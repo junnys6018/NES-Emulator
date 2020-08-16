@@ -1,0 +1,7 @@
+.vs
+.vscode
+bin
+bin-int
+*.sln
+*.vcxproj*
+rockwell_r65c00_microprocessors.pdf
