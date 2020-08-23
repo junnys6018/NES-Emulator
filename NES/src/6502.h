@@ -14,13 +14,13 @@ typedef struct
 	{
 		struct
 		{
-			uint8_t N : 1;		// Negative
-			uint8_t V : 1;		// Overflow
-			uint8_t unused : 2;
-			uint8_t D : 1;		// Decimal
-			uint8_t I : 1;		// Interrupt disable
-			uint8_t Z : 1;		// Zero
 			uint8_t C : 1;		// Carry
+			uint8_t Z : 1;		// Zero
+			uint8_t I : 1;		// Interrupt disable
+			uint8_t D : 1;		// Decimal
+			uint8_t unused : 2;
+			uint8_t V : 1;		// Overflow
+			uint8_t N : 1;		// Negative
 		} flags;
 		uint8_t reg;
 	} status;
@@ -42,6 +42,8 @@ typedef struct
 } State6502;
 
 void clock(State6502* cpu);
+void reset(State6502* cpu);
+void power_on(State6502* cpu);
 
 #endif
 

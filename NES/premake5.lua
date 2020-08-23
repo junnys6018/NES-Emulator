@@ -24,5 +24,5 @@ kind "ConsoleApp"
 
 	includedirs
 	{
-		"../SDL2-2.0.12/include"
+		"vendor/SDL2-2.0.12/include"
 	}
