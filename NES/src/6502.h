@@ -41,11 +41,14 @@ typedef struct
 
 } State6502;
 
-void clock(State6502* cpu);
+// Clock returns the number of cycles until the instruction is completed
+int clock(State6502* cpu);
 void reset(State6502* cpu);
 void power_on(State6502* cpu);
 void NMI(State6502* cpu);
 void IRQ(State6502* cpu);
+
+char* dissassemble(State6502* cpu, uint16_t addr, int* size);
 
 #endif
 
