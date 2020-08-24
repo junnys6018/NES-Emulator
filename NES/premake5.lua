@@ -19,10 +19,10 @@ kind "ConsoleApp"
 
 	links 
 	{
-		"vendor/SDL2", "vendor/SDL2main"
+		"vendor/SDL2", "vendor/SDL2main", "vendor/SDL2_ttf-2.0.15/lib/x64/SDL2_ttf"
 	}
 
 	includedirs
 	{
-		"vendor/SDL2-2.0.12/include"
+		"vendor/SDL2-2.0.12/include", "vendor/SDL2_ttf-2.0.15/include"
 	}
