@@ -31,12 +31,12 @@ typedef struct
 	uint8_t operand; // Data fetched for the operand of an instruction
 	uint16_t addr; // Address of the data fetched, only set for zero page, absolute addressing and indirect X, Y 
 
-	/* Data fetched from an absolute indirect addressing mode operation, unlike other addressing modes
+	/* 
+	 * Data fetched from an absolute indirect addressing mode operation, unlike other addressing modes
 	 * 2 bytes are fetched, note only the JMP instruction uses absolute indirect addressing
 	 */
 	uint16_t indirect_fetch;
 	
-	int32_t remaining_cycles; // Remaining cycles in the current instruction
 	int32_t total_cycles;
 
 } State6502;
@@ -44,6 +44,8 @@ typedef struct
 void clock(State6502* cpu);
 void reset(State6502* cpu);
 void power_on(State6502* cpu);
+void NMI(State6502* cpu);
+void IRQ(State6502* cpu);
 
 #endif
 

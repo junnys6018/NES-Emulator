@@ -3,6 +3,12 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+/* 
+ * TODO:
+ * Interrupt hijacking
+ * Illegal Opcodes
+ */
+
 typedef struct
 {
 	char code[3]; // OP code of the instruction
@@ -22,6 +28,7 @@ static Instruction opcodes[256];
 void clock(State6502* cpu)
 {
 	static uint32_t remaining = 0;
+	cpu->total_cycles++;
 
 	if (remaining == 0)
 	{
@@ -44,6 +51,14 @@ void reset(State6502* cpu)
 	cpu->status.flags.I = 1;
 
 	bus_write(cpu->bus, 0x4015, 0); // All channels disabled
+
+	// Set PC to Reset vector 0xFFFC/D
+	cpu->PC = bus_read(cpu->bus, 0xFFFD); // High byte
+	cpu->PC = cpu->PC << 8;
+	cpu->PC |= bus_read(cpu->bus, 0xFFFC); // Low byte
+
+	// Reset Cycle count (used in debugging only)
+	cpu->total_cycles = 0;
 }
 
 void power_on(State6502* cpu)
@@ -65,6 +80,56 @@ void power_on(State6502* cpu)
 	for (uint16_t addr = 0x4010; addr <= 0x4013; addr++)
 	{
 		bus_write(cpu->bus, addr, 0);
+	}
+
+	// Reset Cycle count (used in debugging only)
+	cpu->total_cycles = 0;
+}
+
+void NMI(State6502* cpu)
+{
+	// Push PC to stack
+	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
+	cpu->SP--;
+
+	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
+	cpu->SP--;
+
+	// Push status to stack, with bit 5 set and bit 4 clear
+	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
+	cpu->SP--;
+
+	// Set PC to NMI vector 0xFFFA/B
+	cpu->PC = bus_read(cpu->bus, 0xFFFB); // High byte
+	cpu->PC = cpu->PC << 8;
+	cpu->PC |= bus_read(cpu->bus, 0xFFFA); // Low byte
+
+	// Set I flag
+	cpu->status.flags.I = 1;
+}
+
+void IRQ(State6502* cpu)
+{
+	if (!cpu->status.flags.I)
+	{
+		// Push PC to stack
+		bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
+		cpu->SP--;
+
+		bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
+		cpu->SP--;
+
+		// Push status to stack, with bit 5 set and bit 4 clear
+		bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
+		cpu->SP--;
+
+		// Set PC to IRQ vector 0xFFFE/F
+		cpu->PC = bus_read(cpu->bus, 0xFFFF); // High byte
+		cpu->PC = cpu->PC << 8;
+		cpu->PC |= bus_read(cpu->bus, 0xFFFE); // Low byte
+
+		// Set I flag
+		cpu->status.flags.I = 1;
 	}
 }
 
@@ -825,9 +890,10 @@ uint32_t TYA(State6502* cpu, bool c)
 
 uint32_t XXX(State6502* cpu, bool c)
 {
-	printf("[ERROR] Illegal Opcode Used");
+	printf("[ERROR] Illegal Opcode Used\n");
 	return 0;
 }
+
 static Instruction opcodes[256] = {
 	{"BRK",BRK,IMM,7}, {"ORA",ORA,IZX,6}, {"???",XXX,IMP,2}, {"???",XXX,IMP,8}, {"???",NOP,IMP,3}, {"ORA",ORA,ZP0,3}, {"ASL",ASL,ZP0,5}, {"???",XXX,IMP,5}, {"PHP",PHP,IMP,3}, {"ORA",ORA,IMM,2}, {"ASL",ASL,IMP,2}, {"???",XXX,IMP,2}, {"???",NOP,IMP,4}, {"ORA",ORA,ABS,4}, {"ASL",ASL,ABS,6}, {"???",XXX,IMP,6},
 	{"BPL",BPL,REL,2}, {"ORA",ORA,IZY,5}, {"???",XXX,IMP,2}, {"???",XXX,IMP,8}, {"???",NOP,IMP,4}, {"ORA",ORA,ZPX,4}, {"ASL",ASL,ZPX,6}, {"???",XXX,IMP,6}, {"CLC",CLC,IMP,2}, {"ORA",ORA,ABY,4}, {"???",NOP,IMP,2}, {"???",XXX,IMP,7}, {"???",NOP,IMP,4}, {"ORA",ORA,ABX,4}, {"ASL",ASL,ABX,7}, {"???",XXX,IMP,7},

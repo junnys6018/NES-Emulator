@@ -5,7 +5,7 @@
 
 typedef struct
 {
-	uint8_t memory[65536]; // 64 KB of memory
+	uint8_t memory[64 * 1024]; // 64 KB of memory
 } Bus;
 
 void bus_write(Bus* b, uint16_t addr, uint8_t data);
