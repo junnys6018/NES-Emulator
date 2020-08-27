@@ -1,6 +1,6 @@
 #ifndef RENDERER_H
 #define RENDERER_H
-#include "../6502.h"
+#include "../Backend/6502.h"
 
 void Renderer_Init();
 void Renderer_Shutdown();

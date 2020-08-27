@@ -1,22 +1,33 @@
 #include "Renderer.h"
 
 #include <SDL.h> 
-#include <SDL_ttf.h>
+#include <stb_rect_pack.h>
+#include <stb_truetype.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 static SDL_Color white = { 255,255,255 };
 static SDL_Color cyan = { 78,201,176 };
 static SDL_Color red = { 255,0,0 };
 static SDL_Color green = { 0,255,0 };
 
+
 typedef struct
 {
 	SDL_Window* win;
 	SDL_Renderer* rend;
-	TTF_Font* font;
+
+	stbtt_fontinfo info;
+	unsigned char* fontdata;
+	SDL_Texture* atlas;
+	stbtt_packedchar chardata[96];
+	float scale;
+	int ascent, descent;
 
 	int width, height;
 	uint8_t page; // Page to view in memory
@@ -24,37 +35,27 @@ typedef struct
 
 static RendererContext rc;
 
-void TTF_Emit_Error(const char* message)
-{
-	printf("[TTF ERROR] %s: %s\n", message, TTF_GetError());
-}
-
 void SDL_Emit_Error(const char* message)
 {
 	printf("[SDL ERROR] %s: %s\n", message, SDL_GetError());
+}
+
+void TTF_Emit_Error(const char* message)
+{
+	printf("[FONT ERROR]: %s\n", message);
 }
 
 void Renderer_Init()
 {
 	rc.width = 1080;
 	rc.height = 720;
+
 	rc.page = 0;
 
 	// TODO: only initialize video component and initialize other components when needed (eg audio)
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		SDL_Emit_Error("Could not initialize SDL");
-	}
-
-	if (TTF_Init() != 0)
-	{
-		TTF_Emit_Error("Could not initialize SDL_TTF");
-	}
-
-	rc.font = TTF_OpenFont("Consola.ttf", 16);
-	if (!rc.font)
-	{
-		TTF_Emit_Error("Cant Open Font");
 	}
 
 	rc.win = SDL_CreateWindow("NES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
@@ -69,17 +70,60 @@ void Renderer_Init()
 	{
 		SDL_Emit_Error("Could not create renderer");
 	}
+
+	// Load the font
+	FILE* file = fopen("Consola.ttf", "rb");
+	fseek(file, 0, SEEK_END);
+	long size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	rc.fontdata = malloc(size);
+	if (!rc.fontdata)
+	{
+		TTF_Emit_Error("Cound not allocate buffer for font file!");
+	}
+	fread(rc.fontdata, 1, size, file);
+	fclose(file);
+
+
+	if (!stbtt_InitFont(&rc.info, rc.fontdata, 0))
+	{
+		TTF_Emit_Error("Could not init font");
+	}
+
+	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, 15);
+
+	stbtt_pack_context spc;
+	unsigned char* bitmap = malloc(512 * 512);
+	stbtt_PackBegin(&spc, bitmap, 512, 512, 0, 1, NULL);
+	stbtt_PackFontRange(&spc, rc.fontdata, 0, 15, 32, 96, rc.chardata);
+
+	stbtt_PackEnd(&spc);
+
+	stbi_write_png("out.png", 512, 512, 1, bitmap, 512);
+
+	// Convert bitmap into SDL texture
+	uint32_t* pixels = malloc(512 * 512 * sizeof(uint32_t));
+	SDL_PixelFormat* format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
+	for (int i = 0; i < 512 * 512; i++) {
+		pixels[i] = SDL_MapRGBA(format, bitmap[i], bitmap[i], bitmap[i], 0xff);
+	}
+	SDL_FreeFormat(format);
+
+	rc.atlas = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, 512, 512);
+	SDL_UpdateTexture(rc.atlas, NULL, pixels, 512 * sizeof(uint32_t));
+
+	int lg;
+	stbtt_GetFontVMetrics(&rc.info, &rc.ascent, &rc.descent, &lg);
 }
 
 void Renderer_Shutdown()
 {
 	// Cleanup
-	TTF_CloseFont(rc.font);
-	TTF_Quit();
-
 	SDL_DestroyRenderer(rc.rend);
 	SDL_DestroyWindow(rc.win);
 	SDL_Quit();
+
+	free(rc.fontdata);
 }
 
 void Renderer_SetPageView(uint8_t page)
@@ -118,26 +162,32 @@ void Renderer_Draw(State6502* cpu)
 
 void DrawText(const char* text, SDL_Color c, int xoff, int yoff)
 {
-	SDL_Surface* s_line = TTF_RenderUTF8_Blended(rc.font, text, c);
-	SDL_Texture* t_line = SDL_CreateTextureFromSurface(rc.rend, s_line);
+	yoff += roundf(rc.ascent * rc.scale);
+	while (*text)
+	{
+		stbtt_packedchar* info = &rc.chardata[*text - 32];
+		SDL_Rect src_rect = { info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0 };
+		SDL_Rect dst_rect = { xoff + roundf(info->xoff), yoff + roundf(info->yoff), info->x1 - info->x0, info->y1 - info->y0 };
 
-	SDL_Rect rect = { .x = xoff,.y = yoff,.w = s_line->w,.h = s_line->h };
-	SDL_RenderCopy(rc.rend, t_line, NULL, &rect);
+		SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
+		SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
+		xoff += roundf(info->xadvance);
 
-	SDL_FreeSurface(s_line);
-	SDL_DestroyTexture(t_line);
+		text++;
+	}
 }
 
 void DrawChar(char glyph, SDL_Color c, int xoff, int yoff)
 {
-	SDL_Surface* s_glyph = TTF_RenderGlyph_Blended(rc.font, glyph, c);
-	SDL_Texture* t_glyph = SDL_CreateTextureFromSurface(rc.rend, s_glyph);
+	yoff += roundf(rc.ascent * rc.scale);
 
-	SDL_Rect rect = { .x = xoff,.y = yoff,.w = s_glyph->w,.h = s_glyph->h };
-	SDL_RenderCopy(rc.rend, t_glyph, NULL, &rect);
+	stbtt_packedchar* info = &rc.chardata[glyph - 32];
+	SDL_Rect src_rect = { info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0 };
+	SDL_Rect dst_rect = { xoff + roundf(info->xoff), yoff + roundf(info->yoff), info->x1 - info->x0, info->y1 - info->y0 };
 
-	SDL_FreeSurface(s_glyph);
-	SDL_DestroyTexture(t_glyph);
+	SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
+	SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
+	xoff += roundf(info->xadvance);
 }
 
 void DrawMemoryView(SDL_Rect area, State6502* cpu)

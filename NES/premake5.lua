@@ -15,14 +15,24 @@ kind "ConsoleApp"
 	{
 		"src/**.h",
 		"src/**.c",
+		"tests/**.c",
+		"tests/**.h",
 	}
 
 	links 
 	{
-		"vendor/SDL2", "vendor/SDL2main", "vendor/SDL2_ttf-2.0.15/lib/x64/SDL2_ttf"
+		"vendor/SDL2",
+		"vendor/SDL2main",
 	}
 
 	includedirs
 	{
-		"vendor/SDL2-2.0.12/include", "vendor/SDL2_ttf-2.0.15/include"
+		"vendor/SDL2-2.0.12/include",
+		"src",
+		"vendor/stb",
+	}
+
+	defines
+	{
+		"_CRT_SECURE_NO_WARNINGS"
 	}

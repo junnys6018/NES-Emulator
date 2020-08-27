@@ -1,18 +1,19 @@
-#include <SDL.h>
-
 #include "Frontend/Renderer.h"
-#include "6502.h"
 
-#include <stdint.h>
+#include "../tests/test.h"
 #include <stdio.h>
+#include <SDL.h>
 #include <stdbool.h>
 
-int main()
+int main(int argc, char** argv)
 {
 	Renderer_Init();
 
+	//Run_All_Tests();
+
 	Bus bus;
-	FILE* file = fopen("6502_functional_test.bin", "r");
+	FILE* file = fopen("tests/6502_functional_test.bin", "r");
+	//FILE* file = fopen("6502_interrupt_test.bin", "r");
 	fread(bus.memory, 1, 64 * 1024, file);
 	fclose(file);
 
@@ -23,9 +24,9 @@ int main()
 
 	cpu.PC = 0x0400;
 
-	//for (int i = 0; i < 84000000 + 30250; i++)
+	//for (int i = 0; i < 84030250; i++)
 	//{
-	//	clock(&cpu);
+	//	clock_6502(&cpu);
 	//}
 
 	Renderer_Draw(&cpu);
@@ -41,7 +42,7 @@ int main()
 				switch (event.key.keysym.sym)
 				{
 				case SDLK_SPACE:
-					while (clock(&cpu) != 0);
+					while(clock_6502(&cpu) != 0);
 					Renderer_Draw(&cpu);
 					break;
 				}

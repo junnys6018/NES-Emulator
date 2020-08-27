@@ -28,7 +28,7 @@ typedef struct
 
 static Instruction opcodes[256];
 
-int clock(State6502* cpu)
+int clock_6502(State6502* cpu)
 {
 	static uint32_t remaining = 0;
 	cpu->total_cycles++;
