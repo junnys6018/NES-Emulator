@@ -28,7 +28,7 @@ int main(int argc, char** argv)
 
 	EventTypeList list = { .size = 2,.event_types = {SDL_KEYDOWN, SDL_QUIT} };
 	SDL_SetEventFilter(event_whitelist, &list);
-
+	uint8_t page = 0;
 	SDL_Event event;
 	while (true)
 	{
@@ -40,6 +40,24 @@ int main(int argc, char** argv)
 				{
 				case SDLK_SPACE:
 					while(clock_6502(&cpu) != 0);
+					Renderer_Draw(&cpu);
+					break;
+				case SDLK_LEFT:
+					Renderer_SetPageView(--page);
+					Renderer_Draw(&cpu);
+					break;
+				case SDLK_RIGHT:
+					Renderer_SetPageView(++page);
+					Renderer_Draw(&cpu);
+					break;
+				case SDLK_UP:
+					page = (int)page - 16;
+					Renderer_SetPageView(page);
+					Renderer_Draw(&cpu);
+					break;
+				case SDLK_DOWN:
+					page += 16;
+					Renderer_SetPageView(page);
 					Renderer_Draw(&cpu);
 					break;
 				}
