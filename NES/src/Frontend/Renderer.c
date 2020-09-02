@@ -133,6 +133,7 @@ void Renderer_SetPageView(uint8_t page)
 
 void DrawMemoryView(SDL_Rect area, State6502* cpu);
 void DrawCPUStatus(SDL_Rect area, State6502* cpu);
+void DrawStackView(SDL_Rect area, State6502* cpu);
 void DrawProgramView(SDL_Rect area, State6502* cpu);
 
 void Renderer_Draw(State6502* cpu)
@@ -148,9 +149,13 @@ void Renderer_Draw(State6502* cpu)
 	SDL_RenderFillRect(rc.rend, &r_MemoryView);
 	DrawMemoryView(r_MemoryView, cpu);
 
-	SDL_Rect r_CPUStatus = { .x = rc.width / 2 + 5,.y = 10,.w = rc.width / 2 - 15,.h = rc.height / 2 - 15 };
+	SDL_Rect r_CPUStatus = { .x = rc.width / 2 + 5,.y = 10,.w = rc.width / 4 - 10,.h = rc.height / 2 - 15 };
 	SDL_RenderFillRect(rc.rend, &r_CPUStatus);
 	DrawCPUStatus(r_CPUStatus, cpu);
+
+	SDL_Rect r_StackView = { .x = 3 * rc.width / 4 + 5,.y = 10,.w = rc.width / 4 - 15,.h = rc.height / 2 - 15 };
+	SDL_RenderFillRect(rc.rend, &r_StackView);
+	DrawStackView(r_StackView, cpu);
 
 	SDL_Rect r_ProgramDissassembly = { .x = rc.width / 2 + 5,.y = rc.height / 2 + 5,.w = rc.width / 2 - 15,.h = rc.height / 2 - 15 };
 	SDL_RenderFillRect(rc.rend, &r_ProgramDissassembly);
@@ -205,12 +210,6 @@ void DrawMemoryView(SDL_Rect area, State6502* cpu)
 
 		DrawText(line, white, area.x + 10, area.y + 35 + i * 20);
 	}
-
-	// Draw a box around the stack pointer
-	SDL_Rect box = { .x = area.x + 70 + 27 * (cpu->SP & 0x000F),.y = area.y + 35 + 16 * 20 + 20 * ((cpu->SP & 0x00F0) >> 4),.w = 20,.h = 18 };
-	SDL_SetRenderDrawColor(rc.rend, 0, 255, 0, 0);
-	SDL_RenderDrawRect(rc.rend, &box);
-	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 0);
 }
 
 void DrawCPUStatus(SDL_Rect area, State6502* cpu)
@@ -244,6 +243,24 @@ void DrawCPUStatus(SDL_Rect area, State6502* cpu)
 	// Total cycles
 	sprintf(line, "Cycles: %i", cpu->total_cycles);
 	DrawText(line, white, area.x + 10, area.y + 130);
+}
+
+void DrawStackView(SDL_Rect area, State6502* cpu)
+{
+	int stack_size = min(0xFF - cpu->SP, 15);
+
+	DrawText("Stack:", cyan, area.x + 10, area.y + 10);
+
+	// Draw up to 15 lines of the stack
+	for (int i = 0; i < stack_size; i++)
+	{
+		uint16_t addr = (cpu->SP + i + 1) | (1 << 8);
+		uint8_t val = bus_read(cpu->bus,addr);
+		char line[32];
+		sprintf(line, "$%.4X %.2X", addr, val);
+
+		DrawText(line, white, area.x + 10, area.y + 30 + i * 20);
+	}
 }
 
 void DrawProgramView(SDL_Rect area, State6502* cpu)

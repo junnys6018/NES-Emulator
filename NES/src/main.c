@@ -1,57 +1,57 @@
 #include "Frontend/Renderer.h"
-
+#include "event_filter_function.h"
 #include "../tests/test.h"
+
 #include <stdio.h>
-#include <SDL.h>
 #include <stdbool.h>
+#include <stdlib.h>
+
+#include <SDL.h>
 
 int main(int argc, char** argv)
 {
 	Renderer_Init();
 
-	Run_All_Tests();
+	//Run_All_Tests();
 
-	//Bus bus;
-	//FILE* file = fopen("tests/6502_functional_test.bin", "r");
-	//fread(bus.memory, 1, 64 * 1024, file);
-	//fclose(file);
+	Bus bus;
+	FILE* file = fopen("tests/stack_test.bin", "r");
+	fread(bus.memory, 1, 64 * 1024, file);
+	fclose(file);
 
-	//State6502 cpu;
-	//cpu.bus = &bus;
-	//power_on(&cpu);
-	//reset(&cpu);
+	State6502 cpu;
+	cpu.bus = &bus;
+	power_on(&cpu);
+	reset(&cpu);
 
-	//cpu.PC = 0x0400;
+	Renderer_Draw(&cpu);
 
-	////for (int i = 0; i < 84030250; i++)
-	////{
-	////	clock_6502(&cpu);
-	////}
+	EventTypeList list = { .size = 2,.event_types = {SDL_KEYDOWN, SDL_QUIT} };
+	SDL_SetEventFilter(event_whitelist, &list);
 
-	//Renderer_Draw(&cpu);
+	SDL_Event event;
+	while (true)
+	{
+		while (SDL_PollEvent(&event) != 0)
+		{
+			if (event.type == SDL_KEYDOWN)
+			{
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_SPACE:
+					while(clock_6502(&cpu) != 0);
+					Renderer_Draw(&cpu);
+					break;
+				}
+			}
+			if (event.type == SDL_QUIT)
+			{
+				exit(EXIT_SUCCESS);
+			}
+		}
+	}
 
-	//SDL_Event event;
-	//bool quit = false;
-	//while (!quit)
-	//{
-	//	while (SDL_PollEvent(&event) != 0)
-	//	{
-	//		if (event.type == SDL_KEYDOWN)
-	//		{
-	//			switch (event.key.keysym.sym)
-	//			{
-	//			case SDLK_SPACE:
-	//				while(clock_6502(&cpu) != 0);
-	//				Renderer_Draw(&cpu);
-	//				break;
-	//			}
-	//		}
-	//		if (event.type == SDL_QUIT)
-	//		{
-	//			quit = true;
-	//		}
-	//	}
-	//}
+	SDL_SetEventFilter(reset_filter_event, NULL);
 
 	fgetc(stdin);
 	Renderer_Shutdown();

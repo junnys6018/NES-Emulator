@@ -831,7 +831,6 @@ uint32_t mROR(State6502* cpu, bool c)
 	return 0;
 }
 
-
 // Return from Interrupt
 uint32_t RTI(State6502* cpu, bool c)
 {
@@ -977,9 +976,10 @@ uint32_t TYA(State6502* cpu, bool c)
 	return 0;
 }
 
+// All illegal opcodes are captured here
 uint32_t XXX(State6502* cpu, bool c)
 {
-	printf("[ERROR] Illegal Opcode Used\n");
+	printf("[WARN] Illegal Opcode Used\n");
 	return 0;
 }
 
@@ -1002,17 +1002,6 @@ static Instruction opcodes[256] = {
 	{"BEQ", BEQ,REL,2}, {"SBC", SBC,IZY,5}, {"???", XXX,IMP,2}, {"???", XXX,IMP,8}, {"???", NOP,IMP,4}, {"SBC", SBC,ZPX,4}, {"INC", INC,ZPX,6}, {"???", XXX,IMP,6}, {"SED", SED,IMP,2}, {"SBC", SBC,ABY,4}, {"NOP", NOP,IMP,2}, {"???", XXX,IMP,7}, {"???", NOP,IMP,4}, {"SBC", SBC,ABX,4}, {"INC", INC,ABX,7}, {"???", XXX,IMP,7},
 };
 
-//static Instruction opcodes[256] = {
-//	{"BRK",IMP,BRK}, {"ORA",IZX,ORA}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"ORA",ZP0,ORA}, {"ASL",ZP0,ASL}, {"XXX",IMP,XXX},
-//	{"PHP",IMP,PHP}, {"ORA",IMM,ORA}, {"ASL",ACC,ASL}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"ORA",ABS,ORA}, {"ASL",ABS,ASL}, {"XXX",IMP,XXX},
-//	{"BPL",REL,BPL}, {"ORA",IZY,ORA}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"ORA",ZPX,ORA}, {"ASL",ZPX,ASL}, {"XXX",IMP,XXX},
-//	{"CLC",IMP,CLC}, {"ORA",ABY,ORA}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"ORA",ABX,ORA}, {"ASL",ABX,ASL}, {"XXX",IMP,XXX},
-//	{"JSR",ABS,JSR}, {"AND",IZX,AND}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"BIT",ZP0,BIT}, {"AND",ZP0,AND}, {"ROL",ZP0,ROL}, {"XXX",IMP,XXX},
-//	{"PLP",IMP,PLP}, {"AND",IMM,AND}, {"ROL",ACC,ROL}, {"XXX",IMP,XXX}, {"BIT",ABS,BIT}, {"AND",ABS,AND}, {"ROL",ABS,ROL}, {"XXX",IMP,XXX},
-//	{"BMI",REL,BMI}, {"AND",IZY,AND}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"AND",ZPX,AND}, {"ROL",ZPX,ROL}, {"XXX",IMP,XXX},
-//	{"SEC",IMP,SEC}, {"AND",ABY,AND}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"XXX",IMP,XXX}, {"AND",ABX,AND},
-//};
-
 // Sets size to the number of bytes the instruction takes
 char* dissassemble(State6502* cpu, uint16_t addr, int* size)
 {
@@ -1025,7 +1014,7 @@ char* dissassemble(State6502* cpu, uint16_t addr, int* size)
 	uint8_t low = bus_read(cpu->bus, addr + 1);
 	uint8_t high = bus_read(cpu->bus, addr + 2);
 
-	// 4 Possible formats
+	// 12 Possible formats
 	bool(*a)(State6502*) = inst.adressing_mode;
 	if (a == IMM)
 	{

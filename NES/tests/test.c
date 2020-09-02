@@ -1,5 +1,8 @@
 #include "test.h"
+
+#include "Frontend/Renderer.h"
 #include "Backend/6502.h"
+#include "event_filter_function.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -26,16 +29,6 @@ Uint32 on_render_callback(Uint32 interval, void* param)
 	return interval;
 }
 
-int on_filter_event(void* userdata, SDL_Event* event)
-{
-	return (event->type == SDL_QUIT || (event->type == SDL_USEREVENT && event->user.code == 0));
-}
-
-int reset_filter_event(void* userdata, SDL_Event* event)
-{
-	return 1;
-}
-
 void Run_6502_Functional_Test()
 {
 	Bus bus;
@@ -52,7 +45,8 @@ void Run_6502_Functional_Test()
 
 	SDL_AddTimer(16, on_render_callback, NULL);
 
-	SDL_SetEventFilter(on_filter_event, NULL);
+	EventTypeList list = { .size = 2,.event_types = {SDL_USEREVENT, SDL_QUIT} };
+	SDL_SetEventFilter(event_whitelist, &list);
 
 	uint16_t old_PC = 0x400;
 	SDL_Event event;
