@@ -9,4 +9,4 @@ void Renderer_Draw(State6502* cpu);
 void Renderer_SetPageView(uint8_t page);
 
 
-#endif // !RENDERER_H
+#endif

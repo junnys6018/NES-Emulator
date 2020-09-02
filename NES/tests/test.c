@@ -31,10 +31,15 @@ int on_filter_event(void* userdata, SDL_Event* event)
 	return (event->type == SDL_QUIT || (event->type == SDL_USEREVENT && event->user.code == 0));
 }
 
+int reset_filter_event(void* userdata, SDL_Event* event)
+{
+	return 1;
+}
+
 void Run_6502_Functional_Test()
 {
 	Bus bus;
-	FILE* file = fopen("tests/6502_functional_test.bin", "r");
+	FILE* file = fopen("tests/6502_functional_test.bin", "rb");
 	fread(bus.memory, 1, 64 * 1024, file);
 	fclose(file);
 
@@ -45,23 +50,21 @@ void Run_6502_Functional_Test()
 
 	cpu.PC = 0x0400;
 
-	//for (int i = 0; i < 84030250; i++)
-	//{
-	//	clock(&cpu);
-	//}
-
 	SDL_AddTimer(16, on_render_callback, NULL);
 
-	Renderer_Draw(&cpu);
+	SDL_SetEventFilter(on_filter_event, NULL);
 
+	uint16_t old_PC = 0x400;
 	SDL_Event event;
-	bool done = false;
-	while (!done)
+	Renderer_Draw(&cpu);
+	while (true)
 	{
-		clock_6502(&cpu);
+		for (int i = 0; i < 5000; i++)
+		{
+			clock_6502(&cpu);
+		}
 
 		// Poll Events
-		SDL_FilterEvents(on_filter_event, NULL);
 		while (SDL_PollEvent(&event) != 0)
 		{
 			if (event.type == SDL_QUIT)
@@ -70,19 +73,36 @@ void Run_6502_Functional_Test()
 			}
 			else if (event.type == SDL_USEREVENT && event.user.code == 0)
 			{
-				clock_t start, end;
-				double cpu_time_used;
-
-				start = clock();
 				Renderer_Draw(&cpu);
-				end = clock();
-				cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-
-				printf("took %f ms\n", cpu_time_used * 1000.0f);
 			}
 		}
 
+		// Check for success or failure
+		if (old_PC == cpu.PC)
+		{
+			uint8_t success_opcode_pattern[] = { 0x4C, 0xBA, 0xEA, 0xBA, 0xEA };
+			uint8_t opcode_size[] = { 3, 1, 1, 1, 1 };
+			bool passed = true;
+			for (int i = 0; i < 5; i++)
+			{
+				uint8_t opcode = bus_read(cpu.bus, old_PC);
+				passed = passed && (opcode == success_opcode_pattern[i]);
+				old_PC += opcode_size[i];
+			}
+
+			if (passed)
+				printf("Passed\n");
+			else
+				printf("Failed\n");
+
+			Renderer_Draw(&cpu);
+			break;
+		}
+		old_PC = cpu.PC;
 	}
+
+
+	SDL_SetEventFilter(reset_filter_event, NULL);
 }
 
 
