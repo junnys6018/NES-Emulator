@@ -28,6 +28,28 @@ typedef struct
 
 static Instruction opcodes[256];
 
+void interrupt_sequence(State6502* cpu, uint16_t interrupt_vector)
+{
+	// Push PC to stack
+	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
+	cpu->SP--;
+
+	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
+	cpu->SP--;
+
+	// Push status to stack, with bit 5 set and bit 4 clear
+	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
+	cpu->SP--;
+
+	// Set PC to NMI vector 0xFFFA/B
+	cpu->PC = bus_read(cpu->bus, interrupt_vector + 1); // High byte
+	cpu->PC = cpu->PC << 8;
+	cpu->PC |= bus_read(cpu->bus, interrupt_vector); // Low byte
+
+	// Set I flag
+	cpu->status.flags.I = 1;
+}
+
 int clock_6502(State6502* cpu)
 {
 	static uint32_t remaining = 0;
@@ -35,19 +57,50 @@ int clock_6502(State6502* cpu)
 
 	if (remaining == 0)
 	{
-		uint8_t opcode = bus_read(cpu->bus, cpu->PC++);
-		Instruction inst = opcodes[opcode];
+		if (cpu->interrupt & NMI_SIGNAL)
+		{
+			remaining = 7; // 7 clock cycles to respond to interrupt
+			interrupt_sequence(cpu, 0xFFFA);
 
-		remaining = inst.cycles;
-		remaining--;
+			cpu->interrupt &= ~NMI_SIGNAL;
+		}
+		else if (cpu->interrupt & IRQ_SIGNAL && !cpu->status.flags.I)
+		{
+			remaining = 7; // 7 clock cycles to respond to interrupt
+			interrupt_sequence(cpu, 0xFFFE);
 
-		bool b = inst.adressing_mode(cpu);
-		remaining += inst.operation(cpu, b);
+			cpu->interrupt &= ~IRQ_SIGNAL;
+		}
+		else
+		{
+			// if IRQ signal was raised, we should ignore it 
+			cpu->interrupt &= ~IRQ_SIGNAL;
+
+			uint8_t opcode = bus_read(cpu->bus, cpu->PC++);
+			Instruction inst = opcodes[opcode];
+
+			remaining = inst.cycles;
+			remaining--;
+
+			bool b = inst.adressing_mode(cpu);
+			remaining += inst.operation(cpu, b);
+		}
 	}
 	else
 		remaining--;
 
 	return remaining;
+}
+
+void load_cpu_from_file(State6502* cpu, Bus* bus, const char* filepath)
+{
+	FILE* file = fopen(filepath, "rb");
+	fread(bus->memory, 1, 64 * 1024, file);
+	fclose(file);
+
+	cpu->bus = bus;
+	power_on(cpu);
+	reset(cpu);
 }
 
 void reset(State6502* cpu)
@@ -89,53 +142,18 @@ void power_on(State6502* cpu)
 
 	// Reset Cycle count (used in debugging only)
 	cpu->total_cycles = 0;
+
+	cpu->interrupt = NO_INTERRUPT;
 }
 
 void NMI(State6502* cpu)
 {
-	// Push PC to stack
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
-	cpu->SP--;
-
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
-	cpu->SP--;
-
-	// Push status to stack, with bit 5 set and bit 4 clear
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
-	cpu->SP--;
-
-	// Set PC to NMI vector 0xFFFA/B
-	cpu->PC = bus_read(cpu->bus, 0xFFFB); // High byte
-	cpu->PC = cpu->PC << 8;
-	cpu->PC |= bus_read(cpu->bus, 0xFFFA); // Low byte
-
-	// Set I flag
-	cpu->status.flags.I = 1;
+	cpu->interrupt |= NMI_SIGNAL;
 }
 
 void IRQ(State6502* cpu)
 {
-	if (!cpu->status.flags.I)
-	{
-		// Push PC to stack
-		bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
-		cpu->SP--;
-
-		bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
-		cpu->SP--;
-
-		// Push status to stack, with bit 5 set and bit 4 clear
-		bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
-		cpu->SP--;
-
-		// Set PC to IRQ vector 0xFFFE/F
-		cpu->PC = bus_read(cpu->bus, 0xFFFF); // High byte
-		cpu->PC = cpu->PC << 8;
-		cpu->PC |= bus_read(cpu->bus, 0xFFFE); // Low byte
-
-		// Set I flag
-		cpu->status.flags.I = 1;
-	}
+	cpu->interrupt |= IRQ_SIGNAL;
 }
 
 // 13 Adressing modes

@@ -2,6 +2,13 @@
 #define _6502_H
 #include "bus.h"
 
+typedef enum 
+{
+	NO_INTERRUPT = 0,
+	IRQ_SIGNAL = 1,
+	NMI_SIGNAL = 2
+} InterruptSignal;
+
 typedef struct
 {
 	uint8_t A; // Accumilator register 
@@ -39,6 +46,8 @@ typedef struct
 	
 	int32_t total_cycles;
 
+	int interrupt;
+
 } State6502;
 
 // Clock returns the number of cycles until the instruction is completed
@@ -47,6 +56,8 @@ void reset(State6502* cpu);
 void power_on(State6502* cpu);
 void NMI(State6502* cpu);
 void IRQ(State6502* cpu);
+
+void load_cpu_from_file(State6502* cpu, Bus* bus, const char* filepath);
 
 char* dissassemble(State6502* cpu, uint16_t addr, int* size);
 

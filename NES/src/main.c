@@ -12,17 +12,11 @@ int main(int argc, char** argv)
 {
 	Renderer_Init();
 
-	//Run_All_Tests();
+	Run_All_Tests();
 
 	Bus bus;
-	FILE* file = fopen("tests/stack_test.bin", "r");
-	fread(bus.memory, 1, 64 * 1024, file);
-	fclose(file);
-
 	State6502 cpu;
-	cpu.bus = &bus;
-	power_on(&cpu);
-	reset(&cpu);
+	load_cpu_from_file(&cpu, &bus, "tests/stack_test.bin");
 
 	Renderer_Draw(&cpu);
 
