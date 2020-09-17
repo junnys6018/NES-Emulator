@@ -3,6 +3,7 @@
 #include "../tests/test.h"
 #include "../tests/Benchmarks.h"
 #include "Backend/Cartridge.h"
+#include "Backend/Mappers/Mapper_000.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -18,8 +19,14 @@ int main(int argc, char** argv)
 	//RunAllBenchmarks();
 
 	Cartridge cart;
-	load_cartridge_from_file(&cart, "tests/nestest.nes");
+	//load_cartridge_from_file(&cart, "tests/nestest.nes");
+	load_cartridge_from_file(&cart, "roms/SuperMarioBros.nes");
 
+	Renderer_SetPatternTableData(((Mapper000*)(cart.mapper))->CHR);
+
+
+	DrawPatternTable(0,0,0);
+	DrawPatternTable(140, 0, 1);
 
 	//Bus6502 bus;
 	//State6502 cpu;

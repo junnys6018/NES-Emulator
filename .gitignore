@@ -6,3 +6,4 @@ bin-int
 *.vcxproj*
 rockwell_r65c00_microprocessors.pdf
 *.bak
+NES/roms

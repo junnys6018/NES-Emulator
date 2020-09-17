@@ -16,14 +16,14 @@ static SDL_Color cyan = { 78,201,176 };
 static SDL_Color red = { 255,0,0 };
 static SDL_Color green = { 0,255,0 };
 
-
 typedef struct
 {
 	SDL_Window* win;
 	SDL_Renderer* rend;
 
+	// Font data
 	stbtt_fontinfo info;
-	unsigned char* fontdata;
+	uint8_t* fontdata;
 	SDL_Texture* atlas;
 	stbtt_packedchar chardata[96];
 	float scale;
@@ -31,6 +31,9 @@ typedef struct
 
 	int width, height;
 	uint8_t page; // Page to view in memory
+
+	// Pointer to pattern table
+	uint8_t* table_data;
 } RendererContext;
 
 static RendererContext rc;
@@ -121,6 +124,7 @@ void Renderer_Shutdown()
 	// Cleanup
 	SDL_DestroyRenderer(rc.rend);
 	SDL_DestroyWindow(rc.win);
+	SDL_DestroyTexture(rc.atlas);
 	SDL_Quit();
 
 	free(rc.fontdata);
@@ -129,6 +133,11 @@ void Renderer_Shutdown()
 void Renderer_SetPageView(uint8_t page)
 {
 	rc.page = page;
+}
+
+void Renderer_SetPatternTableData(uint8_t* table_data)
+{
+	rc.table_data = table_data;
 }
 
 void DrawMemoryView(SDL_Rect area, State6502* cpu);
@@ -278,8 +287,35 @@ void DrawProgramView(SDL_Rect area, State6502* cpu)
 	}
 }
 
-void DrawPatternTable(int xoff, int yoff, uint8_t* table_data)
+// TODO: Make this more efficient 
+void DrawPatternTable(int xoff, int yoff, int table_index)
 {
+	uint8_t* table_data = rc.table_data + (table_index == 1 ? 0x1000 : 0);
+	SDL_Surface* surf = SDL_CreateRGBSurface(0, 128, 128, 32, 0xFF0000, 0x00FF00, 0x0000FF, 0);
+	uint32_t colors[] = { 0xFF0000,0x00FF00,0x0000FF,0x000000 };
+	for (int x = 0; x < 128; x++)
+	{
+		for (int y = 0; y < 128; y++)
+		{
+			uint16_t fine_y = y % 8;
+			uint16_t fine_x = 7 - x % 8; // Invert x
+			uint16_t tile_row = y / 8;
+			uint16_t tile_col = x / 8;
 
+			uint16_t table_addr = tile_row << 8 | tile_col << 4 | fine_y;
+
+			uint8_t color = (table_data[table_addr] & (1 << fine_x)) >> fine_x | table_data[table_addr | 1 << 3] & (1 << fine_x) >> (fine_x - 1);
+			((uint32_t*)(surf->pixels))[y * 128 + x] = colors[color];
+		}
+	}
+
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(rc.rend, surf);
+	SDL_Rect dest = { .x = xoff,.y = yoff,.w = 128,.h = 128 };
+	SDL_RenderCopy(rc.rend, texture, NULL, &dest);
+
+	SDL_FreeSurface(surf);
+	SDL_DestroyTexture(texture);
+	
+	SDL_RenderPresent(rc.rend);
 }
 

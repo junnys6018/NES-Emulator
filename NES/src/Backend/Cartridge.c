@@ -30,7 +30,7 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 		uint8_t PRGROM_MSB : 4;
 		uint8_t CHRROM_MSB : 4;
 
-		uint8_t todo1; // Figure out what these bytes do
+		uint8_t todo1; // TODO: Figure out what these bytes do
 		uint8_t todo2;
 
 		uint8_t TimingMode : 2;
