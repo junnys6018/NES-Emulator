@@ -1,7 +1,7 @@
 #include "Frontend/Renderer.h"
 #include "event_filter_function.h"
 #include "../tests/test.h"
-
+#include "../tests/Benchmarks.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -13,6 +13,7 @@ int main(int argc, char** argv)
 	Renderer_Init();
 
 	Run_All_Tests();
+	RunAllBenchmarks();
 
 	Bus bus;
 	State6502 cpu;

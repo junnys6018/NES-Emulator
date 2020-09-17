@@ -125,7 +125,7 @@ void Run_6502_Interrupt_Test()
 	const uint16_t feedback_register_addr = 0xBFFC; // Location of register used to feed interrupts into the cpu
 	uint8_t old_nmi = 0; // Used to detect a level change
 	uint16_t old_PC = 0x400; // Used to detect if cpu has halted
-	const int instructions_per_frame = 20; // Execution speed
+	const int instructions_per_frame = 10; // Execution speed
 	int instructions_done = 0;
 
 	SDL_Event event;
