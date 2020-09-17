@@ -31,7 +31,7 @@ Uint32 on_render_callback(Uint32 interval, void* param)
 
 void Run_6502_Functional_Test()
 {
-	Bus bus;
+	Bus6502 bus;
 	State6502 cpu;
 	load_cpu_from_file(&cpu, &bus, "tests/6502_functional_test.bin");
 	cpu.PC = 0x0400; // Code segment at 0x0400
@@ -71,7 +71,7 @@ void Run_6502_Functional_Test()
 				bool passed = true;
 				for (int i = 0; i < 5; i++)
 				{
-					uint8_t opcode = bus_read(cpu.bus, old_PC);
+					uint8_t opcode = cpu_bus_read(cpu.bus, old_PC);
 					passed = passed && (opcode == success_opcode_pattern[i]);
 					old_PC += opcode_size[i];
 				}
@@ -109,7 +109,7 @@ void Run_6502_Functional_Test()
 
 void Run_6502_Interrupt_Test()
 {
-	Bus bus;
+	Bus6502 bus;
 	State6502 cpu;
 	load_cpu_from_file(&cpu, &bus, "tests/6502_interrupt_test.bin");
 	cpu.PC = 0x0400; // Code segment at 0x0400
@@ -137,7 +137,7 @@ void Run_6502_Interrupt_Test()
 			instructions_done++;
 
 			while (clock_6502(&cpu) != 0);
-			uint8_t I_src = bus_read(cpu.bus, feedback_register_addr);
+			uint8_t I_src = cpu_bus_read(cpu.bus, feedback_register_addr);
 			if (I_src & 0x02 && old_nmi == 0) // NMI - Detected on rising edge
 			{
 				NMI(&cpu);
@@ -157,7 +157,7 @@ void Run_6502_Interrupt_Test()
 				bool passed = true;
 				for (int i = 0; i < 5; i++)
 				{
-					uint8_t opcode = bus_read(cpu.bus, old_PC);
+					uint8_t opcode = cpu_bus_read(cpu.bus, old_PC);
 					passed = passed && (opcode == success_opcode_pattern[i]);
 					old_PC += opcode_size[i];
 				}

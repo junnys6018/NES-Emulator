@@ -31,20 +31,20 @@ static Instruction opcodes[256];
 void interrupt_sequence(State6502* cpu, uint16_t interrupt_vector)
 {
 	// Push PC to stack
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
 	cpu->SP--;
 
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
 	cpu->SP--;
 
 	// Push status to stack, with bit 5 set and bit 4 clear
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
 	cpu->SP--;
 
 	// Set PC to NMI vector 0xFFFA/B
-	cpu->PC = bus_read(cpu->bus, interrupt_vector + 1); // High byte
+	cpu->PC = cpu_bus_read(cpu->bus, interrupt_vector + 1); // High byte
 	cpu->PC = cpu->PC << 8;
-	cpu->PC |= bus_read(cpu->bus, interrupt_vector); // Low byte
+	cpu->PC |= cpu_bus_read(cpu->bus, interrupt_vector); // Low byte
 
 	// Set I flag
 	cpu->status.flags.I = 1;
@@ -76,7 +76,7 @@ int clock_6502(State6502* cpu)
 			// if IRQ signal was raised, we should ignore it 
 			cpu->interrupt &= ~IRQ_SIGNAL;
 
-			uint8_t opcode = bus_read(cpu->bus, cpu->PC++);
+			uint8_t opcode = cpu_bus_read(cpu->bus, cpu->PC++);
 			Instruction inst = opcodes[opcode];
 
 			remaining = inst.cycles;
@@ -92,7 +92,7 @@ int clock_6502(State6502* cpu)
 	return remaining;
 }
 
-void load_cpu_from_file(State6502* cpu, Bus* bus, const char* filepath)
+void load_cpu_from_file(State6502* cpu, Bus6502* bus, const char* filepath)
 {
 	FILE* file = fopen(filepath, "rb");
 	fread(bus->memory, 1, 64 * 1024, file);
@@ -108,12 +108,12 @@ void reset(State6502* cpu)
 	cpu->SP -= 3;
 	cpu->status.flags.I = 1;
 
-	bus_write(cpu->bus, 0x4015, 0); // All channels disabled
+	cpu_bus_write(cpu->bus, 0x4015, 0); // All channels disabled
 
 	// Set PC to Reset vector 0xFFFC/D
-	cpu->PC = bus_read(cpu->bus, 0xFFFD); // High byte
+	cpu->PC = cpu_bus_read(cpu->bus, 0xFFFD); // High byte
 	cpu->PC = cpu->PC << 8;
-	cpu->PC |= bus_read(cpu->bus, 0xFFFC); // Low byte
+	cpu->PC |= cpu_bus_read(cpu->bus, 0xFFFC); // Low byte
 
 	// Reset Cycle count (used in debugging only)
 	cpu->total_cycles = 0;
@@ -127,17 +127,17 @@ void power_on(State6502* cpu)
 	cpu->Y = 0;
 	cpu->SP = 0xFD;
 
-	bus_write(cpu->bus, 0x4015, 0); // All channels disabled
-	bus_write(cpu->bus, 0x4017, 0); // Frame IRQ disabled
+	cpu_bus_write(cpu->bus, 0x4015, 0); // All channels disabled
+	cpu_bus_write(cpu->bus, 0x4017, 0); // Frame IRQ disabled
 
 	for (uint16_t addr = 0x4000; addr <= 0x400F; addr++)
 	{
-		bus_write(cpu->bus, addr, 0);
+		cpu_bus_write(cpu->bus, addr, 0);
 	}
 
 	for (uint16_t addr = 0x4010; addr <= 0x4013; addr++)
 	{
-		bus_write(cpu->bus, addr, 0);
+		cpu_bus_write(cpu->bus, addr, 0);
 	}
 
 	// Reset Cycle count (used in debugging only)
@@ -167,15 +167,15 @@ bool ACC(State6502* cpu)
 // Immediate addressing
 bool IMM(State6502* cpu)
 {
-	cpu->operand = bus_read(cpu->bus, cpu->PC++);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->PC++);
 	return false;
 }
 
 // Zero page
 bool ZP0(State6502* cpu)
 {
-	cpu->addr = bus_read(cpu->bus, cpu->PC++);
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->addr = cpu_bus_read(cpu->bus, cpu->PC++);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return false;
 }
@@ -183,39 +183,39 @@ bool ZP0(State6502* cpu)
 // Zero page with X index
 bool ZPX(State6502* cpu)
 {
-	uint16_t addr_low = bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
 	cpu->addr = (addr_low + cpu->X) & 0x00FF;
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return false;
 }
 
 // Zero page with Y index
 bool ZPY(State6502* cpu)
 {
-	uint16_t addr_low = bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
 	cpu->addr = (addr_low + cpu->Y) & 0x00FF;
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return false;
 }
 
 // Absolulte
 bool ABS(State6502* cpu)
 {
-	uint16_t addr_low = bus_read(cpu->bus, cpu->PC++);
-	uint16_t addr_high = bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_high = cpu_bus_read(cpu->bus, cpu->PC++);
 	cpu->addr = (addr_high << 8) | addr_low;
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return false;
 }
 
 // Absolute with X index
 bool ABX(State6502* cpu)
 {
-	uint16_t addr_low = bus_read(cpu->bus, cpu->PC++);
-	uint16_t addr_high = bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_high = cpu_bus_read(cpu->bus, cpu->PC++);
 	uint16_t addr = (addr_high << 8) | addr_low;
 	cpu->addr = addr + cpu->X;
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return (addr & 0xFF00) != (cpu->addr & 0xFF00);
 }
@@ -223,11 +223,11 @@ bool ABX(State6502* cpu)
 // Absolulte with Y index
 bool ABY(State6502* cpu)
 {
-	uint16_t addr_low = bus_read(cpu->bus, cpu->PC++);
-	uint16_t addr_high = bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_high = cpu_bus_read(cpu->bus, cpu->PC++);
 	uint16_t addr = (addr_high << 8) | addr_low;
 	cpu->addr = addr + cpu->Y;
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return (addr & 0xFF00) != (cpu->addr & 0xFF00);
 }
@@ -241,21 +241,21 @@ bool IMP(State6502* cpu)
 // Relative 
 bool REL(State6502* cpu)
 {
-	cpu->operand = bus_read(cpu->bus, cpu->PC++);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->PC++);
 	return false;
 }
 
 // Indirect
 bool IND(State6502* cpu)
 {
-	uint16_t addr_low = bus_read(cpu->bus, cpu->PC++);
-	uint16_t addr_high = bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_high = cpu_bus_read(cpu->bus, cpu->PC++);
 	uint16_t addr = (addr_high << 8) | addr_low;
 
 	// Read high bits
-	cpu->indirect_fetch = bus_read(cpu->bus, addr + 1);
+	cpu->indirect_fetch = cpu_bus_read(cpu->bus, addr + 1);
 	cpu->indirect_fetch <<= 8;
-	cpu->indirect_fetch |= bus_read(cpu->bus, addr);
+	cpu->indirect_fetch |= cpu_bus_read(cpu->bus, addr);
 	
 	/* Hack: only the JMP instruction uses indirect addressing, however it could also be using absolute addressing
 	 * If absolute addressing was used JMP would set the program counter to the value of cpu->operand, however
@@ -271,13 +271,13 @@ bool IND(State6502* cpu)
 // Indirect with X index
 bool IZX(State6502* cpu)
 {
-	uint16_t zp_addr = bus_read(cpu->bus, cpu->PC++);
+	uint16_t zp_addr = cpu_bus_read(cpu->bus, cpu->PC++);
 	zp_addr = (zp_addr + cpu->X) & 0x00FF;
 
-	uint16_t addr_low = bus_read(cpu->bus, zp_addr);
-	uint16_t addr_high = bus_read(cpu->bus, (zp_addr + 1) & 0x00FF);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, zp_addr);
+	uint16_t addr_high = cpu_bus_read(cpu->bus, (zp_addr + 1) & 0x00FF);
 	cpu->addr = (addr_high << 8) | addr_low;
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return false;
 }
@@ -285,13 +285,13 @@ bool IZX(State6502* cpu)
 // Indirect with Y index
 bool IZY(State6502* cpu)
 {
-	uint16_t zp_addr = bus_read(cpu->bus, cpu->PC++);
-	uint16_t addr_low = bus_read(cpu->bus, zp_addr);
-	uint16_t addr_high = bus_read(cpu->bus, (zp_addr + 1) & 0x00FF); // Read the next zero page address
+	uint16_t zp_addr = cpu_bus_read(cpu->bus, cpu->PC++);
+	uint16_t addr_low = cpu_bus_read(cpu->bus, zp_addr);
+	uint16_t addr_high = cpu_bus_read(cpu->bus, (zp_addr + 1) & 0x00FF); // Read the next zero page address
 
 	uint16_t addr = ((addr_high << 8) | addr_low);
 	cpu->addr = addr + cpu->Y;
-	cpu->operand = bus_read(cpu->bus, cpu->addr);
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return (addr & 0xFF00) != (cpu->addr & 0xFF00);
 }
 
@@ -348,7 +348,7 @@ uint32_t mASL(State6502* cpu, bool c)
 	cpu->status.flags.Z = cpu->operand == 0;
 	cpu->status.flags.N = (cpu->operand & 0x0080) == 0x0080;
 
-	bus_write(cpu->bus, cpu->addr, cpu->operand);
+	cpu_bus_write(cpu->bus, cpu->addr, cpu->operand);
 
 	return 0;
 }
@@ -451,20 +451,20 @@ uint32_t BRK(State6502* cpu, bool c)
 	cpu->PC++;
 
 	// Push PC to stack
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
 	cpu->SP--;
 
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
 	cpu->SP--;
 
 	// Push status to stack, with bits 4 and 5 set
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, cpu->status.reg | 1 << 4 | 1 << 5);
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, cpu->status.reg | 1 << 4 | 1 << 5);
 	cpu->SP--;
 
 	// Set PC to BRK vector 0xFFFE/F
-	cpu->PC = bus_read(cpu->bus, 0xFFFF); // High byte
+	cpu->PC = cpu_bus_read(cpu->bus, 0xFFFF); // High byte
 	cpu->PC = cpu->PC << 8;
-	cpu->PC |= bus_read(cpu->bus, 0xFFFE); // Low byte
+	cpu->PC |= cpu_bus_read(cpu->bus, 0xFFFE); // Low byte
 
 	// Set I flag
 	cpu->status.flags.I = 1;
@@ -566,7 +566,7 @@ uint32_t CPY(State6502* cpu, bool c)
 uint32_t DEC(State6502* cpu, bool c)
 {
 	uint8_t result = cpu->operand - 1;
-	bus_write(cpu->bus, cpu->addr, result);
+	cpu_bus_write(cpu->bus, cpu->addr, result);
 
 	cpu->status.flags.Z = result == 0;
 	cpu->status.flags.N = (result & 0x0080) == 0x0080;
@@ -608,7 +608,7 @@ uint32_t EOR(State6502* cpu, bool c)
 uint32_t INC(State6502* cpu, bool c)
 {
 	uint8_t result = cpu->operand + 1;
-	bus_write(cpu->bus, cpu->addr, result);
+	cpu_bus_write(cpu->bus, cpu->addr, result);
 
 	cpu->status.flags.Z = result == 0;
 	cpu->status.flags.N = (result & 0x0080) == 0x0080;
@@ -658,10 +658,10 @@ uint32_t JSR(State6502* cpu, bool c)
 	cpu->PC--;
 
 	// Push PC to stack
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC >> 8)); // High byte
 	cpu->SP--;
 
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (uint8_t)(cpu->PC & 0x00FF)); // Low byte
 	cpu->SP--;
 
 	cpu->PC = cpu->addr;
@@ -724,7 +724,7 @@ uint32_t mLSR(State6502* cpu, bool c)
 	cpu->status.flags.Z = cpu->operand == 0;
 	cpu->status.flags.N = (cpu->operand & 0x0080) == 0x0080;
 
-	bus_write(cpu->bus, cpu->addr, cpu->operand);
+	cpu_bus_write(cpu->bus, cpu->addr, cpu->operand);
 
 	return 0;
 }
@@ -750,7 +750,7 @@ uint32_t ORA(State6502* cpu, bool c)
 // Push Accumulator
 uint32_t PHA(State6502* cpu, bool c)
 {
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, cpu->A);
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, cpu->A);
 	cpu->SP--;
 
 	return 0;
@@ -760,7 +760,7 @@ uint32_t PHA(State6502* cpu, bool c)
 uint32_t PHP(State6502* cpu, bool c)
 {
 	// Unused bits 4 and 5 are set in a PHP instruction
-	bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, cpu->status.reg | 1 << 4 | 1 << 5);
+	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, cpu->status.reg | 1 << 4 | 1 << 5);
 	cpu->SP--;
 
 	return 0;
@@ -770,7 +770,7 @@ uint32_t PHP(State6502* cpu, bool c)
 uint32_t PLA(State6502* cpu, bool c)
 {
 	cpu->SP++;
-	cpu->A = bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
+	cpu->A = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 
 	cpu->status.flags.Z = cpu->A == 0;
 	cpu->status.flags.N = (cpu->A & 0x0080) == 0x0080;
@@ -782,7 +782,7 @@ uint32_t PLA(State6502* cpu, bool c)
 uint32_t PLP(State6502* cpu, bool c)
 {
 	cpu->SP++;
-	cpu->status.reg = bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
+	cpu->status.reg = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 
 	return 0;
 }
@@ -813,7 +813,7 @@ uint32_t mROL(State6502* cpu, bool c)
 	cpu->status.flags.Z = cpu->operand == 0;
 	cpu->status.flags.N = (cpu->operand & 0x0080) == 0x0080;
 
-	bus_write(cpu->bus, cpu->addr, cpu->operand);
+	cpu_bus_write(cpu->bus, cpu->addr, cpu->operand);
 
 	return 0;
 }
@@ -844,7 +844,7 @@ uint32_t mROR(State6502* cpu, bool c)
 	cpu->status.flags.Z = cpu->operand == 0;
 	cpu->status.flags.N = (cpu->operand & 0x0080) == 0x0080;
 
-	bus_write(cpu->bus, cpu->addr, cpu->operand);
+	cpu_bus_write(cpu->bus, cpu->addr, cpu->operand);
 
 	return 0;
 }
@@ -854,13 +854,13 @@ uint32_t RTI(State6502* cpu, bool c)
 {
 	// Pull status from stack
 	cpu->SP++;
-	cpu->status.reg = bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
+	cpu->status.reg = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 
 	// Pull PC from stack
 	cpu->SP++;
-	uint16_t PCL = bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
+	uint16_t PCL = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 	cpu->SP++;
-	uint16_t PCH = bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
+	uint16_t PCH = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 
 	cpu->PC = (PCH << 8) | PCL;
 
@@ -872,9 +872,9 @@ uint32_t RTS(State6502* cpu, bool c)
 {
 	// Pull PC from stack
 	cpu->SP++;
-	uint16_t PCL = bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
+	uint16_t PCL = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 	cpu->SP++;
-	uint16_t PCH = bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
+	uint16_t PCH = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 
 	cpu->PC = (PCH << 8) | PCL + 1;
 
@@ -919,21 +919,21 @@ uint32_t SEI(State6502* cpu, bool c)
 // Store Accumulator
 uint32_t STA(State6502* cpu, bool c)
 {
-	bus_write(cpu->bus, cpu->addr, cpu->A);
+	cpu_bus_write(cpu->bus, cpu->addr, cpu->A);
 	return 0;
 }
 
 // Store X Register
 uint32_t STX(State6502* cpu, bool c)
 {
-	bus_write(cpu->bus, cpu->addr, cpu->X);
+	cpu_bus_write(cpu->bus, cpu->addr, cpu->X);
 	return 0;
 }
 
 // Store Y Register
 uint32_t STY(State6502* cpu, bool c)
 {
-	bus_write(cpu->bus, cpu->addr, cpu->Y);
+	cpu_bus_write(cpu->bus, cpu->addr, cpu->Y);
 	return 0;
 }
 
@@ -1025,12 +1025,12 @@ char* dissassemble(State6502* cpu, uint16_t addr, int* size)
 {
 	char* line = malloc(128);
 
-	uint8_t opcode = bus_read(cpu->bus, addr);
+	uint8_t opcode = cpu_bus_read(cpu->bus, addr);
 	Instruction inst = opcodes[opcode];
 
 	// Fetch the data for the instruction 
-	uint8_t low = bus_read(cpu->bus, addr + 1);
-	uint8_t high = bus_read(cpu->bus, addr + 2);
+	uint8_t low = cpu_bus_read(cpu->bus, addr + 1);
+	uint8_t high = cpu_bus_read(cpu->bus, addr + 2);
 
 	// 12 Possible formats
 	bool(*a)(State6502*) = inst.adressing_mode;

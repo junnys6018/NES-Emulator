@@ -255,7 +255,7 @@ void DrawStackView(SDL_Rect area, State6502* cpu)
 	for (int i = 0; i < stack_size; i++)
 	{
 		uint16_t addr = (cpu->SP + i + 1) | (1 << 8);
-		uint8_t val = bus_read(cpu->bus,addr);
+		uint8_t val = cpu_bus_read(cpu->bus,addr);
 		char line[32];
 		sprintf(line, "$%.4X %.2X", addr, val);
 
@@ -276,5 +276,10 @@ void DrawProgramView(SDL_Rect area, State6502* cpu)
 
 		free(line);
 	}
+}
+
+void DrawPatternTable(int xoff, int yoff, uint8_t* table_data)
+{
+
 }
 

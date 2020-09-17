@@ -1,6 +1,6 @@
 #ifndef _6502_H
 #define _6502_H
-#include "bus.h"
+#include "6502_Bus.h"
 
 typedef enum 
 {
@@ -32,7 +32,7 @@ typedef struct
 		uint8_t reg;
 	} status;
 
-	Bus* bus;
+	Bus6502* bus;
 
 	// Helper members
 	uint8_t operand; // Data fetched for the operand of an instruction
@@ -57,7 +57,7 @@ void power_on(State6502* cpu);
 void NMI(State6502* cpu);
 void IRQ(State6502* cpu);
 
-void load_cpu_from_file(State6502* cpu, Bus* bus, const char* filepath);
+void load_cpu_from_file(State6502* cpu, Bus6502* bus, const char* filepath);
 
 char* dissassemble(State6502* cpu, uint16_t addr, int* size);
 

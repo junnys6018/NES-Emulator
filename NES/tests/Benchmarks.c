@@ -6,7 +6,7 @@
 
 void Run6502Benchmark()
 {
-	Bus bus;
+	Bus6502 bus;
 	State6502 cpu;
 	load_cpu_from_file(&cpu, &bus, "tests/6502_functional_test.bin");
 	cpu.PC = 0x0400; // Code segment at 0x400
