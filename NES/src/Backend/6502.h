@@ -39,14 +39,15 @@ typedef struct
 	uint16_t addr; // Address of the data fetched, only set for zero page, absolute addressing and indirect X, Y 
 
 	/* 
-	 * Data fetched from an absolute indirect addressing mode operation, unlike other addressing modes
-	 * 2 bytes are fetched, note only the JMP instruction uses absolute indirect addressing
+	 * Data fetched from an absolute indirect addressing mode operation, 
+	 * only the JMP instruction uses this addressing mode. Unlike other addressing modes
+	 * 2 bytes are fetched.
 	 */
 	uint16_t indirect_fetch;
 	
-	int32_t total_cycles;
+	uint64_t total_cycles;
 
-	int interrupt;
+	int interrupt; // Btiwise or of InterruptSignal enums, represents the internal latches that signify an interrupt
 
 } State6502;
 

@@ -80,6 +80,9 @@ int main(int argc, char** argv)
 	//SDL_SetEventFilter(reset_filter_event, NULL);
 
 	fgetc(stdin);
+
+	free_cartridge(&cart);
+
 	Renderer_Shutdown();
 	return 0;
 }

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 {
@@ -43,18 +44,17 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 		uint8_t DefaultExpansionDevice;
 
 	} header;
-	fread(&header, 16, 1, file);
+	fread(&header, sizeof(header), 1, file);
 
 	// Verify File
 	char* c = header.idstring;
 	if (c[0] == 'N' && c[1] == 'E' && c[2] == 'S' && c[3] == 0x1A)
 	{
 		uint16_t mapperID = ((uint16_t)header.MapperID3 << 8) | ((uint16_t)header.MapperID2 << 4) | (uint16_t)header.MapperID1;
+		cart->mapperID = mapperID;
 		switch (mapperID)
 		{
 		case 0:
-			cart->mapperID = 0;
-
 			cart->CPUReadCartridge = m000CPUReadCartridge;
 			cart->PPUReadCartridge = m000PPUReadCartridge;
 
@@ -64,6 +64,7 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 			cart->PPUMirrorNametable = m000PPUMirrorNametable;
 
 			Mapper000* map = malloc(sizeof(Mapper000));
+			assert(map);
 			cart->mapper = map;
 
 			// Skip trainer if present

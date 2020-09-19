@@ -2,8 +2,12 @@
 #define _2C02_H
 #include "2C02_Bus.h"
 
+#include <stdbool.h>
+
 typedef struct
 {
+	// Registers exposed to CPU
+
 	// Access: write only, accessed from $2000
 	struct
 	{
@@ -77,6 +81,13 @@ typedef struct
 
 	// Access: write, accessed from $4014
 	uint8_t OAMDMA;
+
+	// Internal Registers
+
+	uint16_t v; // Current VRAM address (15 bits)
+	uint16_t t; // Temporary VRAM address (15 bits)
+	uint8_t x; // Fine X scroll (3 bits)
+	bool w; // First or second write toggle
 
 	Bus2C02* bus;
 
