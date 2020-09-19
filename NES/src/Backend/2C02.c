@@ -1,10 +1,5 @@
 #include "2C02.h"
 
-typedef struct
-{
-	uint8_t r, g, b;
-} color;
-
 // Maps a 6 bit HSV color into RGB
 color PALETTE_MAP[64] =
 {

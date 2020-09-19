@@ -29,11 +29,14 @@ typedef struct
 	float scale;
 	int ascent, descent;
 
+	// Width and height of the screen
 	int width, height;
 	uint8_t page; // Page to view in memory
 
-	// Pointer to pattern table
-	uint8_t* table_data;
+	// Textures representing the pattern tables currently accessible on the PPU
+	SDL_Texture* left_nametable;
+	SDL_Texture* right_nametable;
+	
 } RendererContext;
 
 static RendererContext rc;
@@ -61,13 +64,14 @@ void Renderer_Init()
 		SDL_Emit_Error("Could not initialize SDL");
 	}
 
+	// Create a window
 	rc.win = SDL_CreateWindow("NES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
 	if (!rc.win)
 	{
 		SDL_Emit_Error("Could not create window");
 	}
 
-	// creates a renderer to render our images 
+	// Create a renderer to render our images 
 	rc.rend = SDL_CreateRenderer(rc.win, -1, SDL_RENDERER_ACCELERATED);
 	if (!rc.rend)
 	{
@@ -117,14 +121,26 @@ void Renderer_Init()
 
 	int lg;
 	stbtt_GetFontVMetrics(&rc.info, &rc.ascent, &rc.descent, &lg);
+
+	free(bitmap);
+	free(pixels);
+
+	// Create nametable textures
+	rc.left_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
+	rc.right_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
 }
 
 void Renderer_Shutdown()
 {
 	// Cleanup
+	SDL_DestroyTexture(rc.atlas);
+
+	SDL_DestroyTexture(rc.left_nametable);
+	SDL_DestroyTexture(rc.right_nametable);
+
 	SDL_DestroyRenderer(rc.rend);
 	SDL_DestroyWindow(rc.win);
-	SDL_DestroyTexture(rc.atlas);
+
 	SDL_Quit();
 
 	free(rc.fontdata);
@@ -133,11 +149,6 @@ void Renderer_Shutdown()
 void Renderer_SetPageView(uint8_t page)
 {
 	rc.page = page;
-}
-
-void Renderer_SetPatternTableData(uint8_t* table_data)
-{
-	rc.table_data = table_data;
 }
 
 void DrawMemoryView(SDL_Rect area, State6502* cpu);
@@ -287,12 +298,23 @@ void DrawProgramView(SDL_Rect area, State6502* cpu)
 	}
 }
 
-// TODO: Make this more efficient 
-void DrawPatternTable(int xoff, int yoff, int table_index)
+void DrawPatternTable(int xoff, int yoff, int side)
 {
-	uint8_t* table_data = rc.table_data + (table_index == 1 ? 0x1000 : 0);
-	SDL_Surface* surf = SDL_CreateRGBSurface(0, 128, 128, 32, 0xFF0000, 0x00FF00, 0x0000FF, 0);
-	uint32_t colors[] = { 0xFF0000,0x00FF00,0x0000FF,0x000000 };
+	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
+
+	SDL_Rect dest = { .x = xoff,.y = yoff,.w = 128,.h = 128};
+	SDL_RenderCopy(rc.rend, target, NULL, &dest);
+	
+	SDL_RenderPresent(rc.rend);
+}
+
+// TODO: Make this more efficient, currently takes ~0.8ms to run this function
+void LoadPatternTable(uint8_t* table_data, int side, uint8_t palette[4])
+{
+	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
+	uint8_t* pixels = malloc(128 * 128 * 3);
+	assert(pixels);
+
 	for (int x = 0; x < 128; x++)
 	{
 		for (int y = 0; y < 128; y++)
@@ -304,18 +326,15 @@ void DrawPatternTable(int xoff, int yoff, int table_index)
 
 			uint16_t table_addr = tile_row << 8 | tile_col << 4 | fine_y;
 
-			uint8_t color = (table_data[table_addr] & (1 << fine_x)) >> fine_x | table_data[table_addr | 1 << 3] & (1 << fine_x) >> (fine_x - 1);
-			((uint32_t*)(surf->pixels))[y * 128 + x] = colors[color];
+			uint8_t palette_index = (table_data[table_addr] & (1 << fine_x)) >> fine_x | table_data[table_addr | 1 << 3] & (1 << fine_x) >> (fine_x - 1);
+			color c = PALETTE_MAP[palette[palette_index]];
+
+			pixels[3 * (y * 128 + x)] = c.r;
+			pixels[3 * (y * 128 + x) + 1] = c.g;
+			pixels[3 * (y * 128 + x) + 2] = c.b;
 		}
 	}
+	SDL_UpdateTexture(target, NULL, pixels, 3 * 128);
 
-	SDL_Texture* texture = SDL_CreateTextureFromSurface(rc.rend, surf);
-	SDL_Rect dest = { .x = xoff,.y = yoff,.w = 128,.h = 128 };
-	SDL_RenderCopy(rc.rend, texture, NULL, &dest);
-
-	SDL_FreeSurface(surf);
-	SDL_DestroyTexture(texture);
-	
-	SDL_RenderPresent(rc.rend);
+	free(pixels);
 }
-

@@ -1,7 +1,7 @@
 #include "Benchmarks.h"
 #include "Backend/6502.h"
 
-#include <time.h>
+#include "timer.h"
 #include <stdio.h>
 
 void Run6502Benchmark()
@@ -12,14 +12,15 @@ void Run6502Benchmark()
 	cpu.PC = 0x0400; // Code segment at 0x400
 
 	int NUM = 100000000;
-	time_t start = clock();
+	timepoint beg, end;
+	GetTime(&beg);
 	for (int i = 0; i < NUM; i++)
 	{
 		clock_6502(&cpu);
 	}
-	time_t end = clock();
-	float time_seconds = (float)(end - start) / CLOCKS_PER_SEC;
-	float frequency_mHZ = (float)NUM / (time_seconds * 1000000);
+	GetTime(&end);
+	float time_micro = GetElapsedTimeMicro(&beg, &end);
+	float frequency_mHZ = (float)NUM / time_micro;
 
 	printf("[6502 BENCHMARK] Max clock speed: %.5f MHz (1.789773 MHz Required)\n", frequency_mHZ);
 }

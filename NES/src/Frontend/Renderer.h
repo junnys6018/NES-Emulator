@@ -7,7 +7,10 @@ void Renderer_Shutdown();
 
 void Renderer_Draw(State6502* cpu);
 void Renderer_SetPageView(uint8_t page);
-void DrawPatternTable(int xoff, int yoff, int table_index);
-void Renderer_SetPatternTableData(uint8_t* table_data);
+
+// side = 0: left nametable
+// side = 1: right nametable
+void DrawPatternTable(int xoff, int yoff, int side);
+void LoadPatternTable(uint8_t* table_data, int side, uint8_t palette[4]);
 
 #endif

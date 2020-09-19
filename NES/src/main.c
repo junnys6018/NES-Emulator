@@ -5,6 +5,8 @@
 #include "Backend/Cartridge.h"
 #include "Backend/Mappers/Mapper_000.h"
 
+#include "timer.h"
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -22,12 +24,21 @@ int main(int argc, char** argv)
 	//load_cartridge_from_file(&cart, "tests/nestest.nes");
 	load_cartridge_from_file(&cart, "roms/SuperMarioBros.nes");
 
-	Renderer_SetPatternTableData(((Mapper000*)(cart.mapper))->CHR);
+	uint8_t* chr = ((Mapper000*)(cart.mapper))->CHR;
 
+	uint8_t palette[4] = { 0x0F,0x16,0x1A,0x01 }; // Black, red, green, blue
 
-	DrawPatternTable(0,0,0);
-	DrawPatternTable(140, 0, 1);
+	timepoint beg, end;
 
+	GetTime(&beg);
+	LoadPatternTable(chr, 0, palette);
+	LoadPatternTable(chr + 0x1000, 1, palette);
+	GetTime(&end);
+
+	printf("time: %.3fms", GetElapsedTimeMicro(&beg, &end) / 1000);
+
+	DrawPatternTable(0, 0, 0);
+	DrawPatternTable(260, 0, 1);
 	//Bus6502 bus;
 	//State6502 cpu;
 	//load_cpu_from_file(&cpu, &bus, "tests/stack_test.bin");

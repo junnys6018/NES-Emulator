@@ -32,7 +32,8 @@ kind "ConsoleApp"
 		"vendor/stb",
 	}
 
-	defines
-	{
-		"_CRT_SECURE_NO_WARNINGS"
-	}
+	filter "system:windows"
+		defines { "_CRT_SECURE_NO_WARNINGS", "PLATFORM_WINDOWS" }
+
+	filter "system:linux"
+		defines { "PLATFORM_LINUX" }

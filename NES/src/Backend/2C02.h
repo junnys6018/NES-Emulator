@@ -6,6 +6,12 @@
 
 typedef struct
 {
+	uint8_t r, g, b;
+} color;
+extern color PALETTE_MAP[64];
+
+typedef struct
+{
 	// Registers exposed to CPU
 
 	// Access: write only, accessed from $2000
