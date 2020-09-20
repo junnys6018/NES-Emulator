@@ -5,7 +5,12 @@
 typedef uint8_t(*READ_BYTE)(void* mapper, uint16_t addr);
 typedef void(*WRITE_BYTE)(void* mapper, uint16_t addr, uint8_t data);
 
-typedef uint16_t(*NAMETABLE_MIRROR)(void* mapper, uint16_t addr);
+typedef struct
+{
+	uint16_t index : 1;
+	uint16_t addr : 10;
+} NametableIndex;
+typedef NametableIndex(*NAMETABLE_MIRROR)(void* mapper, uint16_t addr);
 
 typedef struct
 {

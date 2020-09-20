@@ -36,6 +36,9 @@ typedef struct
 	// Textures representing the pattern tables currently accessible on the PPU
 	SDL_Texture* left_nametable;
 	SDL_Texture* right_nametable;
+
+	// Texture for PPU output
+	SDL_Texture* nes_screen;
 	
 } RendererContext;
 
@@ -53,8 +56,8 @@ void TTF_Emit_Error(const char* message)
 
 void Renderer_Init()
 {
-	rc.width = 1080;
-	rc.height = 720;
+	rc.width = 1298;
+	rc.height = 740;
 
 	rc.page = 0;
 
@@ -128,6 +131,9 @@ void Renderer_Init()
 	// Create nametable textures
 	rc.left_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
 	rc.right_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
+
+	// And main screen 
+	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
 }
 
 void Renderer_Shutdown()
@@ -137,6 +143,7 @@ void Renderer_Shutdown()
 
 	SDL_DestroyTexture(rc.left_nametable);
 	SDL_DestroyTexture(rc.right_nametable);
+	SDL_DestroyTexture(rc.nes_screen);
 
 	SDL_DestroyRenderer(rc.rend);
 	SDL_DestroyWindow(rc.win);
@@ -151,12 +158,14 @@ void Renderer_SetPageView(uint8_t page)
 	rc.page = page;
 }
 
-void DrawMemoryView(SDL_Rect area, State6502* cpu);
-void DrawCPUStatus(SDL_Rect area, State6502* cpu);
-void DrawStackView(SDL_Rect area, State6502* cpu);
-void DrawProgramView(SDL_Rect area, State6502* cpu);
+void DrawMemoryView(int xoff, int yoff, State6502* cpu);
+void DrawCPUStatus(int xoff, int yoff, State6502* cpu);
+void DrawStackView(int xoff, int yoff, State6502* cpu);
+void DrawProgramView(int xoff, int yoff, State6502* cpu);
 
-void Renderer_Draw(State6502* cpu)
+void DrawPPUStatus(int xoff, int yoff, State2C02* ppu);
+
+void Renderer_Draw(State6502* cpu, State2C02* ppu)
 {
 	// Clear screen to black
 	SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 0);
@@ -165,21 +174,25 @@ void Renderer_Draw(State6502* cpu)
 	// Draw GUI
 	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 0);
 
-	SDL_Rect r_MemoryView = { .x = 10,.y = 10,.w = rc.width / 2 - 15,.h = rc.height - 20 };
+	SDL_Rect r_MemoryView = { .x = 10,.y = 10,.w = 768,.h = 720 };
 	SDL_RenderFillRect(rc.rend, &r_MemoryView);
-	DrawMemoryView(r_MemoryView, cpu);
+	DrawMemoryView(10, 10, cpu);
 
-	SDL_Rect r_CPUStatus = { .x = rc.width / 2 + 5,.y = 10,.w = rc.width / 4 - 10,.h = rc.height / 2 - 15 };
-	SDL_RenderFillRect(rc.rend, &r_CPUStatus);
-	DrawCPUStatus(r_CPUStatus, cpu);
+	SDL_Rect r_CPUView = { .x = 788,.y = 10,.w = 500,.h = 355 };
+	SDL_RenderFillRect(rc.rend, &r_CPUView);
 
-	SDL_Rect r_StackView = { .x = 3 * rc.width / 4 + 5,.y = 10,.w = rc.width / 4 - 15,.h = rc.height / 2 - 15 };
-	SDL_RenderFillRect(rc.rend, &r_StackView);
-	DrawStackView(r_StackView, cpu);
+	DrawProgramView(788, 10, cpu);
+	DrawStackView(980, 10, cpu);
+	DrawCPUStatus(1100, 10, cpu);
 
-	SDL_Rect r_ProgramDissassembly = { .x = rc.width / 2 + 5,.y = rc.height / 2 + 5,.w = rc.width / 2 - 15,.h = rc.height / 2 - 15 };
-	SDL_RenderFillRect(rc.rend, &r_ProgramDissassembly);
-	DrawProgramView(r_ProgramDissassembly, cpu);
+	SDL_Rect r_PPUView = { .x = 788,.y = 375,.w = 500,.h = 355 };
+	SDL_RenderFillRect(rc.rend, &r_PPUView);
+
+	DrawPPUStatus(788, 375, ppu);
+
+	SDL_Rect dest = { 10,10,512,480 };
+	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
+
 
 	// Swap framebuffers
 	SDL_RenderPresent(rc.rend);
@@ -215,9 +228,21 @@ void DrawChar(char glyph, SDL_Color c, int xoff, int yoff)
 	xoff += roundf(info->xadvance);
 }
 
-void DrawMemoryView(SDL_Rect area, State6502* cpu)
+int TextLen(const char* text)
 {
-	DrawText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, area.x + 10, area.y + 10);
+	float sum = 0.0f;
+	while (*text)
+	{
+		sum += rc.chardata[*text - 32].xadvance;
+		text++;
+	}
+
+	return roundf(sum);
+}
+
+void DrawMemoryView(int xoff, int yoff, State6502* cpu)
+{
+	DrawText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 10);
 
 	// Draw 2 pages of memory
 	for (int i = 0; i < 32; i++)
@@ -228,50 +253,50 @@ void DrawMemoryView(SDL_Rect area, State6502* cpu)
 		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
 			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-		DrawText(line, white, area.x + 10, area.y + 35 + i * 20);
+		DrawText(line, white, xoff + 10, yoff + 35 + i * 20);
 	}
 }
 
-void DrawCPUStatus(SDL_Rect area, State6502* cpu)
+void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 {
-	DrawText("Status: ", white, area.x + 10, area.y + 10);
+	DrawText("Status: ", white, xoff + 10, yoff + 10);
 	char flags[] = "NV-BDIZC";
 	for (int i = 0; i < 8; i++)
 	{
 		// We are drawing the flags from high bits to low bits 
 		bool set = cpu->status.reg & (1 << (7 - i));
-		DrawChar(flags[i], set ? green : red, area.x + 80 + 10 * i, area.y + 10);
+		DrawChar(flags[i], set ? green : red, xoff + TextLen("Status:  ") + 10 * i, yoff + 10);
 	}
 	// Draw Registers, PC and SP
 	char line[32];
 
 	sprintf(line, "A: $%.2X", cpu->A);
-	DrawText(line, white, area.x + 10, area.y + 30);
+	DrawText(line, white, xoff + 10, yoff + 30);
 
 	sprintf(line, "X: $%.2X", cpu->X);
-	DrawText(line, white, area.x + 10, area.y + 50);
+	DrawText(line, white, xoff + 10, yoff + 50);
 
 	sprintf(line, "Y: $%.2X", cpu->Y);
-	DrawText(line, white, area.x + 10, area.y + 70);
+	DrawText(line, white, xoff + 10, yoff + 70);
 
 	sprintf(line, "PC: $%.4X", cpu->PC);
-	DrawText(line, white, area.x + 10, area.y + 90);
+	DrawText(line, white, xoff + 10, yoff + 90);
 
 	sprintf(line, "SP: $%.4X", 0x0100 | (uint16_t)cpu->SP);
-	DrawText(line, white, area.x + 10, area.y + 110);
+	DrawText(line, white, xoff + 10, yoff + 110);
 
 	// Total cycles
-	sprintf(line, "Cycles: %i", cpu->total_cycles);
-	DrawText(line, white, area.x + 10, area.y + 130);
+	sprintf(line, "cycles: %i", cpu->total_cycles);
+	DrawText(line, white, xoff + 10, yoff + 130);
 }
 
-void DrawStackView(SDL_Rect area, State6502* cpu)
+void DrawStackView(int xoff, int yoff, State6502* cpu)
 {
-	int stack_size = min(0xFF - cpu->SP, 15);
+	int stack_size = min(0xFF - cpu->SP, 11);
 
-	DrawText("Stack:", cyan, area.x + 10, area.y + 10);
+	DrawText("Stack:", cyan, xoff + 10, yoff + 10);
 
-	// Draw up to 15 lines of the stack
+	// Draw up to 11 lines of the stack
 	for (int i = 0; i < stack_size; i++)
 	{
 		uint16_t addr = (cpu->SP + i + 1) | (1 << 8);
@@ -279,11 +304,11 @@ void DrawStackView(SDL_Rect area, State6502* cpu)
 		char line[32];
 		sprintf(line, "$%.4X %.2X", addr, val);
 
-		DrawText(line, white, area.x + 10, area.y + 30 + i * 20);
+		DrawText(line, white, xoff + 10, yoff + 30 + i * 20);
 	}
 }
 
-void DrawProgramView(SDL_Rect area, State6502* cpu)
+void DrawProgramView(int xoff, int yoff, State6502* cpu)
 {
 	uint16_t PC = cpu->PC;
 	int size;
@@ -292,10 +317,75 @@ void DrawProgramView(SDL_Rect area, State6502* cpu)
 		char* line = dissassemble(cpu, PC, &size);
 		PC += size;
 
-		DrawText(line, i == 0 ? cyan : white, area.x + 10, area.y + 10 + i * 20);
+		DrawText(line, i == 0 ? cyan : white, xoff + 10, yoff + 10 + i * 20);
 
 		free(line);
 	}
+}
+
+void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
+{
+	DrawText("PPUCTRL   ($2000): ", white, xoff + 10, yoff + 10);
+	char flags[] = "VPHBSINN";
+	for (int i = 0; i < 8; i++)
+	{
+		// We are drawing the flags from high bits to low bits 
+		bool set = ppu->PPUCTRL.reg & (1 << (7 - i));
+		DrawChar(flags[i], set ? green : red, xoff + TextLen("PPUCTRL   ($2000):  ") + 10 * i, yoff + 10);
+	}
+
+	DrawText("PPUMASK   ($2001): ", white, xoff + 10, yoff + 30);
+	strcpy(flags, "BGRsbMmG");
+	for (int i = 0; i < 8; i++)
+	{
+		bool set = ppu->PPUMASK.reg & (1 << (7 - i));
+		DrawChar(flags[i], set ? green : red, xoff + TextLen("PPUMASK   ($2001):  ") + 10 * i, yoff + 30);
+	}
+
+	DrawText("PPUSTATUS ($2002): ", white, xoff + 10, yoff + 50);
+	strcpy(flags, "VSO.....");
+	for (int i = 0; i < 8; i++)
+	{
+		bool set = ppu->PPUSTATUS.reg & (1 << (7 - i));
+		DrawChar(flags[i], set ? green : red, xoff + TextLen("PPUSTATUS ($2002):  ") + 10 * i, yoff + 50);
+	}
+
+	char line[64];
+	sprintf(line, "OAMADDR   ($2003): $%.2X", ppu->OAMADDR);
+	DrawText(line, white, xoff + 10, yoff + 70);
+
+	sprintf(line, "OAMDATA   ($2004): $%.2X", ppu->OAMDATA);
+	DrawText(line, white, xoff + 10, yoff + 90);
+
+	sprintf(line, "PPUSCROLL ($2005): $%.2X", ppu->PPUSCROLL);
+	DrawText(line, white, xoff + 10, yoff + 110);
+
+	sprintf(line, "PPUADDR   ($2006): $%.2X", ppu->PPUADDR);
+	DrawText(line, white, xoff + 10, yoff + 130);
+
+	sprintf(line, "PPUDATA   ($2007): $%.2X", ppu->PPUDATA);
+	DrawText(line, white, xoff + 10, yoff + 150);
+
+	sprintf(line, "OAMDMA    ($4014): $%.2X", ppu->OAMDMA);
+	DrawText(line, white, xoff + 10, yoff + 170);
+	
+	DrawText("Internal Registers", cyan, xoff + 10, yoff + 190);
+
+	sprintf(line, "v: $%.4X; t: $%.4X", ppu->v, ppu->t);
+	DrawText(line, white, xoff + 10, yoff + 210);
+
+	sprintf(line, "fine-x: %i", ppu->x);
+	DrawText(line, white, xoff + 10, yoff + 230);
+
+	sprintf(line, "Write Toggle (w): %i", ppu->w);
+	DrawText(line, white, xoff + 10, yoff + 250);
+
+	// TODO: ppu->cycles and ppu->scanline indicate the next clock of the ppu, we want to render the current clock
+	sprintf(line, "cycles: %i", ppu->cycles);
+	DrawText(line, white, xoff + 10, yoff + 270);
+
+	sprintf(line, "scanline: %i", ppu->scanline);
+	DrawText(line, white, xoff + 10, yoff + 290);
 }
 
 void DrawPatternTable(int xoff, int yoff, int side)
@@ -308,7 +398,7 @@ void DrawPatternTable(int xoff, int yoff, int side)
 	SDL_RenderPresent(rc.rend);
 }
 
-// TODO: Make this more efficient, currently takes ~0.8ms to run this function
+// TODO: Make this more efficient, currently takes ~0.15ms to run this function
 void LoadPatternTable(uint8_t* table_data, int side, uint8_t palette[4])
 {
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
@@ -337,4 +427,15 @@ void LoadPatternTable(uint8_t* table_data, int side, uint8_t palette[4])
 	SDL_UpdateTexture(target, NULL, pixels, 3 * 128);
 
 	free(pixels);
+}
+
+void LoadPixelDataToScreen(color* pixels)
+{
+	color* dest;
+	int pitch;
+	SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
+
+	memcpy(dest, pixels, 256 * 240 * sizeof(color));
+
+	SDL_UnlockTexture(rc.nes_screen);
 }

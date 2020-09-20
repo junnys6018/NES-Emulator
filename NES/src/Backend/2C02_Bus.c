@@ -2,7 +2,7 @@
 
 uint8_t ppu_bus_read(Bus2C02* bus, uint16_t addr)
 {
-	addr &= 0x4000; // Just in case given address is outside the PPU's addressable range
+	addr &= 0x3FFF; // Just in case given address is outside the PPU's addressable range
 
 	// Read CHR from cartridge
 	if (addr >= 0x0000 && addr < 0x2000) 
@@ -12,26 +12,25 @@ uint8_t ppu_bus_read(Bus2C02* bus, uint16_t addr)
 	// Read Nametable
 	else if (addr >= 0x2000 && addr < 0x3F00)
 	{
-		// Mirror into $2000-$3FFF address range
-		addr = 0x2000 + addr & 0x1000;
+		// Mirror into $2000-$2FFF address range
+		addr = 0x2000 + (addr & 0x0FFF);
 		Cartridge* c = bus->cartridge;
-		uint16_t mirrored_addr = c->PPUMirrorNametable(c->mapper, addr);
-		uint8_t table_index = (mirrored_addr & ~(1 << 10)) >> 1; // Get bit 10 to figure out which table to write to 
+		NametableIndex idx = c->PPUMirrorNametable(c->mapper, addr);
 
-		return bus->nametable[table_index][mirrored_addr & 0x400];
+		return bus->nametable[idx.index][idx.addr];
 	}
 	// Read Palette data
 	else if (addr >= 0x3F00 && addr < 0x4000)
 	{
 		// Mirror every 32 bytes
-		addr &= 0x20;
+		addr &= 0x1F;
 		return bus->palette[addr];
 	}
 }
 
 void ppu_bus_write(Bus2C02* bus, uint16_t addr, uint8_t data)
 {
-	addr &= 0x4000; // Just in case given address is outside the PPU's addressable range
+	addr &= 0x3FFF; // Just in case given address is outside the PPU's addressable range
 
 	// Write data to cartridge
 	if (addr >= 0x0000 && addr < 0x2000)
@@ -42,18 +41,25 @@ void ppu_bus_write(Bus2C02* bus, uint16_t addr, uint8_t data)
 	else if (addr >= 0x2000 && addr < 0x3F00)
 	{
 		// Mirror into $2000-$2FFF address range
-		addr = 0x2000 + addr & 0x1000;
+		addr = 0x2000 + (addr & 0x0FFF);
 		Cartridge* c = bus->cartridge;
-		uint16_t mirrored_addr = c->PPUMirrorNametable(c->mapper, addr);
-		uint8_t table_index = (mirrored_addr & ~(1 << 10)) >> 1; // Get bit 10 to figure out which table to write to 
+		NametableIndex idx = c->PPUMirrorNametable(c->mapper, addr);
 
-		bus->nametable[table_index][mirrored_addr & 0x400] = data;
+		bus->nametable[idx.index][idx.addr] = data;
 	}
 	// Write to Palette
 	else if (addr >= 0x3F00 && addr < 0x4000)
 	{
 		// Mirror every 32 bytes
-		addr &= 0x20;
+		addr &= 0x1F;
 		bus->palette[addr] = data;
+
+		// Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of $3F00/$3F04/$3F08/$3F0C
+		if ((addr & 0x3FE3) == 0x3F00)
+		{
+			// Flip bit	4 of addr
+			addr ^= 0x0010;
+			bus->palette[addr] = data;
+		}
 	}
 }

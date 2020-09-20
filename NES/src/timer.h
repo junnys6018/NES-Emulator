@@ -18,5 +18,6 @@ typedef struct
 
 void GetTime(timepoint* tp);
 float GetElapsedTimeMicro(timepoint* beg, timepoint* end);
+float GetElapsedTimeMilli(timepoint* beg, timepoint* end);
 
 #endif // ! TIMER_H

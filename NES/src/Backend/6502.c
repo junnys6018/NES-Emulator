@@ -92,18 +92,18 @@ int clock_6502(State6502* cpu)
 	return remaining;
 }
 
-void load_cpu_from_file(State6502* cpu, Bus6502* bus, const char* filepath)
-{
-	FILE* file = fopen(filepath, "rb");
-	fread(bus->memory, 1, 64 * 1024, file);
-	fclose(file);
+//void load_cpu_from_file(State6502* cpu, Bus6502* bus, const char* filepath)
+//{
+//	FILE* file = fopen(filepath, "rb");
+//	fread(bus->memory, 1, 64 * 1024, file);
+//	fclose(file);
+//
+//	cpu->bus = bus;
+//	power_on_6502(cpu);
+//	reset_6502(cpu);
+//}
 
-	cpu->bus = bus;
-	power_on(cpu);
-	reset(cpu);
-}
-
-void reset(State6502* cpu)
+void reset_6502(State6502* cpu)
 {
 	cpu->SP -= 3;
 	cpu->status.flags.I = 1;
@@ -119,7 +119,7 @@ void reset(State6502* cpu)
 	cpu->total_cycles = 0;
 }
 
-void power_on(State6502* cpu)
+void power_on_6502(State6502* cpu)
 {
 	cpu->status.reg = 0x34; // Interrupt disabled
 	cpu->A = 0;

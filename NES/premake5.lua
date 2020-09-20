@@ -31,6 +31,12 @@ kind "ConsoleApp"
 		"src",
 		"vendor/stb",
 	}
+	
+	filter "configurations:Debug"
+		optimize "Debug"
+
+	filter "configurations:Release"
+		optimize "On"
 
 	filter "system:windows"
 		defines { "_CRT_SECURE_NO_WARNINGS", "PLATFORM_WINDOWS" }

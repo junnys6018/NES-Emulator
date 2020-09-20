@@ -1,6 +1,7 @@
 #ifndef MAPPER_000_H
 #define MAPPER_000_H
 #include <stdint.h>
+#include "../Cartridge.h"
 
 typedef enum 
 {
@@ -29,7 +30,7 @@ uint8_t m000PPUReadCartridge(void* mapper, uint16_t addr);
 void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
 void m000PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
 
-uint16_t m000PPUMirrorNametable(void* mapper, uint16_t addr);
+NametableIndex m000PPUMirrorNametable(void* mapper, uint16_t addr);
 
 void m000Free(Mapper000* mapper);
 
