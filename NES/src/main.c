@@ -48,13 +48,13 @@ int main(int argc, char** argv)
 	uint8_t* chr = ((Mapper000*)(cart.mapper))->CHR;
 
 	// Fast forward
-	for (int i = 0; i < 82670; i++)
-	{
-		clocks++;
-		clock_2C02(&ppu);
-		if (clocks % 3 == 0)
-			clock_6502(&cpu);
-	}
+	//for (int i = 0; i < 82670; i++)
+	//{
+	//	clocks++;
+	//	clock_2C02(&ppu);
+	//	if (clocks % 3 == 0)
+	//		clock_6502(&cpu);
+	//}
 	Renderer_Draw(&cpu, &ppu);
 
 	SDL_Event event;

@@ -20,7 +20,8 @@ typedef struct
 	// to fetch its data. returns any additional cycles required to complete the instruction if any 
 	uint32_t(*operation)(State6502* cpu, bool c);
 
-	// Fetches data and loads it into cpu->operand for the instruction. Returns true if a page was crossed
+	// Calculates the location of the operand used in the instruction, call fetch() to load the operand into the CPU
+	// Returns true if a page boundary will be crossed to fetch the operand
 	bool(*adressing_mode)(State6502* cpu);
 
 	uint32_t cycles; // Number of cycles required for instruction to complete
@@ -146,6 +147,10 @@ void IRQ(State6502* cpu)
 }
 
 // 13 Adressing modes
+void fetch(State6502* cpu)
+{
+	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
+}
 
 // Accumilator addressing
 bool ACC(State6502* cpu)
@@ -156,7 +161,7 @@ bool ACC(State6502* cpu)
 // Immediate addressing
 bool IMM(State6502* cpu)
 {
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->PC++);
+	cpu->addr = cpu->PC++;
 	return false;
 }
 
@@ -164,7 +169,6 @@ bool IMM(State6502* cpu)
 bool ZP0(State6502* cpu)
 {
 	cpu->addr = cpu_bus_read(cpu->bus, cpu->PC++);
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return false;
 }
@@ -174,7 +178,6 @@ bool ZPX(State6502* cpu)
 {
 	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
 	cpu->addr = (addr_low + cpu->X) & 0x00FF;
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return false;
 }
 
@@ -183,7 +186,6 @@ bool ZPY(State6502* cpu)
 {
 	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
 	cpu->addr = (addr_low + cpu->Y) & 0x00FF;
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return false;
 }
 
@@ -193,7 +195,6 @@ bool ABS(State6502* cpu)
 	uint16_t addr_low = cpu_bus_read(cpu->bus, cpu->PC++);
 	uint16_t addr_high = cpu_bus_read(cpu->bus, cpu->PC++);
 	cpu->addr = (addr_high << 8) | addr_low;
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return false;
 }
 
@@ -204,7 +205,6 @@ bool ABX(State6502* cpu)
 	uint16_t addr_high = cpu_bus_read(cpu->bus, cpu->PC++);
 	uint16_t addr = (addr_high << 8) | addr_low;
 	cpu->addr = addr + cpu->X;
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return (addr & 0xFF00) != (cpu->addr & 0xFF00);
 }
@@ -216,7 +216,6 @@ bool ABY(State6502* cpu)
 	uint16_t addr_high = cpu_bus_read(cpu->bus, cpu->PC++);
 	uint16_t addr = (addr_high << 8) | addr_low;
 	cpu->addr = addr + cpu->Y;
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return (addr & 0xFF00) != (cpu->addr & 0xFF00);
 }
@@ -230,7 +229,7 @@ bool IMP(State6502* cpu)
 // Relative 
 bool REL(State6502* cpu)
 {
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->PC++);
+	cpu->addr = cpu->PC++;
 	return false;
 }
 
@@ -249,7 +248,7 @@ bool IND(State6502* cpu)
 	cpu->indirect_fetch |= cpu_bus_read(cpu->bus, addr);
 	
 	/* Hack: only the JMP instruction uses indirect addressing, however it could also be using absolute addressing
-	 * If absolute addressing was used JMP would set the program counter to the value of cpu->operand, however
+	 * If absolute addressing was used JMP would set the program counter to the value of cpu->addr, however
 	 * if indirect addressing was used JMP would set the program counter to the value of cpu->indirect_fetch
 	 * The problem is that JMP has no way of knowing which addressing mode was used, this is where the hack comes in,
 	 * both indirect and absolute addressing will never cross a page boundary, so they should both return false. However 
@@ -268,7 +267,6 @@ bool IZX(State6502* cpu)
 	uint16_t addr_low = cpu_bus_read(cpu->bus, zp_addr);
 	uint16_t addr_high = cpu_bus_read(cpu->bus, (zp_addr + 1) & 0x00FF);
 	cpu->addr = (addr_high << 8) | addr_low;
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 
 	return false;
 }
@@ -282,7 +280,6 @@ bool IZY(State6502* cpu)
 
 	uint16_t addr = ((addr_high << 8) | addr_low);
 	cpu->addr = addr + cpu->Y;
-	cpu->operand = cpu_bus_read(cpu->bus, cpu->addr);
 	return (addr & 0xFF00) != (cpu->addr & 0xFF00);
 }
 
@@ -291,6 +288,7 @@ bool IZY(State6502* cpu)
 // Add with carry
 uint32_t ADC(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	uint16_t result = (uint16_t)cpu->A + (uint16_t)cpu->operand + (uint16_t)cpu->status.flags.C;
 
 	// Set status flags
@@ -308,6 +306,7 @@ uint32_t ADC(State6502* cpu, bool c)
 // Logical AND
 uint32_t AND(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->A = cpu->A & cpu->operand;
 
 	// Set status flags
@@ -332,6 +331,7 @@ uint32_t aASL(State6502* cpu, bool c)
 
 uint32_t mASL(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->status.flags.C = (cpu->operand & 0x0080) == 0x0080;
 
 	cpu->operand = cpu->operand << 1;
@@ -347,6 +347,7 @@ uint32_t mASL(State6502* cpu, bool c)
 // Branch if Carry Clear
 uint32_t BCC(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.C == 0)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -360,6 +361,7 @@ uint32_t BCC(State6502* cpu, bool c)
 // Branch if Carry Set
 uint32_t BCS(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.C == 1)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -373,6 +375,7 @@ uint32_t BCS(State6502* cpu, bool c)
 // Branch if Equal (zero flag set)
 uint32_t BEQ(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.Z == 1)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -386,6 +389,7 @@ uint32_t BEQ(State6502* cpu, bool c)
 // Bit Test
 uint32_t BIT(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	uint8_t result = cpu->A & cpu->operand;
 
 	cpu->status.flags.Z = result == 0;
@@ -398,6 +402,7 @@ uint32_t BIT(State6502* cpu, bool c)
 // Branch if Minus (negative flag set)
 uint32_t BMI(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.N == 1)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -411,6 +416,7 @@ uint32_t BMI(State6502* cpu, bool c)
 // Branch if not Equal (zero flag clear)
 uint32_t BNE(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.Z == 0)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -424,6 +430,7 @@ uint32_t BNE(State6502* cpu, bool c)
 // Branch if Positive (negative flag clear)
 uint32_t BPL(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.N == 0)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -466,6 +473,7 @@ uint32_t BRK(State6502* cpu, bool c)
 // Branch if Overflow Clear
 uint32_t BVC(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.V == 0)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -479,6 +487,7 @@ uint32_t BVC(State6502* cpu, bool c)
 // Branch if Overflow Set
 uint32_t BVS(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	if (cpu->status.flags.V == 1)
 	{
 		cpu->PC += (int8_t)cpu->operand;
@@ -520,6 +529,7 @@ uint32_t CLV(State6502* cpu, bool c)
 // Compare A register
 uint32_t CMP(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->status.flags.C = (cpu->A >= cpu->operand);
 	cpu->status.flags.Z = (cpu->A == cpu->operand);
 
@@ -532,6 +542,7 @@ uint32_t CMP(State6502* cpu, bool c)
 // Compare X Register
 uint32_t CPX(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->status.flags.C = (cpu->X >= cpu->operand);
 	cpu->status.flags.Z = (cpu->X == cpu->operand);
 
@@ -544,6 +555,7 @@ uint32_t CPX(State6502* cpu, bool c)
 // Compare Y Register
 uint32_t CPY(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->status.flags.C = (cpu->Y >= cpu->operand);
 	cpu->status.flags.Z = (cpu->Y == cpu->operand);
 
@@ -556,6 +568,7 @@ uint32_t CPY(State6502* cpu, bool c)
 // Decrement Memory
 uint32_t DEC(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	uint8_t result = cpu->operand - 1;
 	cpu_bus_write(cpu->bus, cpu->addr, result);
 
@@ -587,6 +600,7 @@ uint32_t DEY(State6502* cpu, bool c)
 // Exclusive OR
 uint32_t EOR(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->A = cpu->A ^ cpu->operand;
 
 	cpu->status.flags.Z = cpu->A == 0;
@@ -598,6 +612,7 @@ uint32_t EOR(State6502* cpu, bool c)
 // Increment Memory
 uint32_t INC(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	uint8_t result = cpu->operand + 1;
 	cpu_bus_write(cpu->bus, cpu->addr, result);
 
@@ -663,6 +678,7 @@ uint32_t JSR(State6502* cpu, bool c)
 // Load Accumulator
 uint32_t LDA(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->A = cpu->operand;
 
 	cpu->status.flags.Z = cpu->A == 0;
@@ -674,6 +690,7 @@ uint32_t LDA(State6502* cpu, bool c)
 // Load X Register
 uint32_t LDX(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->X = cpu->operand;
 
 	cpu->status.flags.Z = cpu->X == 0;
@@ -685,6 +702,7 @@ uint32_t LDX(State6502* cpu, bool c)
 // Load Y Register
 uint32_t LDY(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->Y = cpu->operand;
 
 	cpu->status.flags.Z = cpu->Y == 0;
@@ -708,6 +726,7 @@ uint32_t aLSR(State6502* cpu, bool c)
 
 uint32_t mLSR(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->status.flags.C = cpu->operand & 0x0001;
 
 	cpu->operand = cpu->operand >> 1;
@@ -730,6 +749,7 @@ uint32_t NOP(State6502* cpu, bool c)
 // Logical Inclusive OR
 uint32_t ORA(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	cpu->A = cpu->A | cpu->operand;
 
 	cpu->status.flags.Z = cpu->A == 0;
@@ -795,6 +815,7 @@ uint32_t aROL(State6502* cpu, bool c)
 
 uint32_t mROL(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	uint8_t old_carry = cpu->status.flags.C;
 	cpu->status.flags.C = (cpu->operand & 0x0080) == 0x0080;
 
@@ -826,6 +847,7 @@ uint32_t aROR(State6502* cpu, bool c)
 
 uint32_t mROR(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	uint8_t old_carry = (uint8_t)cpu->status.flags.C << 7;
 	cpu->status.flags.C = cpu->operand & 0x0001;
 
@@ -875,6 +897,7 @@ uint32_t RTS(State6502* cpu, bool c)
 // Subtract with Carry
 uint32_t SBC(State6502* cpu, bool c)
 {
+	fetch(cpu);
 	uint16_t value = ((uint16_t)cpu->operand) ^ 0x00FF;
 
 	uint16_t temp = (uint16_t)cpu->A + value + (uint16_t)cpu->status.flags.C;
