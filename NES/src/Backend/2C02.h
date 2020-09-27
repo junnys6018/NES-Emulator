@@ -110,15 +110,15 @@ typedef struct
 	uint16_t t; // Temporary VRAM address (15 bits)
 	uint8_t x; // Fine X scroll (3 bits)
 	bool w; // First or second write toggle
-	bool evenframe; // 0: even; 1: odd
+	bool oddframe; // 0: even; 1: odd
 
 	uint16_t pt_shift_low, pt_shift_high; // Pattern table shift registers
 	uint8_t pa_shift_low, pa_shift_high; // Palatte attribute shift registers
 
 	uint8_t pt_latch_low, pt_latch_high, pa_latch_low, pa_latch_high; // Latches used to feed data into shift registers
-	uint8_t name_tbl_byte;
+	uint8_t name_tbl_byte; // Byte fetched from name table
 	
-	int cycles; // 341 cycles per scan ine
+	int cycles; // 341 cycles per scanline
 	int scanline; // 262 scanlines per frame
 
 	color pixels[256 * 240];

@@ -1,5 +1,9 @@
 #include "2C02.h"
 #include "Frontend/Renderer.h" // To upload pixel data to renderer
+
+#include <stdio.h> // For printf
+// TODO: Skip cycle (340,261) on odd frames
+
 // Maps a 6 bit HSV color into RGB
 color PALETTE_MAP[64] =
 {
@@ -54,12 +58,12 @@ uint16_t fineYinc(uint16_t v)
 	return v;
 }
 
-uint16_t getNameTableAddr(uint16_t v)
+uint16_t GetNameTableAddr(uint16_t v)
 {
 	return 0x2000 | (v & 0x0FFF);
 }
 
-uint16_t getAttribTableAddr(uint16_t v)
+uint16_t GetAttribTableAddr(uint16_t v)
 {
 	return 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
 }
@@ -71,26 +75,26 @@ void fetch_data_inc_v(State2C02* ppu)
 	case 1:
 	{
 		// NT byte
-		uint16_t name_tbl_addr = getNameTableAddr(ppu->v);
+		uint16_t name_tbl_addr = GetNameTableAddr(ppu->v);
 		ppu->name_tbl_byte = ppu_bus_read(ppu->bus, name_tbl_addr);
 		break;
 	}
 	case 3:
 	{
 		// AT byte
-		uint16_t attrib_tbl_addr = getAttribTableAddr(ppu->v);
+		uint16_t attrib_tbl_addr = GetAttribTableAddr(ppu->v);
 		uint8_t attrib_tbl_byte = ppu_bus_read(ppu->bus, attrib_tbl_addr);
 		uint8_t shift = 2 * ((ppu->v >> 1) & 0x01) + 4 * ((ppu->v >> 6) & 0x01);
 		uint8_t palatteID = (attrib_tbl_byte >> shift) & 0x03;
 
 		ppu->pa_latch_low = (palatteID & 0x01 ? 0xFF : 0x00);
-		ppu->pa_latch_high = (palatteID & 0x02 ? 0xFf : 0x00);
+		ppu->pa_latch_high = (palatteID & 0x02 ? 0xFF : 0x00);
 		break;
 	}
 	case 5:
 	{
 		// Low PT byte
-		int fine_y = ppu->v >> 12;
+		int fine_y = (ppu->v >> 12) & 0x7;
 		uint16_t pattern_tbl_addr = ppu->PPUCTRL.flags.B << 12 | ppu->name_tbl_byte << 4 | fine_y;
 		ppu->pt_latch_low = ppu_bus_read(ppu->bus, pattern_tbl_addr);
 		break;
@@ -98,7 +102,7 @@ void fetch_data_inc_v(State2C02* ppu)
 	case 7:
 	{
 		// High PT byte
-		int fine_y = ppu->v >> 12;
+		int fine_y = (ppu->v >> 12) & 0x7;
 		uint16_t pattern_tbl_addr = ppu->PPUCTRL.flags.B << 12 | ppu->name_tbl_byte << 4 | (1 << 3) | fine_y;
 		ppu->pt_latch_high = ppu_bus_read(ppu->bus, pattern_tbl_addr);
 		break;
@@ -119,24 +123,24 @@ void fetch_data_inc_v(State2C02* ppu)
 }
 
 // Load new bytes into shift registers
-void feedShiftRegisters(State2C02* ppu)
+void FeedShiftRegisters(State2C02* ppu)
 {
-	ppu->pt_shift_low = (ppu->pt_shift_low & 0x00FF) | ((uint16_t)ppu->pt_latch_low << 8);
-	ppu->pt_shift_high = (ppu->pt_shift_high & 0x00FF) | ((uint16_t)ppu->pt_latch_high << 8);
-	ppu->pa_shift_low = (ppu->pa_shift_low & 0x00FF) | ((uint16_t)ppu->pa_latch_low << 8);
-	ppu->pa_shift_high = (ppu->pa_shift_high & 0x00FF) | ((uint16_t)ppu->pa_latch_high << 8);
+	ppu->pt_shift_low = (ppu->pt_shift_low & 0xFF00) | (uint16_t)ppu->pt_latch_low;
+	ppu->pt_shift_high = (ppu->pt_shift_high & 0xFF00) | (uint16_t)ppu->pt_latch_high;
+	ppu->pa_shift_low = (ppu->pa_shift_low & 0xFF00) | (uint16_t)ppu->pa_latch_low;
+	ppu->pa_shift_high = (ppu->pa_shift_high & 0xFF00) | (uint16_t)ppu->pa_latch_high;
 }
 
 void clock_2C02(State2C02* ppu)
 {
-	// Pre render line
 	if (ppu->PPUMASK.flags.b)
 	{
+		// Pre render line
 		if (ppu->scanline == -1)
 		{
 			if (ppu->cycles % 8 == 1 && ((ppu->cycles >= 9 && ppu->cycles <= 257) || (ppu->cycles >= 321 && ppu->cycles <= 337)))
 			{
-				feedShiftRegisters(&ppu);
+				FeedShiftRegisters(ppu);
 			}
 
 			if (ppu->cycles == 1)
@@ -146,10 +150,10 @@ void clock_2C02(State2C02* ppu)
 
 			if (ppu->cycles >= 1 && ppu->cycles < 257)
 			{
-				ppu->pt_shift_low >>= 1;
-				ppu->pt_shift_high >>= 1;
-				ppu->pa_shift_low >>= 1;
-				ppu->pa_shift_high >>= 1;
+				ppu->pt_shift_low <<= 1;
+				ppu->pt_shift_high <<= 1;
+				ppu->pa_shift_low <<= 1;
+				ppu->pa_shift_high <<= 1;
 
 				fetch_data_inc_v(ppu);
 			}
@@ -168,17 +172,25 @@ void clock_2C02(State2C02* ppu)
 				fetch_data_inc_v(ppu);
 			}
 		}
+		// Visible Scanlines
 		if (ppu->scanline >= 0 && ppu->scanline < 240)
 		{
 			if (ppu->cycles % 8 == 1 && ((ppu->cycles >= 9 && ppu->cycles <= 257) || (ppu->cycles >= 321 && ppu->cycles <= 337)))
 			{
-				feedShiftRegisters(&ppu);
+				FeedShiftRegisters(ppu);
 			}
 
 			if (ppu->cycles >= 1 && ppu->cycles < 257)
 			{
-				uint8_t shade = ((ppu->pt_shift_low >> ppu->x) & 0x01) | ((ppu->pt_shift_high >> ppu->x) & 0x01) << 1;
-				uint8_t palatte = ((ppu->pa_shift_low >> ppu->x) & 0x01) | ((ppu->pa_shift_high >> ppu->x) & 0x01) << 1;
+				uint16_t bit_mask = 0x8000 >> ppu->x;
+
+				uint8_t pixel_low = ppu->pt_shift_low & bit_mask ? 1 : 0;
+				uint8_t pixel_high = ppu->pt_shift_high & bit_mask ? 1 : 0;
+				uint8_t shade = pixel_high << 1 | pixel_low;
+
+				uint8_t pal_low = ppu->pa_shift_low & bit_mask ? 1 : 0;
+				uint8_t pal_high = ppu->pa_shift_high & bit_mask ? 1 : 0;
+				uint8_t palatte = pal_high << 1 | pixel_low;
 
 				int index = ppu->scanline * 256 + ppu->cycles - 1;
 				if (shade == 0) // Universal background color
@@ -190,11 +202,13 @@ void clock_2C02(State2C02* ppu)
 					uint16_t palatte_addr = 0x3F00 | palatte << 2 | shade;
 					ppu->pixels[index] = PALETTE_MAP[ppu_bus_read(ppu->bus, palatte_addr) & 0x3F];
 				}
+				//color col[4] = { {0,0,0},{255,0,0,},{0,255,0,},{0,0,255} };
+				//ppu->pixels[index] = col[shade];
 
-				ppu->pt_shift_low >>= 1;
-				ppu->pt_shift_high >>= 1;
-				ppu->pa_shift_low >>= 1;
-				ppu->pa_shift_high >>= 1;
+				ppu->pt_shift_low <<= 1;
+				ppu->pt_shift_high <<= 1;
+				ppu->pa_shift_low <<= 1;
+				ppu->pa_shift_high <<= 1;
 
 				fetch_data_inc_v(ppu);
 			}
@@ -229,7 +243,7 @@ void clock_2C02(State2C02* ppu)
 		if (ppu->scanline == 261)
 		{
 			ppu->scanline = -1;
-			ppu->evenframe = !ppu->evenframe;
+			ppu->oddframe = !ppu->oddframe;
 		}
 	}
 }
@@ -245,7 +259,7 @@ void reset_2C02(State2C02* ppu)
 
 	ppu->PPUDATA = 0;
 
-	ppu->evenframe = 0;
+	ppu->oddframe = 0;
 
 	ppu->scanline = -1;
 	ppu->cycles = 0;
@@ -264,7 +278,7 @@ void power_on_2C02(State2C02* ppu)
 	ppu->PPUADDR = 0;
 	ppu->PPUDATA = 0;
 
-	ppu->evenframe = 0;
+	ppu->oddframe = 0;
 
 	ppu->scanline = -1;
 	ppu->cycles = 0;
@@ -286,8 +300,10 @@ void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
 		ppu->PPUMASK.reg = data;
 		break;
 	case 0x2003: // OAMADDR
+		printf("OAMADDR\n");
 		break;
 	case 0x2004: // OAMDATA
+		printf("OAMDATA\n");
 		break;
 	case 0x2005: // PPUSCROLL
 		ppu->PPUSCROLL = data;
@@ -353,6 +369,7 @@ uint8_t read_ppu(State2C02* ppu, uint16_t addr)
 		ppu->PPUSTATUS.flags.V = 0;
 		return ret;
 	case 0x2004: // OAMDATA
+		printf("OAMDATA\n");
 		break;
 	case 0x2007: // PPUDATA
 	{
@@ -366,12 +383,12 @@ uint8_t read_ppu(State2C02* ppu, uint16_t addr)
 		else if (ppu->v >= 0x3F00 && ppu->v < 0x4000)
 		{
 			// Mirrored nametable data is stored in internal buffer
-			ppu->PPUDATA = ppu_bus_read(ppu->bus, 0x2000 | ppu->v & 0x03FF);
+			ppu->PPUDATA = ppu_bus_read(ppu->bus, 0x2000 | ppu->v & 0x0FFF);
 			uint8_t ret = ppu_bus_read(ppu->bus, ppu->v);
 			ppu->v += (ppu->PPUCTRL.flags.I ? 32 : 1);
 			return ret;
 		}
-
+		break;
 	}
 	}
 

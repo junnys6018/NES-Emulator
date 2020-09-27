@@ -9,11 +9,11 @@ void Renderer_Shutdown();
 void Renderer_Draw(State6502* cpu, State2C02* ppu);
 void Renderer_SetPageView(uint8_t page);
 
-// side = 0: left nametable
-// side = 1: right nametable
-void DrawPatternTable(int xoff, int yoff, int side);
-void LoadPatternTable(uint8_t* table_data, int side, uint8_t palette[4]);
+// side = 0: left nametable; side = 1: right nametable
+void LoadPatternTable(uint8_t* table_data, int side, int palette_index);
 
 void LoadPixelDataToScreen(color* pixels);
+
+void DrawNametable(State2C02* ppu);
 
 #endif

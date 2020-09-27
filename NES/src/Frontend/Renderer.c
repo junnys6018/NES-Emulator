@@ -40,6 +40,8 @@ typedef struct
 	// Texture for PPU output
 	SDL_Texture* nes_screen;
 	
+	// Pointer to the PPU's palette data
+	uint8_t* palette;
 } RendererContext;
 
 static RendererContext rc;
@@ -54,7 +56,7 @@ void TTF_Emit_Error(const char* message)
 	printf("[FONT ERROR]: %s\n", message);
 }
 
-void Renderer_Init()
+void Renderer_Init(uint8_t* palette)
 {
 	rc.width = 1298;
 	rc.height = 740;
@@ -134,6 +136,8 @@ void Renderer_Init()
 
 	// And main screen 
 	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+
+	rc.palette = palette;
 }
 
 void Renderer_Shutdown()
@@ -165,6 +169,9 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu);
 
 void DrawPPUStatus(int xoff, int yoff, State2C02* ppu);
 
+void DrawPatternTable(int xoff, int yoff, int side);
+void DrawPaletteData(int xoff, int yoff);
+
 void Renderer_Draw(State6502* cpu, State2C02* ppu)
 {
 	// Clear screen to black
@@ -176,7 +183,7 @@ void Renderer_Draw(State6502* cpu, State2C02* ppu)
 
 	SDL_Rect r_MemoryView = { .x = 10,.y = 10,.w = 768,.h = 720 };
 	SDL_RenderFillRect(rc.rend, &r_MemoryView);
-	DrawMemoryView(10, 10, cpu);
+	//DrawMemoryView(10, 10, cpu);
 
 	SDL_Rect r_CPUView = { .x = 788,.y = 10,.w = 500,.h = 355 };
 	SDL_RenderFillRect(rc.rend, &r_CPUView);
@@ -193,6 +200,11 @@ void Renderer_Draw(State6502* cpu, State2C02* ppu)
 	SDL_Rect dest = { 10,10,512,480 };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
 
+
+	DrawPatternTable(10, 500, 0);
+	DrawPatternTable(150, 500, 1);
+
+	DrawPaletteData(160 + 128, 500);
 
 	// Swap framebuffers
 	SDL_RenderPresent(rc.rend);
@@ -398,9 +410,47 @@ void DrawPatternTable(int xoff, int yoff, int side)
 	SDL_RenderPresent(rc.rend);
 }
 
-// TODO: Make this more efficient, currently takes ~0.15ms to run this function
-void LoadPatternTable(uint8_t* table_data, int side, uint8_t palette[4])
+void DrawPaletteData(int xoff, int yoff)
 {
+	SDL_Rect rect = { .x = xoff,.y = yoff,.w = 8,.h = 8 };
+	color c;
+	for (int y = 0; y < 8; y++)
+	{
+		rect.x = xoff;
+		for (int x = 0; x < 4; x++)
+		{
+			// Draw background color
+			if (x == 0)
+			{
+				c = PALETTE_MAP[rc.palette[0] & 0x3F];
+			}
+			else
+			{
+				c = PALETTE_MAP[rc.palette[y * 4 + x] & 0x3F];
+			}
+
+
+			SDL_SetRenderDrawColor(rc.rend, c.r, c.g, c.b, 255);
+			SDL_RenderFillRect(rc.rend, &rect);
+			rect.x += 8;
+		}
+		rect.y += 14;
+	}
+}
+
+// TODO: Make this more efficient, currently takes ~0.15ms to run this function
+// Palette index can be 0..7
+void LoadPatternTable(uint8_t* table_data, int side, int palette_index)
+{
+	assert(palette_index >= 0 && palette_index < 8);
+	uint8_t palette[4];
+	palette[0] = rc.palette[0];
+	for (int i = 1; i < 4; i++)
+	{
+		palette[i] = rc.palette[palette_index * 4 + i];
+	}
+
+
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
 	uint8_t* pixels = malloc(128 * 128 * 3);
 	assert(pixels);
@@ -436,6 +486,49 @@ void LoadPixelDataToScreen(color* pixels)
 	SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
 
 	memcpy(dest, pixels, 256 * 240 * sizeof(color));
+
+	SDL_UnlockTexture(rc.nes_screen);
+}
+
+// For debugging
+void DrawNametable(State2C02* ppu)
+{
+	color* pixels;
+	color col[4] = { {0,0,0},{255,0,0,},{0,0,0,},{255,0,0} };
+	int pitch;
+	SDL_LockTexture(rc.nes_screen, NULL, &pixels, &pitch);
+
+	memset(pixels, 255, 256 * 240 * 3);
+
+	for (int x = 0; x < 32; x++)
+	{
+		for (int y = 0; y < 30; y++)
+		{
+			uint16_t nt_addr = 0x2000 | (y * 32 + x);
+			uint8_t nt_byte = ppu_bus_read(ppu->bus, nt_addr);
+			// Draw 8x8 tile
+			for (int fine_y = 0; fine_y < 8; fine_y++)
+			{
+				uint16_t pt_addr = (uint16_t)(nt_byte << 4) | fine_y;
+				uint8_t pt_byte_low = ppu_bus_read(ppu->bus, pt_addr);
+				uint8_t pt_byte_high = ppu_bus_read(ppu->bus, pt_addr | 1 << 3);
+				for (int fine_x = 0; fine_x < 8; fine_x++)
+				{
+					int yoff = y * 8 + fine_y;
+					int xoff = x * 8 + 7 - fine_x;
+					int index = yoff * 256 + xoff;
+					int shade = (pt_byte_low & (1 << fine_x)) >> fine_x | pt_byte_high & (1 << fine_x) >> (fine_x - 1);
+					pixels[index] = col[shade];
+					if (fine_x == 0 || fine_y == 0)
+					{
+						pixels[index].r = 100;
+						pixels[index].g = 100;
+						pixels[index].b = 100;
+					}
+				}
+			}
+		}
+	}
 
 	SDL_UnlockTexture(rc.nes_screen);
 }

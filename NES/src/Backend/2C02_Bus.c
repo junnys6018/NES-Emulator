@@ -55,10 +55,10 @@ void ppu_bus_write(Bus2C02* bus, uint16_t addr, uint8_t data)
 		bus->palette[addr] = data;
 
 		// Addresses $3F10/$3F14/$3F18/$3F1C are mirrors of $3F00/$3F04/$3F08/$3F0C
-		if ((addr & 0x3FE3) == 0x3F00)
+		if ((addr & 0x3) == 0x00)
 		{
 			// Flip bit	4 of addr
-			addr ^= 0x0010;
+			addr ^= 0x10;
 			bus->palette[addr] = data;
 		}
 	}
