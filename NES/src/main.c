@@ -15,10 +15,16 @@ int main(int argc, char** argv)
 {
 
 	Cartridge cart;
-	load_cartridge_from_file(&cart, "tests/nestest.nes");
+	//load_cartridge_from_file(&cart, "tests/clear_color_test.nes");
+	//load_cartridge_from_file(&cart, "tests/4.vbl_clear_timing.nes"); // failed
+	load_cartridge_from_file(&cart, "tests/1.frame_basics.nes");
+	//load_cartridge_from_file(&cart, "tests/nmi_sync.nes");
+	//load_cartridge_from_file(&cart, "tests/palette.nes");
+	//load_cartridge_from_file(&cart, "tests/nestest.nes");
+	//load_cartridge_from_file(&cart, "tests/scanline.nes");
+
 	//load_cartridge_from_file(&cart, "roms/DonkeyKong.nes");
 	//load_cartridge_from_file(&cart, "roms/SuperMarioBros.nes");
-	//load_cartridge_from_file(&cart, "tests/clear_color_test.nes");
 
 	Bus6502 cpu_bus;
 	Bus2C02 ppu_bus;
@@ -47,14 +53,6 @@ int main(int argc, char** argv)
 
 	uint8_t* chr = ((Mapper000*)(cart.mapper))->CHR;
 
-	// Fast forward
-	//for (int i = 0; i < 82670; i++)
-	//{
-	//	clocks++;
-	//	clock_2C02(&ppu);
-	//	if (clocks % 3 == 0)
-	//		clock_6502(&cpu);
-	//}
 	Renderer_Draw(&cpu, &ppu);
 
 	SDL_Event event;
@@ -81,7 +79,6 @@ int main(int argc, char** argv)
 				{
 					LoadPatternTable(chr, 0, 0);
 					LoadPatternTable(chr + 0x1000, 1, 0);
-					//DrawNametable(&ppu);
 					do
 					{
 						clocks++;

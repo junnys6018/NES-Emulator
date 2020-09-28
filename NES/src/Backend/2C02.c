@@ -3,6 +3,7 @@
 
 #include <stdio.h> // For printf
 // TODO: Skip cycle (340,261) on odd frames
+// TODO: Implment color emphasis and grey scale
 
 // Maps a 6 bit HSV color into RGB
 color PALETTE_MAP[64] =
@@ -143,11 +144,6 @@ void clock_2C02(State2C02* ppu)
 				FeedShiftRegisters(ppu);
 			}
 
-			if (ppu->cycles == 1)
-			{
-				ppu->PPUSTATUS.flags.V = 0;
-			}
-
 			if (ppu->cycles >= 1 && ppu->cycles < 257)
 			{
 				ppu->pt_shift_low <<= 1;
@@ -173,7 +169,7 @@ void clock_2C02(State2C02* ppu)
 			}
 		}
 		// Visible Scanlines
-		if (ppu->scanline >= 0 && ppu->scanline < 240)
+		else if (ppu->scanline >= 0 && ppu->scanline < 240)
 		{
 			if (ppu->cycles % 8 == 1 && ((ppu->cycles >= 9 && ppu->cycles <= 257) || (ppu->cycles >= 321 && ppu->cycles <= 337)))
 			{
@@ -202,8 +198,6 @@ void clock_2C02(State2C02* ppu)
 					uint16_t palatte_addr = 0x3F00 | palatte << 2 | shade;
 					ppu->pixels[index] = PALETTE_MAP[ppu_bus_read(ppu->bus, palatte_addr) & 0x3F];
 				}
-				//color col[4] = { {0,0,0},{255,0,0,},{0,255,0,},{0,0,255} };
-				//ppu->pixels[index] = col[shade];
 
 				ppu->pt_shift_low <<= 1;
 				ppu->pt_shift_high <<= 1;
@@ -223,9 +217,19 @@ void clock_2C02(State2C02* ppu)
 			}
 		}
 	}
+	//static int count = 0;
+	//count++;
+
+	if (ppu->scanline == -1 && ppu->cycles == 1)
+	{
+		//printf("Count: %i\n", count);
+		ppu->PPUSTATUS.flags.V = 0;
+	}
 
 	if (ppu->scanline == 241 && ppu->cycles == 1)
 	{
+		//count = 0;
+		//printf("Reset count\n");
 		ppu->PPUSTATUS.flags.V = 1;
 		if (ppu->PPUCTRL.flags.V)
 		{
@@ -236,11 +240,18 @@ void clock_2C02(State2C02* ppu)
 	}
 
 	ppu->cycles++;
-	if (ppu->cycles == 341)
+
+	// Skip a cycle on odd frames
+	if (ppu->cycles == 340 && ppu->scanline == -1 && ppu->oddframe)
+	{
+		ppu->cycles++;
+	}
+
+	if (ppu->cycles >= 341)
 	{
 		ppu->cycles = 0;
 		ppu->scanline++;
-		if (ppu->scanline == 261)
+		if (ppu->scanline >= 261)
 		{
 			ppu->scanline = -1;
 			ppu->oddframe = !ppu->oddframe;
@@ -350,7 +361,6 @@ void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
 		ppu->w = !ppu->w;
 		break;
 	case 0x2007: // PPUDATA
-		ppu->PPUDATA = data;
 		ppu_bus_write(ppu->bus, ppu->v, data);
 		ppu->v += (ppu->PPUCTRL.flags.I ? 32 : 1);
 		break;

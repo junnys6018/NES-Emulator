@@ -1,5 +1,8 @@
 #include "6502_Bus.h"
 #include "2C02.h"
+#include <stdio.h> // For printf
+
+// TODO: give cartridge first priority over writes and reads
 
 void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 {
@@ -19,7 +22,10 @@ void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 	// NES APU and I/O registers
 	else if (addr >= 0x4000 && addr < 0x4018)
 	{
-
+		if (addr == 0x4014)
+		{
+			printf("OAMDMA\n");
+		}
 	}
 	// APU and I/O functionality that is normally disabled
 	else if (addr >= 0x4018 && addr < 0x4020)
@@ -52,7 +58,10 @@ uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 	// NES APU and I/O registers
 	else if (addr >= 0x4000 && addr < 0x4018)
 	{
-
+		if (addr == 0x4014)
+		{
+			printf("OAMDMA\n");
+		}
 	}
 	// APU and I/O functionality that is normally disabled
 	else if (addr >= 0x4018 && addr < 0x4020)

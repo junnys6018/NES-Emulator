@@ -79,7 +79,7 @@ typedef struct
 			/*
 			 * Vertical blank has started (0: not in vblank; 1: in vblank).
 			 * Set at dot 1 of line 241 (the line *after* the post-render line);
-			 * cleared after reading $2002and at dot 1 of the pre-render line.
+			 * cleared after reading $2002 and at dot 1 of the pre-render line.
 			 */
 			uint8_t V : 1;
 		} flags;

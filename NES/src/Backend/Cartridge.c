@@ -55,6 +55,7 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 		switch (mapperID)
 		{
 		case 0:
+		{
 			cart->CPUReadCartridge = m000CPUReadCartridge;
 			cart->PPUReadCartridge = m000PPUReadCartridge;
 
@@ -99,6 +100,7 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 			map->mirrorMode = header.MirrorType == 0 ? HORIZONTAL : VERTICAL;
 
 			break;
+		}
 		default:
 			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);
 			break;

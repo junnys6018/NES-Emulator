@@ -3,13 +3,15 @@
 #include <SDL.h> 
 #include <stb_rect_pack.h>
 #include <stb_truetype.h>
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <math.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
+
+#include "timer.h"
 
 static SDL_Color white = { 255,255,255 };
 static SDL_Color cyan = { 78,201,176 };
@@ -70,7 +72,7 @@ void Renderer_Init(uint8_t* palette)
 	}
 
 	// Create a window
-	rc.win = SDL_CreateWindow("NES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
+	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
 	if (!rc.win)
 	{
 		SDL_Emit_Error("Could not create window");
@@ -110,8 +112,6 @@ void Renderer_Init(uint8_t* palette)
 	stbtt_PackFontRange(&spc, rc.fontdata, 0, 15, 32, 96, rc.chardata);
 
 	stbtt_PackEnd(&spc);
-
-	stbi_write_png("out.png", 512, 512, 1, bitmap, 512);
 
 	// Convert bitmap into SDL texture
 	uint32_t* pixels = malloc(512 * 512 * sizeof(uint32_t));
@@ -169,11 +169,13 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu);
 
 void DrawPPUStatus(int xoff, int yoff, State2C02* ppu);
 
-void DrawPatternTable(int xoff, int yoff, int side);
+void DrawPatternTable(int xoff, int yoff, float scale, int side);
 void DrawPaletteData(int xoff, int yoff);
 
 void Renderer_Draw(State6502* cpu, State2C02* ppu)
 {
+	//timepoint beg, end;
+	//GetTime(&beg);
 	// Clear screen to black
 	SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 0);
 	SDL_RenderClear(rc.rend);
@@ -181,36 +183,35 @@ void Renderer_Draw(State6502* cpu, State2C02* ppu)
 	// Draw GUI
 	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 0);
 
-	SDL_Rect r_MemoryView = { .x = 10,.y = 10,.w = 768,.h = 720 };
-	SDL_RenderFillRect(rc.rend, &r_MemoryView);
-	//DrawMemoryView(10, 10, cpu);
+	SDL_Rect dest = { 10,10,768,720 };
+	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
 
-	SDL_Rect r_CPUView = { .x = 788,.y = 10,.w = 500,.h = 355 };
-	SDL_RenderFillRect(rc.rend, &r_CPUView);
+	SDL_Rect r_DebugView = { .x = 788,.y = 10,.w = 500,.h = 720 };
+	SDL_RenderFillRect(rc.rend, &r_DebugView);
 
 	DrawProgramView(788, 10, cpu);
 	DrawStackView(980, 10, cpu);
 	DrawCPUStatus(1100, 10, cpu);
 
-	SDL_Rect r_PPUView = { .x = 788,.y = 375,.w = 500,.h = 355 };
-	SDL_RenderFillRect(rc.rend, &r_PPUView);
-
 	DrawPPUStatus(788, 375, ppu);
 
-	SDL_Rect dest = { 10,10,512,480 };
-	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
+	int x = 798;
+	int y = 190;
+	float scale = 1.45;
 
-
-	DrawPatternTable(10, 500, 0);
-	DrawPatternTable(150, 500, 1);
-
-	DrawPaletteData(160 + 128, 500);
+	DrawPatternTable(x, y, scale, 0);
+	DrawPatternTable(x + 128 * scale + 5, y, scale, 1);
+	DrawPaletteData(x + 256 * scale + 10, y);
 
 	// Swap framebuffers
 	SDL_RenderPresent(rc.rend);
+
+	//GetTime(&end);
+	//float elapsed = GetElapsedTimeMilli(&beg, &end);
+	//printf("Took %.3fms\n", elapsed);
 }
 
-void DrawText(const char* text, SDL_Color c, int xoff, int yoff)
+void RenderText(const char* text, SDL_Color c, int xoff, int yoff)
 {
 	yoff += roundf(rc.ascent * rc.scale);
 	while (*text)
@@ -227,7 +228,7 @@ void DrawText(const char* text, SDL_Color c, int xoff, int yoff)
 	}
 }
 
-void DrawChar(char glyph, SDL_Color c, int xoff, int yoff)
+void RenderChar(char glyph, SDL_Color c, int xoff, int yoff)
 {
 	yoff += roundf(rc.ascent * rc.scale);
 
@@ -254,7 +255,7 @@ int TextLen(const char* text)
 
 void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 {
-	DrawText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 10);
+	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 10);
 
 	// Draw 2 pages of memory
 	for (int i = 0; i < 32; i++)
@@ -265,50 +266,50 @@ void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
 			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-		DrawText(line, white, xoff + 10, yoff + 35 + i * 20);
+		RenderText(line, white, xoff + 10, yoff + 35 + i * 20);
 	}
 }
 
 void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 {
-	DrawText("Status: ", white, xoff + 10, yoff + 10);
+	RenderText("Status: ", white, xoff + 10, yoff + 10);
 	char flags[] = "NV-BDIZC";
 	for (int i = 0; i < 8; i++)
 	{
 		// We are drawing the flags from high bits to low bits 
 		bool set = cpu->status.reg & (1 << (7 - i));
-		DrawChar(flags[i], set ? green : red, xoff + TextLen("Status:  ") + 10 * i, yoff + 10);
+		RenderChar(flags[i], set ? green : red, xoff + TextLen("Status:  ") + 10 * i, yoff + 10);
 	}
 	// Draw Registers, PC and SP
 	char line[32];
 
 	sprintf(line, "A: $%.2X", cpu->A);
-	DrawText(line, white, xoff + 10, yoff + 30);
+	RenderText(line, white, xoff + 10, yoff + 30);
 
 	sprintf(line, "X: $%.2X", cpu->X);
-	DrawText(line, white, xoff + 10, yoff + 50);
+	RenderText(line, white, xoff + 10, yoff + 50);
 
 	sprintf(line, "Y: $%.2X", cpu->Y);
-	DrawText(line, white, xoff + 10, yoff + 70);
+	RenderText(line, white, xoff + 10, yoff + 70);
 
 	sprintf(line, "PC: $%.4X", cpu->PC);
-	DrawText(line, white, xoff + 10, yoff + 90);
+	RenderText(line, white, xoff + 10, yoff + 90);
 
 	sprintf(line, "SP: $%.4X", 0x0100 | (uint16_t)cpu->SP);
-	DrawText(line, white, xoff + 10, yoff + 110);
+	RenderText(line, white, xoff + 10, yoff + 110);
 
 	// Total cycles
 	sprintf(line, "cycles: %i", cpu->total_cycles);
-	DrawText(line, white, xoff + 10, yoff + 130);
+	RenderText(line, white, xoff + 10, yoff + 130);
 }
 
 void DrawStackView(int xoff, int yoff, State6502* cpu)
 {
-	int stack_size = min(0xFF - cpu->SP, 11);
+	int stack_size = min(0xFF - cpu->SP, 7);
 
-	DrawText("Stack:", cyan, xoff + 10, yoff + 10);
+	RenderText("Stack:", cyan, xoff + 10, yoff + 10);
 
-	// Draw up to 11 lines of the stack
+	// Draw up to 7 lines of the stack
 	for (int i = 0; i < stack_size; i++)
 	{
 		uint16_t addr = (cpu->SP + i + 1) | (1 << 8);
@@ -316,7 +317,7 @@ void DrawStackView(int xoff, int yoff, State6502* cpu)
 		char line[32];
 		sprintf(line, "$%.4X %.2X", addr, val);
 
-		DrawText(line, white, xoff + 10, yoff + 30 + i * 20);
+		RenderText(line, white, xoff + 10, yoff + 30 + i * 20);
 	}
 }
 
@@ -324,12 +325,12 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu)
 {
 	uint16_t PC = cpu->PC;
 	int size;
-	for (int i = 0; i < 12; i++)
+	for (int i = 0; i < 8; i++)
 	{
 		char* line = dissassemble(cpu, PC, &size);
 		PC += size;
 
-		DrawText(line, i == 0 ? cyan : white, xoff + 10, yoff + 10 + i * 20);
+		RenderText(line, i == 0 ? cyan : white, xoff + 10, yoff + 10 + i * 20);
 
 		free(line);
 	}
@@ -337,74 +338,74 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu)
 
 void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 {
-	DrawText("PPUCTRL   ($2000): ", white, xoff + 10, yoff + 10);
+	RenderText("PPUCTRL   ($2000): ", white, xoff + 10, yoff + 10);
 	char flags[] = "VPHBSINN";
 	for (int i = 0; i < 8; i++)
 	{
 		// We are drawing the flags from high bits to low bits 
 		bool set = ppu->PPUCTRL.reg & (1 << (7 - i));
-		DrawChar(flags[i], set ? green : red, xoff + TextLen("PPUCTRL   ($2000):  ") + 10 * i, yoff + 10);
+		RenderChar(flags[i], set ? green : red, xoff + TextLen("PPUCTRL   ($2000):  ") + 10 * i, yoff + 10);
 	}
 
-	DrawText("PPUMASK   ($2001): ", white, xoff + 10, yoff + 30);
+	RenderText("PPUMASK   ($2001): ", white, xoff + 10, yoff + 30);
 	strcpy(flags, "BGRsbMmG");
 	for (int i = 0; i < 8; i++)
 	{
 		bool set = ppu->PPUMASK.reg & (1 << (7 - i));
-		DrawChar(flags[i], set ? green : red, xoff + TextLen("PPUMASK   ($2001):  ") + 10 * i, yoff + 30);
+		RenderChar(flags[i], set ? green : red, xoff + TextLen("PPUMASK   ($2001):  ") + 10 * i, yoff + 30);
 	}
 
-	DrawText("PPUSTATUS ($2002): ", white, xoff + 10, yoff + 50);
+	RenderText("PPUSTATUS ($2002): ", white, xoff + 10, yoff + 50);
 	strcpy(flags, "VSO.....");
 	for (int i = 0; i < 8; i++)
 	{
 		bool set = ppu->PPUSTATUS.reg & (1 << (7 - i));
-		DrawChar(flags[i], set ? green : red, xoff + TextLen("PPUSTATUS ($2002):  ") + 10 * i, yoff + 50);
+		RenderChar(flags[i], set ? green : red, xoff + TextLen("PPUSTATUS ($2002):  ") + 10 * i, yoff + 50);
 	}
 
 	char line[64];
 	sprintf(line, "OAMADDR   ($2003): $%.2X", ppu->OAMADDR);
-	DrawText(line, white, xoff + 10, yoff + 70);
+	RenderText(line, white, xoff + 10, yoff + 70);
 
 	sprintf(line, "OAMDATA   ($2004): $%.2X", ppu->OAMDATA);
-	DrawText(line, white, xoff + 10, yoff + 90);
+	RenderText(line, white, xoff + 10, yoff + 90);
 
 	sprintf(line, "PPUSCROLL ($2005): $%.2X", ppu->PPUSCROLL);
-	DrawText(line, white, xoff + 10, yoff + 110);
+	RenderText(line, white, xoff + 10, yoff + 110);
 
 	sprintf(line, "PPUADDR   ($2006): $%.2X", ppu->PPUADDR);
-	DrawText(line, white, xoff + 10, yoff + 130);
+	RenderText(line, white, xoff + 10, yoff + 130);
 
 	sprintf(line, "PPUDATA   ($2007): $%.2X", ppu->PPUDATA);
-	DrawText(line, white, xoff + 10, yoff + 150);
+	RenderText(line, white, xoff + 10, yoff + 150);
 
 	sprintf(line, "OAMDMA    ($4014): $%.2X", ppu->OAMDMA);
-	DrawText(line, white, xoff + 10, yoff + 170);
+	RenderText(line, white, xoff + 10, yoff + 170);
 	
-	DrawText("Internal Registers", cyan, xoff + 10, yoff + 190);
+	RenderText("Internal Registers", cyan, xoff + 10, yoff + 190);
 
 	sprintf(line, "v: $%.4X; t: $%.4X", ppu->v, ppu->t);
-	DrawText(line, white, xoff + 10, yoff + 210);
+	RenderText(line, white, xoff + 10, yoff + 210);
 
 	sprintf(line, "fine-x: %i", ppu->x);
-	DrawText(line, white, xoff + 10, yoff + 230);
+	RenderText(line, white, xoff + 10, yoff + 230);
 
 	sprintf(line, "Write Toggle (w): %i", ppu->w);
-	DrawText(line, white, xoff + 10, yoff + 250);
+	RenderText(line, white, xoff + 10, yoff + 250);
 
 	// TODO: ppu->cycles and ppu->scanline indicate the next clock of the ppu, we want to render the current clock
 	sprintf(line, "cycles: %i", ppu->cycles);
-	DrawText(line, white, xoff + 10, yoff + 270);
+	RenderText(line, white, xoff + 10, yoff + 270);
 
 	sprintf(line, "scanline: %i", ppu->scanline);
-	DrawText(line, white, xoff + 10, yoff + 290);
+	RenderText(line, white, xoff + 10, yoff + 290);
 }
 
-void DrawPatternTable(int xoff, int yoff, int side)
+void DrawPatternTable(int xoff, int yoff, float scale, int side)
 {
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
 
-	SDL_Rect dest = { .x = xoff,.y = yoff,.w = 128,.h = 128};
+	SDL_Rect dest = { .x = xoff,.y = yoff,.w = 128 * scale,.h = 128 * scale };
 	SDL_RenderCopy(rc.rend, target, NULL, &dest);
 	
 	SDL_RenderPresent(rc.rend);
@@ -413,23 +414,12 @@ void DrawPatternTable(int xoff, int yoff, int side)
 void DrawPaletteData(int xoff, int yoff)
 {
 	SDL_Rect rect = { .x = xoff,.y = yoff,.w = 8,.h = 8 };
-	color c;
 	for (int y = 0; y < 8; y++)
 	{
 		rect.x = xoff;
 		for (int x = 0; x < 4; x++)
 		{
-			// Draw background color
-			if (x == 0)
-			{
-				c = PALETTE_MAP[rc.palette[0] & 0x3F];
-			}
-			else
-			{
-				c = PALETTE_MAP[rc.palette[y * 4 + x] & 0x3F];
-			}
-
-
+			color c = PALETTE_MAP[rc.palette[y * 4 + x] & 0x3F];
 			SDL_SetRenderDrawColor(rc.rend, c.r, c.g, c.b, 255);
 			SDL_RenderFillRect(rc.rend, &rect);
 			rect.x += 8;

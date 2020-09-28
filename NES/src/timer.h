@@ -3,7 +3,7 @@
 
 #ifdef PLATFORM_WINDOWS
 // This struct should be treated as opaque.
-// I've exposed its definition so users can create timepoints themselves
+// I've exposed its definition so users can create timepoints on the stack
 #include <Windows.h>
 typedef struct
 {
@@ -14,7 +14,6 @@ typedef struct
 #ifdef PLATFORM_LINUX
 // TODO
 #endif
-
 
 void GetTime(timepoint* tp);
 float GetElapsedTimeMicro(timepoint* beg, timepoint* end);
