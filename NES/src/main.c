@@ -1,8 +1,10 @@
 #include "Frontend/Renderer.h"
 #include "event_filter_function.h"
-#include "Backend/Cartridge.h"
 #include "Backend/Mappers/Mapper_000.h"
+#include "Backend/nes.h"
+
 #include "test.h"
+#include "Benchmarks.h"
 
 #include "timer.h"
 
@@ -16,49 +18,24 @@ int main(int argc, char** argv)
 {
 	RendererInit();
 
-	Run_All_Tests();
-
-	Cartridge cart;
-	//load_cartridge_from_file(&cart, "tests/roms/clear_color_test.nes");
-	//load_cartridge_from_file(&cart, "tests/roms/4.vbl_clear_timing.nes"); // failed
-	//load_cartridge_from_file(&cart, "tests/roms/1.frame_basics.nes");
-	//load_cartridge_from_file(&cart, "tests/roms/nmi_sync.nes");
-	//load_cartridge_from_file(&cart, "tests/roms/palette.nes");
-	load_cartridge_from_file(&cart, "tests/roms/nestest.nes");
-	//load_cartridge_from_file(&cart, "tests/roms/scanline.nes");
-
-	//load_cartridge_from_file(&cart, "roms/DonkeyKong.nes");
-	//load_cartridge_from_file(&cart, "roms/SuperMarioBros.nes");
-
-	// TODO: put this into a function
-	Bus6502 cpu_bus;
-	Bus2C02 ppu_bus;
-	State6502 cpu;
-	State2C02 ppu;
-
-	cpu_bus.cartridge = &cart;
-	cpu_bus.ppu = &ppu;
-
-	ppu_bus.cartridge = &cart;
+	RunAllTests();
+	RunAllBenchmarks();
 	
-	cpu.bus = &cpu_bus;
+	Nes nes;
+	
+	//NESInit(&nes, "roms/SuperMarioBros.nes");
+	NESInit(&nes, "tests/roms/nestest.nes");
 
-	ppu.bus = &ppu_bus;
-	ppu.cpu = &cpu;
+	RendererBindNES(&nes);
 
-	power_on_6502(&cpu);
-	reset_6502(&cpu);
+	uint8_t* chr = ((Mapper000*)(nes.cart.mapper))->CHR;
+	RendererSetPatternTable(chr, 0);
+	RendererSetPatternTable(chr + 0x1000, 1);
 
-	power_on_2C02(&ppu);
-	reset_2C02(&ppu);
+	RendererDraw();
 
-	long long clocks = 0;
-
-	RendererSetPaletteData(ppu_bus.palette);
-
-	uint8_t* chr = ((Mapper000*)(cart.mapper))->CHR;
-
-	RendererDraw(&cpu, &ppu);
+	EventTypeList list = { .size = 2,.event_types = {SDL_KEYDOWN, SDL_QUIT} };
+	SDL_SetEventFilter(event_whitelist, &list);
 
 	SDL_Event event;
 	while (true)
@@ -67,39 +44,19 @@ int main(int argc, char** argv)
 		{
 			if (event.type == SDL_KEYDOWN)
 			{
+				RendererDraw();
 				switch (event.key.keysym.sym)
 				{
 				case SDLK_SPACE:
-					while (true)
-					{
-						clocks++;
-						clock_2C02(&ppu);
-						if (clocks % 3 == 0 && clock_6502(&cpu) == 0)
-							break;
-					}
-
-					RendererDraw(&cpu, &ppu);
+					clock_nes_instruction(&nes);
 					break;
 				case SDLK_f:
 				{
-					LoadPatternTable(chr, 0, 0);
-					LoadPatternTable(chr + 0x1000, 1, 0);
-					do
-					{
-						clocks++;
-						clock_2C02(&ppu);
-						if (clocks % 3 == 0)
-							clock_6502(&cpu);
-					} while (!(ppu.scanline == 241 && ppu.cycles == 0));
-					RendererDraw(&cpu, &ppu);
+					clock_nes_frame(&nes);
 					break;
 				}
 				case SDLK_p:
-					clocks++;
-					clock_2C02(&ppu);
-					if (clocks % 3 == 0)
-						clock_6502(&cpu);
-					RendererDraw(&cpu, &ppu);
+					clock_nes_cycle(&nes);
 					break;
 				}
 			}
@@ -110,9 +67,9 @@ int main(int argc, char** argv)
 		}
 	}
 
-	fgetc(stdin);
+	NESDestroy(&nes);
 
-	free_cartridge(&cart);
+	SDL_SetEventFilter(reset_filter_event, NULL);
 
 	RendererShutdown();
 	return 0;
@@ -120,7 +77,7 @@ int main(int argc, char** argv)
 #if 0
 	RendererInit();
 
-	Run_All_Tests();
+	RunAllTests();
 	RunAllBenchmarks();
 	Bus6502 bus;
 	State6502 cpu;

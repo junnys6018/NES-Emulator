@@ -1,13 +1,14 @@
 #include "test.h"
 
 #include "Frontend/Renderer.h"
-#include "Backend/6502.h"
+#include "Backend/nes.h"
 #include "event_filter_function.h"
+
+#include "timer.h"
 
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include <SDL.h>
 
@@ -31,32 +32,11 @@ Uint32 on_render_callback(Uint32 interval, void* param)
 
 void Run_6502_Functional_Test()
 {
-	Cartridge cart;
-	load_cartridge_from_file(&cart, "tests/roms/6502_functional_test.bin");
+	Nes nes;
+	NESInit(&nes, "tests/roms/6502_functional_test.bin");
 
-	// TODO: put this into a function
-	Bus6502 cpu_bus;
-	Bus2C02 ppu_bus;
-	State6502 cpu;
-	State2C02 ppu;
-
-	cpu_bus.cartridge = &cart;
-	cpu_bus.ppu = &ppu;
-
-	ppu_bus.cartridge = &cart;
-
-	cpu.bus = &cpu_bus;
-
-	ppu.bus = &ppu_bus;
-	ppu.cpu = &cpu;
-
-	power_on_6502(&cpu);
-	reset_6502(&cpu);
-
-	power_on_2C02(&ppu);
-	reset_2C02(&ppu);
-
-	RendererSetPaletteData(ppu_bus.palette);
+	RendererBindNES(&nes);
+	RendererDraw();
 
 	// Update screen every 16ms
 	SDL_TimerID tid = SDL_AddTimer(16, on_render_callback, NULL);
@@ -73,7 +53,6 @@ void Run_6502_Functional_Test()
 	int instructions_done = 0;
 
 	SDL_Event event;
-	RendererDraw(&cpu, &ppu);
 	while (true)
 	{
 		if (instructions_done < instructions_per_frame)
@@ -82,18 +61,18 @@ void Run_6502_Functional_Test()
 			for (int i = 0; i < 5000; i++)
 			{
 				instructions_done++;
-				while(clock_6502(&cpu) != 0);
+				while(clock_6502(&nes.cpu) != 0);
 			}
 
 			// Check for success or failure
-			if (old_PC == cpu.PC) // Execution paused in infinite loop
+			if (old_PC == nes.cpu.PC) // Execution paused in infinite loop
 			{
 				uint8_t success_opcode_pattern[] = { 0x4C, 0xBA, 0xEA, 0xBA, 0xEA };
 				uint8_t opcode_size[] = { 3, 1, 1, 1, 1 };
 				bool passed = true;
 				for (int i = 0; i < 5; i++)
 				{
-					uint8_t opcode = cpu_bus_read(cpu.bus, old_PC);
+					uint8_t opcode = cpu_bus_read(&nes.cpu_bus, old_PC);
 					passed = passed && (opcode == success_opcode_pattern[i]);
 					old_PC += opcode_size[i];
 				}
@@ -103,10 +82,10 @@ void Run_6502_Functional_Test()
 				else
 					printf("Failed Functional Test\n");
 
-				RendererDraw(&cpu, &ppu);
+				RendererDraw();
 				break;
 			}
-			old_PC = cpu.PC;
+			old_PC = nes.cpu.PC;
 		}
 
 		// Poll Events
@@ -118,7 +97,7 @@ void Run_6502_Functional_Test()
 			}
 			else if (event.type == SDL_USEREVENT && event.user.code == 0)
 			{
-				RendererDraw(&cpu, &ppu);
+				RendererDraw();
 				//printf("done: %i\n", instructions_done);
 				instructions_done = 0;
 			}
@@ -126,7 +105,7 @@ void Run_6502_Functional_Test()
 
 	}
 
-	free_cartridge(&cart);
+	NESDestroy(&nes);
 
 	SDL_RemoveTimer(tid);
 	SDL_SetEventFilter(reset_filter_event, NULL);
@@ -134,32 +113,11 @@ void Run_6502_Functional_Test()
 
 void Run_6502_Interrupt_Test()
 {
-	Cartridge cart;
-	load_cartridge_from_file(&cart, "tests/roms/6502_interrupt_test.bin");
+	Nes nes;
+	NESInit(&nes, "tests/roms/6502_interrupt_test.bin");
 
-	// TODO: put this into a function
-	Bus6502 cpu_bus;
-	Bus2C02 ppu_bus;
-	State6502 cpu;
-	State2C02 ppu;
-
-	cpu_bus.cartridge = &cart;
-	cpu_bus.ppu = &ppu;
-
-	ppu_bus.cartridge = &cart;
-
-	cpu.bus = &cpu_bus;
-
-	ppu.bus = &ppu_bus;
-	ppu.cpu = &cpu;
-
-	power_on_6502(&cpu);
-	reset_6502(&cpu);
-
-	power_on_2C02(&ppu);
-	reset_2C02(&ppu);
-
-	RendererSetPaletteData(ppu_bus.palette);
+	RendererBindNES(&nes);
+	RendererDraw();
 
 	// Update screen every 16ms
 	SDL_TimerID tid = SDL_AddTimer(16, on_render_callback, NULL);
@@ -176,35 +134,34 @@ void Run_6502_Interrupt_Test()
 	int instructions_done = 0;
 
 	SDL_Event event;
-	RendererDraw(&cpu, &ppu);
 	while (true)
 	{
 		if (instructions_done < instructions_per_frame)
 		{
 			instructions_done++;
 
-			while (clock_6502(&cpu) != 0);
-			uint8_t I_src = cpu_bus_read(cpu.bus, feedback_register_addr);
+			while (clock_6502(&nes.cpu) != 0);
+			uint8_t I_src = cpu_bus_read(&nes.cpu_bus, feedback_register_addr);
 			if (I_src & 0x02 && old_nmi == 0) // NMI - Detected on rising edge
 			{
-				NMI(&cpu);
+				NMI(&nes.cpu);
 			}
 			if (I_src & 0x01) // IRQ - level detected
 			{
-				IRQ(&cpu);
+				IRQ(&nes.cpu);
 			}
 
 			old_nmi = I_src & 0x02; // Mask out NMI bit
 
 			// Check for success or failure
-			if (old_PC == cpu.PC) // Execution paused in infinite loop
+			if (old_PC == nes.cpu.PC) // Execution paused in infinite loop
 			{
 				uint8_t success_opcode_pattern[] = { 0x4C, 0xBA, 0xEA, 0xBA, 0xEA };
 				uint8_t opcode_size[] = { 3, 1, 1, 1, 1 };
 				bool passed = true;
 				for (int i = 0; i < 5; i++)
 				{
-					uint8_t opcode = cpu_bus_read(cpu.bus, old_PC);
+					uint8_t opcode = cpu_bus_read(&nes.cpu_bus, old_PC);
 					passed = passed && (opcode == success_opcode_pattern[i]);
 					old_PC += opcode_size[i];
 				}
@@ -214,11 +171,11 @@ void Run_6502_Interrupt_Test()
 				else
 					printf("Failed Interrupt Test\n");
 
-				RendererDraw(&cpu, &ppu);
+				RendererDraw();
 				break;
 			}
 
-			old_PC = cpu.PC;
+			old_PC = nes.cpu.PC;
 		}
 
 
@@ -231,21 +188,21 @@ void Run_6502_Interrupt_Test()
 			}
 			else if (event.type == SDL_USEREVENT && event.user.code == 0)
 			{
-				RendererDraw(&cpu, &ppu);
+				RendererDraw();
 				instructions_done = 0;
 			}
 		}
 
 	}
 
-	free_cartridge(&cart);
+	NESDestroy(&nes);
 
 	SDL_RemoveTimer(tid);
 	SDL_SetEventFilter(reset_filter_event, NULL);
 }
 
 
-void Run_All_Tests()
+void RunAllTests()
 {
 	Run_6502_Interrupt_Test();
 	Run_6502_Functional_Test();

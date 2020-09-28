@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 {
@@ -149,4 +150,6 @@ void free_cartridge(Cartridge* cart)
 		printf("[ERROR] Unknown mapper id, %i", cart->mapperID);
 		break;
 	}
+
+	memset(cart, 0, sizeof(Cartridge));
 }

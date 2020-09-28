@@ -1,6 +1,5 @@
 #include "timer.h"
 
-
 #ifdef PLATFORM_WINDOWS
 
 static LARGE_INTEGER freq = { 0 };

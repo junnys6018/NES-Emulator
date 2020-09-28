@@ -1,6 +1,6 @@
 #ifndef TEST_H
 #define TEST_H
 
-void Run_All_Tests();
+void RunAllTests();
 
 #endif // !TEST_H

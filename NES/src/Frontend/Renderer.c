@@ -38,12 +38,19 @@ typedef struct
 	// Textures representing the pattern tables currently accessible on the PPU
 	SDL_Texture* left_nametable;
 	SDL_Texture* right_nametable;
+	uint8_t* left_nt_data;
+	uint8_t* right_nt_data;
+	
+	Nes* nes;
+
+	// Pointer to the PPU's palette data
+	uint8_t* palette;
+
+	// Cached copy of the first background palette to detect changes in palette data
+	uint8_t cached_bg_palette[4]; 
 
 	// Texture for PPU output
 	SDL_Texture* nes_screen;
-	
-	// Pointer to the PPU's palette data
-	uint8_t* palette;
 } RendererContext;
 
 static RendererContext rc;
@@ -56,11 +63,6 @@ void SDL_Emit_Error(const char* message)
 void TTF_Emit_Error(const char* message)
 {
 	printf("[FONT ERROR]: %s\n", message);
-}
-
-void RendererSetPaletteData(uint8_t* palette)
-{
-	rc.palette = palette;
 }
 
 void RendererInit()
@@ -175,8 +177,12 @@ void DrawPPUStatus(int xoff, int yoff, State2C02* ppu);
 void DrawPatternTable(int xoff, int yoff, float scale, int side);
 void DrawPaletteData(int xoff, int yoff);
 
-void RendererDraw(State6502* cpu, State2C02* ppu)
+void RendererUpdatePatternTableTexture(int side);
+
+void RendererDraw()
 {
+	assert(rc.nes); // Nes must be bound for rendering
+
 	//timepoint beg, end;
 	//GetTime(&beg);
 	// Clear screen to black
@@ -189,18 +195,29 @@ void RendererDraw(State6502* cpu, State2C02* ppu)
 	SDL_Rect dest = { 10,10,768,720 };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
 
+
 	SDL_Rect r_DebugView = { .x = 788,.y = 10,.w = 500,.h = 720 };
 	SDL_RenderFillRect(rc.rend, &r_DebugView);
 
-	DrawProgramView(788, 10, cpu);
-	DrawStackView(980, 10, cpu);
-	DrawCPUStatus(1100, 10, cpu);
+	DrawProgramView(788, 10, &rc.nes->cpu);
+	DrawStackView(980, 10, &rc.nes->cpu);
+	DrawCPUStatus(1100, 10, &rc.nes->cpu);
 
-	DrawPPUStatus(788, 375, ppu);
+	DrawPPUStatus(788, 375, &rc.nes->ppu);
 
 	int x = 798;
 	int y = 190;
 	float scale = 1.45;
+
+	// Check if palette has changed
+	if (memcmp(rc.cached_bg_palette, rc.palette, 4) != 0)
+	{
+		memcpy(rc.cached_bg_palette, rc.palette, 4);
+		if (rc.left_nt_data)
+			RendererUpdatePatternTableTexture(0);
+		if (rc.right_nt_data)
+			RendererUpdatePatternTableTexture(1);
+	}
 
 	DrawPatternTable(x, y, scale, 0);
 	DrawPatternTable(x + 128 * scale + 5, y, scale, 1);
@@ -410,8 +427,6 @@ void DrawPatternTable(int xoff, int yoff, float scale, int side)
 
 	SDL_Rect dest = { .x = xoff,.y = yoff,.w = 128 * scale,.h = 128 * scale };
 	SDL_RenderCopy(rc.rend, target, NULL, &dest);
-	
-	SDL_RenderPresent(rc.rend);
 }
 
 void DrawPaletteData(int xoff, int yoff)
@@ -431,20 +446,25 @@ void DrawPaletteData(int xoff, int yoff)
 	}
 }
 
-// TODO: Make this more efficient, currently takes ~0.15ms to run this function
-// Palette index can be 0..7
-void LoadPatternTable(uint8_t* table_data, int side, int palette_index)
+void RendererSetPatternTable(uint8_t* table_data, int side)
 {
-	assert(palette_index >= 0 && palette_index < 8);
-	uint8_t palette[4];
-	palette[0] = rc.palette[0];
-	for (int i = 1; i < 4; i++)
+	if (side == 0)
 	{
-		palette[i] = rc.palette[palette_index * 4 + i];
+		rc.left_nt_data = table_data;
+	}
+	else
+	{
+		rc.right_nt_data = table_data;
 	}
 
+	RendererUpdatePatternTableTexture(side);
+}
 
+// TODO: Make this more efficient, currently takes ~0.15ms to run this function
+void RendererUpdatePatternTableTexture(int side)
+{
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
+	uint8_t* table_data = (side == 0 ? rc.left_nt_data : rc.right_nt_data);
 	uint8_t* pixels = malloc(128 * 128 * 3);
 	assert(pixels);
 
@@ -460,7 +480,7 @@ void LoadPatternTable(uint8_t* table_data, int side, int palette_index)
 			uint16_t table_addr = tile_row << 8 | tile_col << 4 | fine_y;
 
 			uint8_t palette_index = (table_data[table_addr] & (1 << fine_x)) >> fine_x | table_data[table_addr | 1 << 3] & (1 << fine_x) >> (fine_x - 1);
-			color c = PALETTE_MAP[palette[palette_index]];
+			color c = PALETTE_MAP[rc.palette[palette_index]];
 
 			pixels[3 * (y * 128 + x)] = c.r;
 			pixels[3 * (y * 128 + x) + 1] = c.g;
@@ -472,7 +492,18 @@ void LoadPatternTable(uint8_t* table_data, int side, int palette_index)
 	free(pixels);
 }
 
-void LoadPixelDataToScreen(color* pixels)
+void RendererBindNES(Nes* nes)
+{
+	rc.nes = nes;
+
+	rc.palette = nes->ppu_bus.palette;
+	for (int i = 0; i < 4; i++)
+	{
+		rc.cached_bg_palette[i] = rc.palette[i];
+	}
+}
+
+void SendPixelDataToScreen(color* pixels)
 {
 	color* dest;
 	int pitch;
@@ -483,6 +514,7 @@ void LoadPixelDataToScreen(color* pixels)
 	SDL_UnlockTexture(rc.nes_screen);
 }
 
+#if 0
 // For debugging
 void DrawNametable(State2C02* ppu)
 {
@@ -525,3 +557,4 @@ void DrawNametable(State2C02* ppu)
 
 	SDL_UnlockTexture(rc.nes_screen);
 }
+#endif

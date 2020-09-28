@@ -235,7 +235,7 @@ void clock_2C02(State2C02* ppu)
 			NMI(ppu->cpu);
 		}
 		// Send pixel data to renderer
-		LoadPixelDataToScreen(ppu->pixels);
+		SendPixelDataToScreen(ppu->pixels);
 	}
 
 	ppu->cycles++;

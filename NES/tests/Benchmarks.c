@@ -1,27 +1,26 @@
 #include "Benchmarks.h"
-#include "Backend/6502.h"
+#include "Backend/nes.h"
 
-#include <time.h>
+#include <timer.h>
 #include <stdio.h>
 
 void Run6502Benchmark()
 {
-	Bus bus;
-	State6502 cpu;
-	load_cpu_from_file(&cpu, &bus, "tests/6502_functional_test.bin");
-	cpu.PC = 0x0400; // Code segment at 0x400
+	Nes nes;
+	NESInit(&nes, "tests/roms/6502_functional_test.bin");
 
 	int NUM = 100000000;
-	time_t start = clock();
+	timepoint beg, end;
+	GetTime(&beg);
 	for (int i = 0; i < NUM; i++)
 	{
-		clock_6502(&cpu);
+		clock_6502(&nes.cpu);
 	}
-	time_t end = clock();
-	float time_seconds = (float)(end - start) / CLOCKS_PER_SEC;
-	float frequency_mHZ = (float)NUM / (time_seconds * 1000000);
+	GetTime(&end);
+	float time = GetElapsedTimeMicro(&beg, &end);
+	float frequency_MHZ = (float)NUM / (time);
 
-	printf("[6502 BENCHMARK] Max clock speed: %.5f MHz (1.789773 MHz Required)\n", frequency_mHZ);
+	printf("[6502 BENCHMARK] Max clock speed: %.5f MHz (1.789773 MHz Required)\n", frequency_MHZ);
 }
 
 void RunAllBenchmarks()
