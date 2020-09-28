@@ -44,4 +44,6 @@ NametableIndex mJUNPPUMirrorNametable(void* mapper, uint16_t addr)
 		// Map into second table
 		ret.index = 1;
 	}
+
+	return ret;
 }

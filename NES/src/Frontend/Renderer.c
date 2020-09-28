@@ -58,7 +58,12 @@ void TTF_Emit_Error(const char* message)
 	printf("[FONT ERROR]: %s\n", message);
 }
 
-void Renderer_Init(uint8_t* palette)
+void RendererSetPaletteData(uint8_t* palette)
+{
+	rc.palette = palette;
+}
+
+void RendererInit()
 {
 	rc.width = 1298;
 	rc.height = 740;
@@ -136,11 +141,9 @@ void Renderer_Init(uint8_t* palette)
 
 	// And main screen 
 	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
-
-	rc.palette = palette;
 }
 
-void Renderer_Shutdown()
+void RendererShutdown()
 {
 	// Cleanup
 	SDL_DestroyTexture(rc.atlas);
@@ -157,7 +160,7 @@ void Renderer_Shutdown()
 	free(rc.fontdata);
 }
 
-void Renderer_SetPageView(uint8_t page)
+void RendererSetPageView(uint8_t page)
 {
 	rc.page = page;
 }
@@ -172,7 +175,7 @@ void DrawPPUStatus(int xoff, int yoff, State2C02* ppu);
 void DrawPatternTable(int xoff, int yoff, float scale, int side);
 void DrawPaletteData(int xoff, int yoff);
 
-void Renderer_Draw(State6502* cpu, State2C02* ppu)
+void RendererDraw(State6502* cpu, State2C02* ppu)
 {
 	//timepoint beg, end;
 	//GetTime(&beg);

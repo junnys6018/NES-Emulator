@@ -26,6 +26,7 @@ uint8_t ppu_bus_read(Bus2C02* bus, uint16_t addr)
 		addr &= 0x1F;
 		return bus->palette[addr];
 	}
+	return 0;
 }
 
 void ppu_bus_write(Bus2C02* bus, uint16_t addr, uint8_t data)

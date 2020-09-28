@@ -29,6 +29,7 @@ kind "ConsoleApp"
 	{
 		"vendor/SDL2-2.0.12/include",
 		"src",
+		"tests",
 		"vendor/stb",
 	}
 	
