@@ -2,7 +2,6 @@
 #include "Frontend/Renderer.h" // To upload pixel data to renderer
 
 #include <stdio.h> // For printf
-// TODO: Skip cycle (340,261) on odd frames
 // TODO: Implment color emphasis and grey scale
 
 // Maps a 6 bit HSV color into RGB

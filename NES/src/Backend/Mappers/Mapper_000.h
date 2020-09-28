@@ -24,10 +24,10 @@ typedef struct
 	RomCapacity romCap;
 } Mapper000;
 
-uint8_t m000CPUReadCartridge(void* mapper, uint16_t addr);
+uint8_t m000CPUReadCartridge(void* mapper, uint16_t addr, bool* read);
 uint8_t m000PPUReadCartridge(void* mapper, uint16_t addr);
 
-void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
+void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
 void m000PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
 
 NametableIndex m000PPUMirrorNametable(void* mapper, uint16_t addr);

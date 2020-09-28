@@ -1,8 +1,10 @@
 #include "Mapper_000.h"
 #include <stdlib.h>
 
-uint8_t m000CPUReadCartridge(void* mapper, uint16_t addr)
+uint8_t m000CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 {
+	*read = (addr >= 0x4020 && addr <= 0xFFFF);
+
 	Mapper000* map000 = (Mapper000*)mapper;
 	// Read from PGR_RAM
 	if (addr >= 0x6000 && addr < 0x8000)
@@ -25,8 +27,10 @@ uint8_t m000PPUReadCartridge(void* mapper, uint16_t addr)
 	return map000->CHR[addr];
 }
 
-void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
+void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)
 {
+	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
+
 	Mapper000* map000 = (Mapper000*)mapper;
 	// Write to PGR_RAM
 	if (addr >= 0x6000 && addr < 0x8000)

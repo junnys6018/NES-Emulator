@@ -1,5 +1,6 @@
 #include "Cartridge.h"
 #include "Mappers/Mapper_000.h"
+#include "Mappers/Mapper_JUN.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,6 +107,25 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 			break;
 		}
 	}
+	// My custom rom format, for now this format has a 16 byte header, then 64KB of data for cpu memory
+	else if (c[0] == 'J' && c[1] == 'U' && c[2] == 'N' && c[3] == 0x1A)
+	{
+		cart->mapperID = 767; // Assigm mapperID 767 to my format
+		
+		cart->CPUReadCartridge = mJUNCPUReadCartridge;
+		cart->PPUReadCartridge = mJUNPPUReadCartridge;
+
+		cart->CPUWriteCartridge = mJUNCPUWriteCartridge;
+		cart->PPUWriteCartridge = mJUNPPUWriteCartridge;
+
+		cart->PPUMirrorNametable = mJUNPPUMirrorNametable;
+
+		MapperJUN* map = malloc(sizeof(MapperJUN));
+		assert(map);
+		cart->mapper = map;
+
+		fread(map->PRG_RAM, 64 * 1024, 1, file);
+	}
 	else
 	{
 		printf("[ERROR] File %s unknown format\n", filepath);
@@ -121,6 +141,9 @@ void free_cartridge(Cartridge* cart)
 	{
 	case 0:
 		m000Free(cart->mapper);
+		break;
+	case 767:
+		free(cart->mapper);
 		break;
 	default:
 		printf("[ERROR] Unknown mapper id, %i", cart->mapperID);

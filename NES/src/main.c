@@ -17,11 +17,13 @@ int main(int argc, char** argv)
 	Cartridge cart;
 	//load_cartridge_from_file(&cart, "tests/clear_color_test.nes");
 	//load_cartridge_from_file(&cart, "tests/4.vbl_clear_timing.nes"); // failed
-	load_cartridge_from_file(&cart, "tests/1.frame_basics.nes");
+	//load_cartridge_from_file(&cart, "tests/1.frame_basics.nes");
 	//load_cartridge_from_file(&cart, "tests/nmi_sync.nes");
 	//load_cartridge_from_file(&cart, "tests/palette.nes");
 	//load_cartridge_from_file(&cart, "tests/nestest.nes");
 	//load_cartridge_from_file(&cart, "tests/scanline.nes");
+
+	load_cartridge_from_file(&cart, "tests/6502_functional_test.bin");
 
 	//load_cartridge_from_file(&cart, "roms/DonkeyKong.nes");
 	//load_cartridge_from_file(&cart, "roms/SuperMarioBros.nes");

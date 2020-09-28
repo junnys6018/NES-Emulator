@@ -2,77 +2,81 @@
 #include "2C02.h"
 #include <stdio.h> // For printf
 
-// TODO: give cartridge first priority over writes and reads
-
 void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 {
-	// Write to internal RAM
-	if (addr >= 0x0000 && addr < 0x2000)
+	// Check if cartridge wants to handle the write
+	bool wrote;
+	Cartridge* cart = bus->cartridge;
+	cart->CPUWriteCartridge(cart->mapper, addr, data, &wrote);
+	if (!wrote)
 	{
-		addr &= 0x07FF;
-		bus->memory[addr] = data;
-	}
-	// Write to PPU registers
-	else if (addr >= 0x2000 && addr < 0x4000)
-	{
-		// Mirror every 8 bytes
-		addr = 0x2000 + (addr & 0x07);
-		write_ppu(bus->ppu, addr, data);
-	}
-	// NES APU and I/O registers
-	else if (addr >= 0x4000 && addr < 0x4018)
-	{
-		if (addr == 0x4014)
+		// Write to internal RAM
+		if (addr >= 0x0000 && addr < 0x2000)
 		{
-			printf("OAMDMA\n");
+			addr &= 0x07FF;
+			bus->memory[addr] = data;
 		}
-	}
-	// APU and I/O functionality that is normally disabled
-	else if (addr >= 0x4018 && addr < 0x4020)
-	{
+		// Write to PPU registers
+		else if (addr >= 0x2000 && addr < 0x4000)
+		{
+			// Mirror every 8 bytes
+			addr = 0x2000 + (addr & 0x07);
+			write_ppu(bus->ppu, addr, data);
+		}
+		// NES APU and I/O registers
+		else if (addr >= 0x4000 && addr < 0x4018)
+		{
+			if (addr == 0x4014)
+			{
+				printf("OAMDMA\n");
+			}
+		}
+		// APU and I/O functionality that is normally disabled
+		else if (addr >= 0x4018 && addr < 0x4020)
+		{
 
-	}
-	// Cartridge
-	else if (addr >= 0x4020 && addr <= 0xFFFF)
-	{
-		Cartridge* cart = bus->cartridge;
-		cart->CPUWriteCartridge(cart->mapper, addr, data);
+		}
 	}
 }
 
 uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 {
-	// Read internal RAM
-	if (addr >= 0x0000 && addr < 0x2000)
+	// Check if cartridge wants to handle the read
+	bool read;
+	Cartridge* cart = bus->cartridge;
+	uint8_t ret = cart->CPUReadCartridge(cart->mapper, addr, &read);
+	if (read)
 	{
-		addr &= 0x07FF;
-		return bus->memory[addr];
+		return ret;
 	}
-	// Read PPU registers
-	else if (addr >= 0x2000 && addr < 0x4000)
+	else
 	{
-		// Mirror every 8 bytes
-		addr = 0x2000 + (addr & 0x07);
-		return read_ppu(bus->ppu, addr);
-	}
-	// NES APU and I/O registers
-	else if (addr >= 0x4000 && addr < 0x4018)
-	{
-		if (addr == 0x4014)
+		// Read internal RAM
+		if (addr >= 0x0000 && addr < 0x2000)
 		{
-			printf("OAMDMA\n");
+			addr &= 0x07FF;
+			return bus->memory[addr];
 		}
-	}
-	// APU and I/O functionality that is normally disabled
-	else if (addr >= 0x4018 && addr < 0x4020)
-	{
+		// Read PPU registers
+		else if (addr >= 0x2000 && addr < 0x4000)
+		{
+			// Mirror every 8 bytes
+			addr = 0x2000 + (addr & 0x07);
+			return read_ppu(bus->ppu, addr);
+		}
+		// NES APU and I/O registers
+		else if (addr >= 0x4000 && addr < 0x4018)
+		{
+			if (addr == 0x4014)
+			{
+				printf("OAMDMA\n");
+			}
+		}
+		// APU and I/O functionality that is normally disabled
+		else if (addr >= 0x4018 && addr < 0x4020)
+		{
 
-	}
-	// Cartridge
-	else if (addr >= 0x4020 && addr <= 0xFFFF)
-	{
-		Cartridge* cart = bus->cartridge;
-		return cart->CPUReadCartridge(cart->mapper, addr);
+		}
 	}
 	return 0;
 }
