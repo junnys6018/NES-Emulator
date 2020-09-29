@@ -207,7 +207,7 @@ void RendererDraw()
 
 	int x = 798;
 	int y = 190;
-	float scale = 1.45;
+	float scale = 1.45f;
 
 	// Check if palette has changed
 	if (memcmp(rc.cached_bg_palette, rc.palette, 4) != 0)
@@ -319,7 +319,7 @@ void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 	RenderText(line, white, xoff + 10, yoff + 110);
 
 	// Total cycles
-	sprintf(line, "cycles: %i", cpu->total_cycles);
+	sprintf(line, "cycles: %lli", cpu->total_cycles);
 	RenderText(line, white, xoff + 10, yoff + 130);
 }
 

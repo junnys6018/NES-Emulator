@@ -13,7 +13,7 @@ color PALETTE_MAP[64] =
 	{236, 238, 236}, {168, 204, 236}, {188, 188, 236}, {212, 178, 236}, {236, 174, 236}, {236, 174, 212}, {236, 180, 176}, {228, 196, 144}, {204, 210, 120}, {180, 222, 120}, {168, 226, 144}, {152, 226, 180}, {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0}
 };
 
-uint16_t coarseXinc(uint16_t v)
+uint16_t CoarseXInc(uint16_t v)
 {
 	if ((v & 0x001F) == 31) // if coarse X == 31
 	{
@@ -28,7 +28,7 @@ uint16_t coarseXinc(uint16_t v)
 	return v;
 }
 
-uint16_t fineYinc(uint16_t v)
+uint16_t FineYInc(uint16_t v)
 {
 	if ((v & 0x7000) != 0x7000) // if fine Y < 7
 	{
@@ -68,7 +68,7 @@ uint16_t GetAttribTableAddr(uint16_t v)
 	return 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
 }
 
-void fetch_data_inc_v(State2C02* ppu)
+void FetchDataAndIncV(State2C02* ppu)
 {
 	switch (ppu->cycles % 8)
 	{
@@ -111,11 +111,11 @@ void fetch_data_inc_v(State2C02* ppu)
 	{
 		if (ppu->cycles == 256)
 		{
-			ppu->v = fineYinc(ppu->v);
+			ppu->v = FineYInc(ppu->v);
 		}
 		else
 		{
-			ppu->v = coarseXinc(ppu->v);
+			ppu->v = CoarseXInc(ppu->v);
 		}
 		break;
 	}
@@ -150,7 +150,7 @@ void clock_2C02(State2C02* ppu)
 				ppu->pa_shift_low <<= 1;
 				ppu->pa_shift_high <<= 1;
 
-				fetch_data_inc_v(ppu);
+				FetchDataAndIncV(ppu);
 			}
 			else if (ppu->cycles == 257)
 			{
@@ -164,7 +164,7 @@ void clock_2C02(State2C02* ppu)
 			}
 			else if (ppu->cycles >= 321 && ppu->cycles < 337)
 			{
-				fetch_data_inc_v(ppu);
+				FetchDataAndIncV(ppu);
 			}
 		}
 		// Visible Scanlines
@@ -203,7 +203,7 @@ void clock_2C02(State2C02* ppu)
 				ppu->pa_shift_low <<= 1;
 				ppu->pa_shift_high <<= 1;
 
-				fetch_data_inc_v(ppu);
+				FetchDataAndIncV(ppu);
 			}
 			else if (ppu->cycles == 257)
 			{
@@ -212,7 +212,7 @@ void clock_2C02(State2C02* ppu)
 			}
 			else if (ppu->cycles >= 321 && ppu->cycles < 337)
 			{
-				fetch_data_inc_v(ppu);
+				FetchDataAndIncV(ppu);
 			}
 		}
 	}
