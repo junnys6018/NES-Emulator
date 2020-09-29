@@ -1,5 +1,8 @@
 #include "Frontend/Renderer.h"
+#include "Frontend/Gui.h"
+
 #include "event_filter_function.h"
+
 #include "Backend/Mappers/Mapper_000.h"
 #include "Backend/nes.h"
 
@@ -34,18 +37,14 @@ int main(int argc, char** argv)
 	RendererSetPatternTable(chr + 0x1000, 1);
 
 	RendererDraw();
-
-	EventTypeList list = { .size = 2,.event_types = {SDL_KEYDOWN, SDL_QUIT} };
-	SDL_SetEventFilter(event_whitelist, &list);
-
 	SDL_Event event;
 	while (true)
 	{
 		while (SDL_PollEvent(&event) != 0)
 		{
+			GuiDispatchEvent(&event);
 			if (event.type == SDL_KEYDOWN)
 			{
-				RendererDraw();
 				switch (event.key.keysym.sym)
 				{
 				case SDLK_SPACE:
@@ -66,10 +65,10 @@ int main(int argc, char** argv)
 				exit(EXIT_SUCCESS);
 			}
 		}
+		RendererDraw();
 	}
 
 	NESDestroy(&nes);
-	SDL_SetEventFilter(reset_filter_event, NULL);
 	RendererShutdown();
 
 	exit(EXIT_SUCCESS);

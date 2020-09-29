@@ -12,11 +12,23 @@
 #include <string.h>
 
 #include "timer.h"
+#include "Gui.h"
 
-static SDL_Color white = { 255,255,255 };
-static SDL_Color cyan = { 78,201,176 };
-static SDL_Color red = { 255,0,0 };
-static SDL_Color green = { 0,255,0 };
+SDL_Color white = { 255,255,255 };
+SDL_Color cyan = { 78,201,176 };
+SDL_Color red = { 255,0,0 };
+SDL_Color green = { 0,255,0 };
+SDL_Color blue = { 0,122,204 };
+SDL_Color light_blue = { 28,151,234 };
+
+typedef enum
+{
+	TARGET_NES_STATE,
+	TARGET_APU_STATE,
+	TARGET_MEMORY,
+	TARGET_ABOUT,
+	TARGET_SETTINGS
+} DrawTarget;
 
 typedef struct
 {
@@ -51,9 +63,22 @@ typedef struct
 
 	// Texture for PPU output
 	SDL_Texture* nes_screen;
+
+	// What screen we are currently drawing
+	DrawTarget target;
 } RendererContext;
 
+typedef struct
+{
+	unsigned int nes_state;
+	unsigned int apu_state;
+	unsigned int memory;
+	unsigned int about;
+	unsigned int settings;
+} ButtonIDs;
+
 static RendererContext rc;
+static ButtonIDs buttons;
 
 void SDL_Emit_Error(const char* message)
 {
@@ -63,6 +88,30 @@ void SDL_Emit_Error(const char* message)
 void TTF_Emit_Error(const char* message)
 {
 	printf("[FONT ERROR]: %s\n", message);
+}
+
+void myHandler(UIElement* elem, SDL_Event* e)
+{
+	if (elem->id == buttons.nes_state)
+	{
+		rc.target = TARGET_NES_STATE;
+	}
+	else if (elem->id == buttons.apu_state)
+	{
+		rc.target = TARGET_APU_STATE;
+	}
+	else if (elem->id == buttons.memory)
+	{
+		rc.target = TARGET_MEMORY;
+	}
+	else if (elem->id == buttons.about)
+	{
+		rc.target = TARGET_ABOUT;
+	}
+	else if (elem->id == buttons.settings)
+	{
+		rc.target = TARGET_SETTINGS;
+	}
 }
 
 void RendererInit()
@@ -77,7 +126,7 @@ void RendererInit()
 	{
 		SDL_Emit_Error("Could not initialize SDL");
 	}
-
+	assert(SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1"));
 	// Create a window
 	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
 	if (!rc.win)
@@ -111,20 +160,22 @@ void RendererInit()
 		TTF_Emit_Error("Could not init font");
 	}
 
-	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, 15);
+	int font_size = 15; // distance from highest ascender to the lowest descender is 15 pixels
+	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, font_size);
 
 	stbtt_pack_context spc;
 	unsigned char* bitmap = malloc(512 * 512);
 	stbtt_PackBegin(&spc, bitmap, 512, 512, 0, 1, NULL);
-	stbtt_PackFontRange(&spc, rc.fontdata, 0, 15, 32, 96, rc.chardata);
+	stbtt_PackFontRange(&spc, rc.fontdata, 0, font_size, 32, 96, rc.chardata);
 
 	stbtt_PackEnd(&spc);
 
 	// Convert bitmap into SDL texture
 	uint32_t* pixels = malloc(512 * 512 * sizeof(uint32_t));
 	SDL_PixelFormat* format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
-	for (int i = 0; i < 512 * 512; i++) {
-		pixels[i] = SDL_MapRGBA(format, bitmap[i], bitmap[i], bitmap[i], 0xff);
+	for (int i = 0; i < 512 * 512; i++)
+	{
+		pixels[i] = SDL_MapRGBA(format, 255, 255, 255, bitmap[i]);
 	}
 	SDL_FreeFormat(format);
 
@@ -137,12 +188,32 @@ void RendererInit()
 	free(bitmap);
 	free(pixels);
 
+	SDL_SetTextureBlendMode(rc.atlas, SDL_BLENDMODE_BLEND);
+
 	// Create nametable textures
 	rc.left_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
 	rc.right_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
 
 	// And main screen 
 	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+
+	// GUI
+	GuiInit(rc.rend);
+	int width = 100;
+	SDL_Rect span = { .x = 788,.y = 10,.w = width,.h = 30 };
+	buttons.nes_state = GuiAddButton("NES State", &span, myHandler);
+	span.x += width;
+	buttons.apu_state = GuiAddButton("APU State", &span, myHandler);
+	span.x += width;
+	buttons.memory = GuiAddButton("Memory", &span, myHandler);
+	span.x += width;
+	buttons.about = GuiAddButton("About", &span, myHandler);
+	span.x += width;
+	buttons.settings = GuiAddButton("Settings", &span, myHandler);
+
+	GuiAddCheckbox(30, 90, NULL);
+
+	rc.target = TARGET_NES_STATE;
 }
 
 void RendererShutdown()
@@ -160,92 +231,13 @@ void RendererShutdown()
 	SDL_Quit();
 
 	free(rc.fontdata);
+
+	GuiShutdown();
 }
 
 void RendererSetPageView(uint8_t page)
 {
 	rc.page = page;
-}
-
-void DrawMemoryView(int xoff, int yoff, State6502* cpu);
-void DrawCPUStatus(int xoff, int yoff, State6502* cpu);
-void DrawStackView(int xoff, int yoff, State6502* cpu);
-void DrawProgramView(int xoff, int yoff, State6502* cpu);
-
-void DrawPPUStatus(int xoff, int yoff, State2C02* ppu);
-
-void DrawPatternTable(int xoff, int yoff, float scale, int side);
-void DrawPaletteData(int xoff, int yoff);
-
-void RendererUpdatePatternTableTexture(int side);
-
-void RendererDraw()
-{
-	assert(rc.nes); // Nes must be bound for rendering
-
-	//timepoint beg, end;
-	//GetTime(&beg);
-	// Clear screen to black
-	SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 0);
-	SDL_RenderClear(rc.rend);
-
-	// Draw GUI
-	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 0);
-
-	SDL_Rect dest = { 10,10,768,720 };
-	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
-
-
-	SDL_Rect r_DebugView = { .x = 788,.y = 10,.w = 500,.h = 720 };
-	SDL_RenderFillRect(rc.rend, &r_DebugView);
-
-	DrawProgramView(788, 10, &rc.nes->cpu);
-	DrawStackView(980, 10, &rc.nes->cpu);
-	DrawCPUStatus(1100, 10, &rc.nes->cpu);
-
-	DrawPPUStatus(788, 375, &rc.nes->ppu);
-
-	int x = 798;
-	int y = 190;
-	float scale = 1.45f;
-
-	// Check if palette has changed
-	if (memcmp(rc.cached_bg_palette, rc.palette, 4) != 0)
-	{
-		memcpy(rc.cached_bg_palette, rc.palette, 4);
-		if (rc.left_nt_data)
-			RendererUpdatePatternTableTexture(0);
-		if (rc.right_nt_data)
-			RendererUpdatePatternTableTexture(1);
-	}
-
-	DrawPatternTable(x, y, scale, 0);
-	DrawPatternTable(x + 128 * scale + 5, y, scale, 1);
-	DrawPaletteData(x + 256 * scale + 10, y);
-
-	// Swap framebuffers
-	SDL_RenderPresent(rc.rend);
-
-	//GetTime(&end);
-	//float elapsed = GetElapsedTimeMilli(&beg, &end);
-	//printf("Took %.3fms\n", elapsed);
-}
-
-void RenderText(const char* text, SDL_Color c, int xoff, int yoff)
-{
-	yoff += roundf(rc.ascent * rc.scale);
-	while (*text)
-	{
-		stbtt_packedchar* info = &rc.chardata[*text - 32];
-		SDL_Rect src_rect = { info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0 };
-		SDL_Rect dst_rect = { xoff + roundf(info->xoff), yoff + roundf(info->yoff), info->x1 - info->x0, info->y1 - info->y0 };
-
-		SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
-		SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
-		xoff += roundf(info->xadvance);
-
-		text++;
-	}
 }
 
 void RenderChar(char glyph, SDL_Color c, int xoff, int yoff)
@@ -258,7 +250,18 @@ void RenderChar(char glyph, SDL_Color c, int xoff, int yoff)
 
 	SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
 	SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
-	xoff += roundf(info->xadvance);
+}
+
+void RenderText(const char* text, SDL_Color c, int xoff, int yoff)
+{
+	while (*text)
+	{
+		RenderChar(*text, c, xoff, yoff);
+		stbtt_packedchar* info = &rc.chardata[*text - 32];
+		xoff += roundf(info->xadvance);
+
+		text++;
+	}
 }
 
 int TextLen(const char* text)
@@ -402,23 +405,23 @@ void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 	sprintf(line, "OAMDMA    ($4014): $%.2X", ppu->OAMDMA);
 	RenderText(line, white, xoff + 10, yoff + 170);
 	
-	RenderText("Internal Registers", cyan, xoff + 10, yoff + 190);
+	RenderText("Internal Registers", cyan, xoff + 280, yoff + 10);
 
 	sprintf(line, "v: $%.4X; t: $%.4X", ppu->v, ppu->t);
-	RenderText(line, white, xoff + 10, yoff + 210);
+	RenderText(line, white, xoff + 280, yoff + 30);
 
 	sprintf(line, "fine-x: %i", ppu->x);
-	RenderText(line, white, xoff + 10, yoff + 230);
+	RenderText(line, white, xoff + 280, yoff + 50);
 
 	sprintf(line, "Write Toggle (w): %i", ppu->w);
-	RenderText(line, white, xoff + 10, yoff + 250);
+	RenderText(line, white, xoff + 280, yoff + 70);
 
 	// TODO: ppu->cycles and ppu->scanline indicate the next clock of the ppu, we want to render the current clock
 	sprintf(line, "cycles: %i", ppu->cycles);
-	RenderText(line, white, xoff + 10, yoff + 270);
+	RenderText(line, white, xoff + 280, yoff + 90);
 
 	sprintf(line, "scanline: %i", ppu->scanline);
-	RenderText(line, white, xoff + 10, yoff + 290);
+	RenderText(line, white, xoff + 280, yoff + 110);
 }
 
 void DrawPatternTable(int xoff, int yoff, float scale, int side)
@@ -444,20 +447,6 @@ void DrawPaletteData(int xoff, int yoff)
 		}
 		rect.y += 14;
 	}
-}
-
-void RendererSetPatternTable(uint8_t* table_data, int side)
-{
-	if (side == 0)
-	{
-		rc.left_nt_data = table_data;
-	}
-	else
-	{
-		rc.right_nt_data = table_data;
-	}
-
-	RendererUpdatePatternTableTexture(side);
 }
 
 // TODO: Make this more efficient, currently takes ~0.15ms to run this function
@@ -492,6 +481,20 @@ void RendererUpdatePatternTableTexture(int side)
 	free(pixels);
 }
 
+void RendererSetPatternTable(uint8_t* table_data, int side)
+{
+	if (side == 0)
+	{
+		rc.left_nt_data = table_data;
+	}
+	else
+	{
+		rc.right_nt_data = table_data;
+	}
+
+	RendererUpdatePatternTableTexture(side);
+}
+
 void RendererBindNES(Nes* nes)
 {
 	rc.nes = nes;
@@ -512,6 +515,97 @@ void SendPixelDataToScreen(color* pixels)
 	memcpy(dest, pixels, 256 * 240 * sizeof(color));
 
 	SDL_UnlockTexture(rc.nes_screen);
+}
+
+void DrawNESState()
+{
+	DrawProgramView(788, 40, &rc.nes->cpu);
+	DrawStackView(980, 40, &rc.nes->cpu);
+	DrawCPUStatus(1100, 40, &rc.nes->cpu);
+
+	DrawPPUStatus(788, 415, &rc.nes->ppu);
+
+	int x = 798;
+	int y = 220;
+	float scale = 1.45f;
+
+	// Check if palette has changed
+	if (memcmp(rc.cached_bg_palette, rc.palette, 4) != 0)
+	{
+		memcpy(rc.cached_bg_palette, rc.palette, 4);
+		if (rc.left_nt_data)
+			RendererUpdatePatternTableTexture(0);
+		if (rc.right_nt_data)
+			RendererUpdatePatternTableTexture(1);
+	}
+
+	DrawPatternTable(x, y, scale, 0);
+	DrawPatternTable(x + 128 * scale + 5, y, scale, 1);
+	DrawPaletteData(x + 256 * scale + 10, y);
+}
+
+void DrawAbout()
+{
+	int xoff = 788;
+	int yoff = 40;
+
+	RenderText("NES Emulator by Jun Lim", cyan, xoff + 10, yoff + 10);
+	RenderText("Controls", white, xoff + 10, yoff + 30);
+	RenderText("Space - Emulate one CPU instruction", white, xoff + 10, yoff + 50);
+	RenderText("f     - Emulate one frame", white, xoff + 10, yoff + 70);
+	RenderText("p     - Emulate one master clock cycle", white, xoff + 10, yoff + 90);
+}
+
+void DrawSettings()
+{
+
+}
+
+void RendererDraw()
+{
+	assert(rc.nes); // Nes must be bound for rendering
+
+	//timepoint beg, end;
+	//GetTime(&beg);
+	// Clear screen to black
+	SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
+	SDL_RenderClear(rc.rend);
+
+	// Draw GUI
+	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
+
+	SDL_Rect dest = { 10,10,768,720 };
+	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
+
+	SDL_Rect r_DebugView = { .x = 788,.y = 10,.w = 500,.h = 720 };
+	SDL_RenderFillRect(rc.rend, &r_DebugView);
+
+
+	switch (rc.target)
+	{
+	case TARGET_NES_STATE:
+		DrawNESState();
+		break;
+	case TARGET_APU_STATE:
+		break;
+	case TARGET_MEMORY:
+		break;
+	case TARGET_ABOUT:
+		DrawAbout();
+		break;
+	case TARGET_SETTINGS:
+		DrawSettings();
+		break;
+	}
+
+	GuiDraw();
+
+	// Swap framebuffers
+	SDL_RenderPresent(rc.rend);
+
+	//GetTime(&end);
+	//float elapsed = GetElapsedTimeMilli(&beg, &end);
+	//printf("Took %.3fms\n", elapsed);
 }
 
 #if 0
