@@ -6,9 +6,15 @@
 
 #include <stb_ds.h>
 
-static SDL_Renderer* rend;
-static UIElement* v_elements = NULL;
-static unsigned int next_id = 1;
+typedef struct
+{
+	SDL_Renderer* rend;
+
+	int mouse_x, mouse_y;
+	bool mouse_pressed, mouse_released;
+} GuiContext;
+
+static GuiContext gc;
 
 SDL_Color button_high = { 66, 150,250 };
 SDL_Color button_low = { 35,69,109 };
@@ -16,93 +22,14 @@ SDL_Color checkbox_high = { 35,69,109 };
 SDL_Color checkbox_low = { 29,47,73 };
 SDL_Color checkbox_active = { 66,150,250 };
 
-// UI components
-
-// Button
-void ButtonDraw(bool is_focus, SDL_Rect* span, void* data)
-{
-	ButtonElement* button = data;
-	SDL_Color c = is_focus ? button_high : button_low;
-
-	SDL_SetRenderDrawColor(rend, c.r, c.g, c.b, 255);
-	SDL_RenderFillRect(rend, span);
-
-	int xoff = span->x + (span->w - TextLen(button->label)) / 2;
-	int yoff = span->y + (span->h - 15) / 2; // Font height is fixed at 15, this might be refactored to have a variable font size at some point TODO
-
-	RenderText(button->label, white, xoff, yoff);
-}
-
-// Checkbox
-void OnCheckboxClick(UIElement* elem, SDL_Event* e)
-{
-	CheckboxElement* checkbox = elem->data;
-	checkbox->active = !checkbox->active;
-
-	if (checkbox->on_click)
-		checkbox->on_click(elem, e);
-}
-
-void CheckboxDraw(bool is_focus, SDL_Rect* span, void* data)
-{
-	CheckboxElement* checkbox = data;
-	SDL_Color c = is_focus ? checkbox_high : checkbox_low;
-
-	SDL_SetRenderDrawColor(rend, c.r, c.g, c.b, 255);
-	SDL_RenderFillRect(rend, span);
-
-	if (checkbox->active)
-	{
-		SDL_Rect r = { span->x + 5, span->y + 5, 10,10 };
-		SDL_SetRenderDrawColor(rend, checkbox_active.r, checkbox_active.g, checkbox_active.b, 255);
-		SDL_RenderFillRect(rend, &r);
-	}
-}
-
-// Integer Input
-typedef struct
-{
-	int* p;
-	char buf[32];
-} IntInputElement;
-
-void OnIntInputClick(UIElement* elem, SDL_Event* e)
-{
-
-}
-
-void IntInputDraw(bool is_focus, SDL_Rect* span, void* data)
-{
-
-}
-
-
-// Public API implementation
-
 void GuiInit(SDL_Renderer* r)
 {
-	rend = r;
+	gc.rend = r;
 }
 
 void GuiShutdown()
 {
-	UIElement elem;
-	for (int i = 0; i < arrlen(v_elements); i++)
-	{
-		elem = v_elements[i];
-		free(elem.data);
-	}
-	arrfree(v_elements);
-}
 
-void GuiDraw()
-{
-	UIElement elem;
-	for (int i = 0; i < arrlen(v_elements); i++)
-	{
-		elem = v_elements[i];
-		elem.draw(elem.is_focus, &elem.span, elem.data);
-	}
 }
 
 void GuiDispatchEvent(SDL_Event* e)
@@ -110,89 +37,68 @@ void GuiDispatchEvent(SDL_Event* e)
 	switch (e->type)
 	{
 	case SDL_MOUSEBUTTONUP:
-	{
-		Sint32 x = e->button.x;
-		Sint32 y = e->button.y;
-		for (int i = 0; i < arrlen(v_elements); i++)
-		{
-			SDL_Rect r = v_elements[i].span;
-			if (x >= r.x && y >= r.y && x <= r.x + r.w && y <= r.y + r.h)
-			{
-				if (v_elements[i].on_click)
-				{
-					v_elements[i].on_click(&v_elements[i], e);
-				}
-			}
-		}
-	}
+		gc.mouse_released = true;
+		break;
+	case SDL_MOUSEBUTTONDOWN:
+		gc.mouse_pressed = true;
+		break;
 	case SDL_MOUSEMOTION:
+		gc.mouse_x = e->motion.x;
+		gc.mouse_y = e->motion.y;
+		break;
+	}
+}
+void GuiEndFrame()
+{
+	gc.mouse_pressed = false;
+	gc.mouse_released = false;
+}
+
+bool RectIntersectMouse(SDL_Rect* rect)
+{
+	return gc.mouse_x >= rect->x && gc.mouse_x <= rect->x + rect->w && gc.mouse_y >= rect->y && gc.mouse_y <= rect->y + rect->h;
+}
+
+bool GuiAddButton(const char* label, SDL_Rect* span)
+{
+	bool hover = RectIntersectMouse(span);
+	SDL_Color c = hover ? button_high : button_low;
+
+	SDL_SetRenderDrawColor(gc.rend, c.r, c.g, c.b, 255);
+	SDL_RenderFillRect(gc.rend, span);
+
+	int len = TextLen(label);
+	RenderText(label, white, span->x + (span->w - len) / 2, span->y + (span->h - 15 + 1) / 2);
+
+	return hover && gc.mouse_released;
+}
+
+bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v)
+{
+	SDL_Rect span = { xoff,yoff,20,20 };
+	bool hover = RectIntersectMouse(&span);
+	SDL_Color c = hover ? checkbox_high : checkbox_low;
+
+	SDL_SetRenderDrawColor(gc.rend, c.r, c.g, c.b, 255);
+	SDL_RenderFillRect(gc.rend, &span);
+
+	bool pressed = hover && gc.mouse_released;
+	if (pressed)
 	{
-		Sint32 x = e->motion.x;
-		Sint32 y = e->motion.y;
-		for (int i = 0; i < arrlen(v_elements); i++)
-		{
-			SDL_Rect r = v_elements[i].span;
-			v_elements[i].is_focus = (x >= r.x && y >= r.y && x <= r.x + r.w && y <= r.y + r.h);
-		}
+		*v = !*v;
 	}
-	}
-}
 
-unsigned int GuiAddButton(const char* label, SDL_Rect* span, ON_CLICK_EVENT callback)
-{
-	UIElement elem;
-	elem.type = UI_BUTTON;
-	elem.id = next_id++;
-	elem.is_focus = false;
-	elem.on_click = callback;
-	elem.span = *span;
-	elem.data = malloc(sizeof(ButtonElement));
-	elem.draw = ButtonDraw;
-
-	ButtonElement* data = elem.data;
-	data->label = label;
-
-	arrput(v_elements, elem);
-
-	return elem.id;
-}
-
-unsigned int GuiAddCheckbox(int xoff, int yoff, ON_CLICK_EVENT callback)
-{
-	UIElement elem;
-	elem.type = UI_CHECKBOX;
-	elem.id = next_id++;
-	elem.is_focus = false;
-	elem.on_click = OnCheckboxClick;
-	elem.span.x = xoff; elem.span.y = yoff; elem.span.w = 20; elem.span.h = 20;
-	elem.data = malloc(sizeof(CheckboxElement));
-	elem.draw = CheckboxDraw;
-
-	CheckboxElement* data = elem.data;
-	data->on_click = callback;
-
-	arrput(v_elements, elem);
-
-	return elem.id;
-}
-
-unsigned int GuiAddIntInput(int xoff, int yoff, int min, int max, int* p)
-{
-	return 0;
-}
-
-void GuiRemoveUIElement(unsigned int id)
-{
-	// Linear search through vector of UI-elements
-	UIElement elem;
-	for (int i = 0; i < arrlen(v_elements); i++)
+	if (*v)
 	{
-		elem = v_elements[i];
-		if (elem.id == id)
-		{
-			free(elem.data);
-			arrdel(v_elements, i);
-			break;
-		}
+		SDL_SetRenderDrawColor(gc.rend, checkbox_active.r, checkbox_active.g, checkbox_active.b, 255);
+		span.x += 5; span.y += 5; span.h = 10; span.w = 10;
+		SDL_RenderFillRect(gc.rend, &span);
 	}
+
+	if (label)
+	{
+		RenderText(label, white, xoff + 25, yoff + 2);
+	}
+
+	return pressed;
 }

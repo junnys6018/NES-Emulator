@@ -38,6 +38,21 @@ int main(int argc, char** argv)
 
 	RendererDraw();
 	SDL_Event event;
+
+	//timepoint beg, end;
+	//GetTime(&beg);
+	//for (int i = 0; i <= 0xFFFF; i++)
+	//{
+	//	if (i >= 0x2000 && i < 0x4020)
+	//	{
+	//		continue;
+	//	}
+	//	uint8_t data = cpu_bus_read(&nes.cpu_bus, i);
+	//}
+	//GetTime(&end);
+	//printf("took %.3fms", GetElapsedTimeMilli(&beg, &end));
+
+
 	while (true)
 	{
 		while (SDL_PollEvent(&event) != 0)

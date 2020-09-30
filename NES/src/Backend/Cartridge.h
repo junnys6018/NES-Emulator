@@ -17,6 +17,46 @@ typedef NametableIndex(*NAMETABLE_MIRROR)(void* mapper, uint16_t addr);
 
 typedef struct
 {
+	char idstring[4];
+	uint8_t PRGROM_LSB;
+	uint8_t CHRROM_LSB;
+
+	// Flags
+	uint8_t MirrorType : 1; // 0: Horizontal or mapper controlled; 1: vertical
+	uint8_t Battery : 1;
+	uint8_t Trainer : 1;
+	uint8_t FourScreen : 1;
+	uint8_t MapperID1 : 4; // Bits 0-3
+
+	uint8_t ConsoleType : 2;
+	uint8_t FormatIdentifer : 2; // Used to determine if the supplied file is a NES 1.0 or 2.0 format
+	uint8_t MapperID2 : 4; // Bits 4-7
+
+	uint8_t MapperID3 : 4; // Bits 8-11
+	uint8_t SubmapperNumber : 4;
+
+	uint8_t PRGROM_MSB : 4;
+	uint8_t CHRROM_MSB : 4;
+
+	uint8_t todo1; // TODO: Figure out what these bytes do
+	uint8_t todo2;
+
+	uint8_t TimingMode : 2;
+	uint8_t unused : 6;
+
+	uint8_t PPUType : 4;
+	uint8_t HardwareType : 4;
+
+	uint8_t MiscRomsPresent;
+	uint8_t DefaultExpansionDevice;
+
+} Header;
+
+typedef struct
+{
+	// For debugging
+	Header header;
+
 	uint16_t mapperID;
 	CPU_READ_BYTE CPUReadCartridge;
 	PPU_READ_BYTE PPUReadCartridge;

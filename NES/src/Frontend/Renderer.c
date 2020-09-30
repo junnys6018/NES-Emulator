@@ -66,19 +66,11 @@ typedef struct
 
 	// What screen we are currently drawing
 	DrawTarget target;
+
+	bool overscan; // true: show overscan; false: hide overscan
 } RendererContext;
 
-typedef struct
-{
-	unsigned int nes_state;
-	unsigned int apu_state;
-	unsigned int memory;
-	unsigned int about;
-	unsigned int settings;
-} ButtonIDs;
-
 static RendererContext rc;
-static ButtonIDs buttons;
 
 void SDL_Emit_Error(const char* message)
 {
@@ -88,30 +80,6 @@ void SDL_Emit_Error(const char* message)
 void TTF_Emit_Error(const char* message)
 {
 	printf("[FONT ERROR]: %s\n", message);
-}
-
-void myHandler(UIElement* elem, SDL_Event* e)
-{
-	if (elem->id == buttons.nes_state)
-	{
-		rc.target = TARGET_NES_STATE;
-	}
-	else if (elem->id == buttons.apu_state)
-	{
-		rc.target = TARGET_APU_STATE;
-	}
-	else if (elem->id == buttons.memory)
-	{
-		rc.target = TARGET_MEMORY;
-	}
-	else if (elem->id == buttons.about)
-	{
-		rc.target = TARGET_ABOUT;
-	}
-	else if (elem->id == buttons.settings)
-	{
-		rc.target = TARGET_SETTINGS;
-	}
 }
 
 void RendererInit()
@@ -126,7 +94,7 @@ void RendererInit()
 	{
 		SDL_Emit_Error("Could not initialize SDL");
 	}
-	assert(SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1"));
+	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 	// Create a window
 	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
 	if (!rc.win)
@@ -199,19 +167,6 @@ void RendererInit()
 
 	// GUI
 	GuiInit(rc.rend);
-	int width = 100;
-	SDL_Rect span = { .x = 788,.y = 10,.w = width,.h = 30 };
-	buttons.nes_state = GuiAddButton("NES State", &span, myHandler);
-	span.x += width;
-	buttons.apu_state = GuiAddButton("APU State", &span, myHandler);
-	span.x += width;
-	buttons.memory = GuiAddButton("Memory", &span, myHandler);
-	span.x += width;
-	buttons.about = GuiAddButton("About", &span, myHandler);
-	span.x += width;
-	buttons.settings = GuiAddButton("Settings", &span, myHandler);
-
-	GuiAddCheckbox(30, 90, NULL);
 
 	rc.target = TARGET_NES_STATE;
 }
@@ -522,7 +477,6 @@ void DrawNESState()
 	DrawProgramView(788, 40, &rc.nes->cpu);
 	DrawStackView(980, 40, &rc.nes->cpu);
 	DrawCPUStatus(1100, 40, &rc.nes->cpu);
-
 	DrawPPUStatus(788, 415, &rc.nes->ppu);
 
 	int x = 798;
@@ -544,11 +498,8 @@ void DrawNESState()
 	DrawPaletteData(x + 256 * scale + 10, y);
 }
 
-void DrawAbout()
+void DrawAbout(int xoff, int yoff)
 {
-	int xoff = 788;
-	int yoff = 40;
-
 	RenderText("NES Emulator by Jun Lim", cyan, xoff + 10, yoff + 10);
 	RenderText("Controls", white, xoff + 10, yoff + 30);
 	RenderText("Space - Emulate one CPU instruction", white, xoff + 10, yoff + 50);
@@ -556,9 +507,66 @@ void DrawAbout()
 	RenderText("p     - Emulate one master clock cycle", white, xoff + 10, yoff + 90);
 }
 
-void DrawSettings()
+void DrawSettings(int xoff, int yoff)
 {
+	SDL_Rect span = { xoff + 10, yoff + 10,120,20 };
+	if (GuiAddButton("Load ROM", &span))
+	{
 
+	}
+	if (GuiAddCheckbox("Overscan", xoff + 10, yoff + 40, &rc.overscan))
+	{
+		printf("cb %i\n", rc.overscan);
+	}
+	static bool running = false;
+	span.y = yoff + 70; span.w = 200;
+	if (GuiAddButton(running ? "Step Through Emulation" : "Run Emulation", &span))
+	{
+		running = !running;
+	}
+	span.y = yoff + 100; span.w = 120;
+	if (GuiAddButton("Reset", &span))
+	{
+
+	}
+	span.y = yoff + 130;
+	if (GuiAddButton("Save Game", &span))
+	{
+
+	}
+	span.y = yoff + 160;
+	if (GuiAddButton("Restore Game", &span))
+	{
+
+	}
+
+	RenderText("ROM Infomation", cyan, xoff + 10, yoff + 190);
+	Header header = rc.nes->cart.header;
+	char buf[64];
+
+	uint16_t mapperID = ((uint16_t)header.MapperID3 << 8) | ((uint16_t)header.MapperID2 << 4) | (uint16_t)header.MapperID1;
+	sprintf(buf, "Mapper        - %u", mapperID);
+	RenderText(buf, white, xoff + 10, yoff + 210);
+	
+	int PRG_banks = ((uint16_t)header.PRGROM_MSB << 8) | (uint16_t)header.PRGROM_LSB;
+	sprintf(buf, "PRG ROM banks - %i [%iKB]", PRG_banks, PRG_banks * 16);
+	RenderText(buf, white, xoff + 10, yoff + 230);
+
+	int CHR_banks = ((uint16_t)header.CHRROM_MSB << 8) | (uint16_t)header.CHRROM_LSB;
+	sprintf(buf, "CHR ROM banks - %i [%iKB]", PRG_banks, PRG_banks * 8);
+	RenderText(buf, white, xoff + 10, yoff + 250);
+
+	sprintf(buf, "PPU mirroring - %s", header.MirrorType ? "vertical" : "horizontal");
+	RenderText(buf, white, xoff + 10, yoff + 270);
+
+	sprintf(buf, "Battery       - %s", header.Battery ? "yes" : "no");
+	RenderText(buf, white, xoff + 10, yoff + 290);
+
+	sprintf(buf, "Trainer       - %s", header.Trainer ? "yes" : "no");
+	RenderText(buf, white, xoff + 10, yoff + 310);
+
+	sprintf(buf, "4-Screen      - %s", header.FourScreen ? "yes" : "no");
+	RenderText(buf, white, xoff + 10, yoff + 330);
 }
 
 void RendererDraw()
@@ -580,6 +588,32 @@ void RendererDraw()
 	SDL_Rect r_DebugView = { .x = 788,.y = 10,.w = 500,.h = 720 };
 	SDL_RenderFillRect(rc.rend, &r_DebugView);
 
+	int width = 100;
+	SDL_Rect span = { .x = 788,.y = 10,.w = width,.h = 30 };
+	if (GuiAddButton("NES State", &span))
+	{
+		rc.target = TARGET_NES_STATE;
+	}
+	span.x += width;
+	if (GuiAddButton("APU State", &span))
+	{
+		rc.target = TARGET_APU_STATE;
+	}
+	span.x += width;
+	if (GuiAddButton("Memory", &span))
+	{
+		rc.target = TARGET_MEMORY;
+	}
+	span.x += width;
+	if (GuiAddButton("About", &span))
+	{
+		rc.target = TARGET_ABOUT;
+	}
+	span.x += width;
+	if (GuiAddButton("Settings", &span))
+	{
+		rc.target = TARGET_SETTINGS;
+	}
 
 	switch (rc.target)
 	{
@@ -591,14 +625,14 @@ void RendererDraw()
 	case TARGET_MEMORY:
 		break;
 	case TARGET_ABOUT:
-		DrawAbout();
+		DrawAbout(788, 40);
 		break;
 	case TARGET_SETTINGS:
-		DrawSettings();
+		DrawSettings(788, 40);
 		break;
 	}
 
-	GuiDraw();
+	GuiEndFrame();
 
 	// Swap framebuffers
 	SDL_RenderPresent(rc.rend);
