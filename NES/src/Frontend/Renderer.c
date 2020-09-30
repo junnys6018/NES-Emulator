@@ -45,7 +45,6 @@ typedef struct
 
 	// Width and height of the screen
 	int width, height;
-	uint8_t page; // Page to view in memory
 
 	// Textures representing the pattern tables currently accessible on the PPU
 	SDL_Texture* left_nametable;
@@ -87,14 +86,14 @@ void RendererInit()
 	rc.width = 1298;
 	rc.height = 740;
 
-	rc.page = 0;
+	rc.overscan = true;
 
 	// TODO: only initialize video component and initialize other components when needed (eg audio)
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
 	{
 		SDL_Emit_Error("Could not initialize SDL");
 	}
-	SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+
 	// Create a window
 	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
 	if (!rc.win)
@@ -190,11 +189,6 @@ void RendererShutdown()
 	GuiShutdown();
 }
 
-void RendererSetPageView(uint8_t page)
-{
-	rc.page = page;
-}
-
 void RenderChar(char glyph, SDL_Color c, int xoff, int yoff)
 {
 	yoff += roundf(rc.ascent * rc.scale);
@@ -233,18 +227,43 @@ int TextLen(const char* text)
 
 void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 {
-	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 10);
 
-	// Draw 2 pages of memory
-	for (int i = 0; i < 32; i++)
+	static int v = 0;
+	static int v2 = 0;
+
+	SDL_Rect span = { xoff + 1, yoff + 45, 475, 267 };
+	GuiAddScrollBar("test", &span, &v, 115, 5);
+	span.y = yoff + 355;
+	if (GuiAddScrollBar("test2", &span, &v2, 0xFF, 5))
+	{
+		printf("scroll %i\n", v);
+	}
+	// Draw CPU memory
+
+	RenderText("CPU Memory", cyan, xoff + 10, yoff + 10);
+	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 30);
+	for (int i = 0; i < 13; i++)
 	{
 		char line[128];
-		uint16_t addr = i * 16 + ((uint16_t)rc.page << 8);
+		uint16_t addr = (i + v) * 16;
 		uint8_t* m = cpu->bus->memory + addr;
 		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
 			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-		RenderText(line, white, xoff + 10, yoff + 35 + i * 20);
+		RenderText(line, white, xoff + 10, yoff + 50 + i * 20);
+	}
+
+	RenderText("PPU Memory", cyan, xoff + 10, yoff + 320);
+	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 340);
+	for (int i = 0; i < 13; i++)
+	{
+		char line[128];
+		uint16_t addr = i * 16;
+		uint8_t* m = cpu->bus->memory + addr;
+		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
+			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
+
+		RenderText(line, white, xoff + 10, yoff + 360 + i * 20);
 	}
 }
 
@@ -479,10 +498,6 @@ void DrawNESState()
 	DrawCPUStatus(1100, 40, &rc.nes->cpu);
 	DrawPPUStatus(788, 415, &rc.nes->ppu);
 
-	int x = 798;
-	int y = 220;
-	float scale = 1.45f;
-
 	// Check if palette has changed
 	if (memcmp(rc.cached_bg_palette, rc.palette, 4) != 0)
 	{
@@ -492,6 +507,10 @@ void DrawNESState()
 		if (rc.right_nt_data)
 			RendererUpdatePatternTableTexture(1);
 	}
+
+	int x = 798;
+	int y = 220;
+	float scale = 1.45f;
 
 	DrawPatternTable(x, y, scale, 0);
 	DrawPatternTable(x + 128 * scale + 5, y, scale, 1);
@@ -527,7 +546,8 @@ void DrawSettings(int xoff, int yoff)
 	span.y = yoff + 100; span.w = 120;
 	if (GuiAddButton("Reset", &span))
 	{
-
+		power_on_2C02(&rc.nes->ppu);
+		power_on_6502(&rc.nes->cpu);
 	}
 	span.y = yoff + 130;
 	if (GuiAddButton("Save Game", &span))
@@ -544,8 +564,7 @@ void DrawSettings(int xoff, int yoff)
 	Header header = rc.nes->cart.header;
 	char buf[64];
 
-	uint16_t mapperID = ((uint16_t)header.MapperID3 << 8) | ((uint16_t)header.MapperID2 << 4) | (uint16_t)header.MapperID1;
-	sprintf(buf, "Mapper        - %u", mapperID);
+	sprintf(buf, "Mapper        - %u", rc.nes->cart.mapperID);
 	RenderText(buf, white, xoff + 10, yoff + 210);
 	
 	int PRG_banks = ((uint16_t)header.PRGROM_MSB << 8) | (uint16_t)header.PRGROM_LSB;
@@ -582,8 +601,8 @@ void RendererDraw()
 	// Draw GUI
 	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
 
-	SDL_Rect dest = { 10,10,768,720 };
-	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &dest);
+	SDL_Rect r_NesView = { 10,10,768,720 };
+	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
 
 	SDL_Rect r_DebugView = { .x = 788,.y = 10,.w = 500,.h = 720 };
 	SDL_RenderFillRect(rc.rend, &r_DebugView);
@@ -623,6 +642,7 @@ void RendererDraw()
 	case TARGET_APU_STATE:
 		break;
 	case TARGET_MEMORY:
+		DrawMemoryView(788, 40, &rc.nes->cpu);
 		break;
 	case TARGET_ABOUT:
 		DrawAbout(788, 40);
@@ -639,7 +659,7 @@ void RendererDraw()
 
 	//GetTime(&end);
 	//float elapsed = GetElapsedTimeMilli(&beg, &end);
-	//printf("Took %.3fms\n", elapsed);
+	//printf("Took %.3fms                          \r", elapsed);
 }
 
 #if 0

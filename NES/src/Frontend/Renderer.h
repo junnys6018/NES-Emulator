@@ -12,9 +12,7 @@ extern SDL_Color light_blue;
 
 void RendererInit();
 void RendererShutdown();
-
 void RendererDraw();
-void RendererSetPageView(uint8_t page);
 
 void RenderText(const char* text, SDL_Color c, int xoff, int yoff);
 int TextLen(const char* text);

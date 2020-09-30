@@ -25,19 +25,14 @@ int main(int argc, char** argv)
 	//RunAllBenchmarks();
 	
 	Nes nes;
-	
-	//NESInit(&nes, "roms/SuperMarioBros.nes");
-	NESInit(&nes, "tests/roms/nestest.nes");
-
+	NESInit(&nes, "roms/DonkeyKong.nes");
+	//NESInit(&nes, "tests/roms/nestest.nes");
 	RendererBindNES(&nes);
 
 	// TODO: 
 	uint8_t* chr = ((Mapper000*)(nes.cart.mapper))->CHR;
 	RendererSetPatternTable(chr, 0);
 	RendererSetPatternTable(chr + 0x1000, 1);
-
-	RendererDraw();
-	SDL_Event event;
 
 	//timepoint beg, end;
 	//GetTime(&beg);
@@ -52,7 +47,7 @@ int main(int argc, char** argv)
 	//GetTime(&end);
 	//printf("took %.3fms", GetElapsedTimeMilli(&beg, &end));
 
-
+	SDL_Event event;
 	while (true)
 	{
 		while (SDL_PollEvent(&event) != 0)

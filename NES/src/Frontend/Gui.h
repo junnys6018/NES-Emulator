@@ -12,5 +12,6 @@ void GuiEndFrame(); // Call once per frame at the end of adding gui elements
 
 bool GuiAddButton(const char* label, SDL_Rect* span);
 bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v);
+bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int scale);
 
 #endif // !GUI_H
