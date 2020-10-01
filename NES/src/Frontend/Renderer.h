@@ -14,8 +14,18 @@ void RendererInit();
 void RendererShutdown();
 void RendererDraw();
 
-void RenderText(const char* text, SDL_Color c, int xoff, int yoff);
-int TextLen(const char* text);
+void SetTextOrigin(int xoff, int yoff);
+void SameLine();
+void NewLine();
+void RenderChar(char glyph, SDL_Color c);
+void RenderText(const char* text, SDL_Color c);
+
+typedef struct
+{
+	int w, h;
+} Bounds;
+Bounds TextBounds(const char* text);
+int TextHeight(int lines); // Returns the pixel height n lines of text will occupy 
 
 // side = 0: left nametable; side = 1: right nametable
 void RendererSetPatternTable(uint8_t* table_data, int side);

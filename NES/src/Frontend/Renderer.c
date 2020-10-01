@@ -32,6 +32,20 @@ typedef enum
 
 typedef struct
 {
+	int window_size;
+	int width, height;
+	int db_x, db_y;
+	int db_w, db_h;
+	int nes_w, nes_h;
+
+	int menu_button_w, menu_button_h;
+	int button_h;
+
+	int pattern_table_len;
+} WindowMetrics;
+
+typedef struct
+{
 	SDL_Window* win;
 	SDL_Renderer* rend;
 
@@ -41,10 +55,12 @@ typedef struct
 	SDL_Texture* atlas;
 	stbtt_packedchar chardata[96];
 	float scale;
-	int ascent, descent;
+	int ascent, descent, line_gap;
+	int y_advance;
+	int font_size;
+	int text_x, text_y, origin_x;
 
-	// Width and height of the screen
-	int width, height;
+	WindowMetrics wm;
 
 	// Textures representing the pattern tables currently accessible on the PPU
 	SDL_Texture* left_nametable;
@@ -83,8 +99,19 @@ void TTF_Emit_Error(const char* message)
 
 void RendererInit()
 {
-	rc.width = 1298;
-	rc.height = 740;
+	rc.wm.window_size = 3;
+	rc.wm.width = 30 + (256 + 170) * rc.wm.window_size;
+	rc.wm.height = 20 + 240 * rc.wm.window_size;
+	rc.wm.db_x = 20 + 256 * rc.wm.window_size;
+	rc.wm.db_y = 10;
+	rc.wm.db_w = 170 * rc.wm.window_size;
+	rc.wm.db_h = 240 * rc.wm.window_size;
+	rc.wm.nes_w = 256 * rc.wm.window_size;
+	rc.wm.nes_h = 240 * rc.wm.window_size;
+	rc.wm.menu_button_w = 34 * rc.wm.window_size;
+	rc.wm.menu_button_h = 10 * rc.wm.window_size;
+	rc.wm.button_h = 7 * rc.wm.window_size;
+	rc.wm.pattern_table_len = roundf(128 * 0.5f * rc.wm.window_size);
 
 	rc.overscan = true;
 
@@ -95,7 +122,7 @@ void RendererInit()
 	}
 
 	// Create a window
-	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.width, rc.height, 0);
+	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.wm.width, rc.wm.height, 0);
 	if (!rc.win)
 	{
 		SDL_Emit_Error("Could not create window");
@@ -127,13 +154,13 @@ void RendererInit()
 		TTF_Emit_Error("Could not init font");
 	}
 
-	int font_size = 15; // distance from highest ascender to the lowest descender is 15 pixels
-	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, font_size);
+	rc.font_size = 5 * rc.wm.window_size; // distance from highest ascender to the lowest descender in pixels
+	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, rc.font_size);
 
 	stbtt_pack_context spc;
 	unsigned char* bitmap = malloc(512 * 512);
 	stbtt_PackBegin(&spc, bitmap, 512, 512, 0, 1, NULL);
-	stbtt_PackFontRange(&spc, rc.fontdata, 0, font_size, 32, 96, rc.chardata);
+	stbtt_PackFontRange(&spc, rc.fontdata, 0, rc.font_size, 32, 96, rc.chardata);
 
 	stbtt_PackEnd(&spc);
 
@@ -148,9 +175,12 @@ void RendererInit()
 
 	rc.atlas = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, 512, 512);
 	SDL_UpdateTexture(rc.atlas, NULL, pixels, 512 * sizeof(uint32_t));
-
-	int lg;
-	stbtt_GetFontVMetrics(&rc.info, &rc.ascent, &rc.descent, &lg);
+	
+	stbtt_GetFontVMetrics(&rc.info, &rc.ascent, &rc.descent, &rc.line_gap);
+	rc.y_advance = roundf(rc.scale * (rc.ascent - rc.descent + rc.line_gap));
+	rc.ascent = roundf(rc.scale * rc.ascent);
+	rc.descent = roundf(rc.scale * rc.descent);
+	rc.line_gap = roundf(rc.scale * rc.line_gap);
 
 	free(bitmap);
 	free(pixels);
@@ -189,31 +219,33 @@ void RendererShutdown()
 	GuiShutdown();
 }
 
-void RenderChar(char glyph, SDL_Color c, int xoff, int yoff)
+void RenderChar(char glyph, SDL_Color c)
 {
-	yoff += roundf(rc.ascent * rc.scale);
-
 	stbtt_packedchar* info = &rc.chardata[glyph - 32];
 	SDL_Rect src_rect = { info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0 };
-	SDL_Rect dst_rect = { xoff + roundf(info->xoff), yoff + roundf(info->yoff), info->x1 - info->x0, info->y1 - info->y0 };
+
+	const int yoff = rc.text_y + rc.ascent + roundf(info->yoff);
+	const int xoff = rc.text_x + roundf(info->xoff);
+	SDL_Rect dst_rect = { xoff, yoff, info->x1 - info->x0, info->y1 - info->y0 };
 
 	SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
 	SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
+
+	rc.text_x += info->xadvance;
 }
 
-void RenderText(const char* text, SDL_Color c, int xoff, int yoff)
+void RenderText(const char* text, SDL_Color c)
 {
+	rc.text_x = rc.origin_x;
 	while (*text)
 	{
-		RenderChar(*text, c, xoff, yoff);
-		stbtt_packedchar* info = &rc.chardata[*text - 32];
-		xoff += roundf(info->xadvance);
-
+		RenderChar(*text, c);
 		text++;
 	}
+	rc.text_y += rc.y_advance;
 }
 
-int TextLen(const char* text)
+Bounds TextBounds(const char* text)
 {
 	float sum = 0.0f;
 	while (*text)
@@ -222,39 +254,62 @@ int TextLen(const char* text)
 		text++;
 	}
 
-	return roundf(sum);
+	return (Bounds) { roundf(sum), rc.font_size };
+}
+
+int TextHeight(int lines)
+{
+	return (lines - 1) * rc.y_advance + rc.ascent - rc.descent;
+}
+
+void SetTextOrigin(int xoff, int yoff)
+{
+	rc.text_x = xoff;
+	rc.text_y = yoff;
+	rc.origin_x = xoff;
+}
+
+void SameLine()
+{
+	rc.text_y -= rc.y_advance;
+}
+
+void NewLine()
+{
+	rc.text_y += rc.y_advance;
+	rc.text_x = rc.origin_x;
 }
 
 void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 {
-
-	static int v = 0;
+	static int addr_offset = 0;
 	static int v2 = 0;
 
-	SDL_Rect span = { xoff + 1, yoff + 45, 475, 267 };
-	GuiAddScrollBar("test", &span, &v, 115, 5);
-	span.y = yoff + 355;
+	SDL_Rect span = { xoff + 5, yoff + 10 + TextHeight(2), TextBounds("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F").w + 20, TextHeight(13) + 2 };
+	GuiAddScrollBar("test", &span, &addr_offset, 115, 5);
+	span.y = yoff + 30 + TextHeight(15) + TextHeight(2);
 	if (GuiAddScrollBar("test2", &span, &v2, 0xFF, 5))
 	{
-		printf("scroll %i\n", v);
+		printf("scroll %i\n", v2);
 	}
 	// Draw CPU memory
-
-	RenderText("CPU Memory", cyan, xoff + 10, yoff + 10);
-	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 30);
+	SetTextOrigin(xoff + 10, yoff + 10);
+	RenderText("CPU Memory", cyan);
+	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan);
 	for (int i = 0; i < 13; i++)
 	{
 		char line[128];
-		uint16_t addr = (i + v) * 16;
+		uint16_t addr = (i + addr_offset) * 16;
 		uint8_t* m = cpu->bus->memory + addr;
 		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
 			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-		RenderText(line, white, xoff + 10, yoff + 50 + i * 20);
+		RenderText(line, white);
 	}
 
-	RenderText("PPU Memory", cyan, xoff + 10, yoff + 320);
-	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan, xoff + 10, yoff + 340);
+	SetTextOrigin(xoff + 10, yoff + 30 + TextHeight(15));
+	RenderText("PPU Memory", cyan);
+	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan);
 	for (int i = 0; i < 13; i++)
 	{
 		char line[128];
@@ -263,48 +318,52 @@ void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
 			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-		RenderText(line, white, xoff + 10, yoff + 360 + i * 20);
+		RenderText(line, white);
 	}
 }
 
 void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 {
-	RenderText("Status: ", white, xoff + 10, yoff + 10);
+	SetTextOrigin(xoff + 10, yoff + 10);
+	RenderText("Status:  ", white);
+	SameLine();
 	char flags[] = "NV-BDIZC";
 	for (int i = 0; i < 8; i++)
 	{
 		// We are drawing the flags from high bits to low bits 
 		bool set = cpu->status.reg & (1 << (7 - i));
-		RenderChar(flags[i], set ? green : red, xoff + TextLen("Status:  ") + 10 * i, yoff + 10);
+		RenderChar(flags[i], set ? green : red);
 	}
+	NewLine();
 	// Draw Registers, PC and SP
 	char line[32];
 
 	sprintf(line, "A: $%.2X", cpu->A);
-	RenderText(line, white, xoff + 10, yoff + 30);
+	RenderText(line, white);
 
 	sprintf(line, "X: $%.2X", cpu->X);
-	RenderText(line, white, xoff + 10, yoff + 50);
+	RenderText(line, white);
 
 	sprintf(line, "Y: $%.2X", cpu->Y);
-	RenderText(line, white, xoff + 10, yoff + 70);
+	RenderText(line, white);
 
 	sprintf(line, "PC: $%.4X", cpu->PC);
-	RenderText(line, white, xoff + 10, yoff + 90);
+	RenderText(line, white);
 
 	sprintf(line, "SP: $%.4X", 0x0100 | (uint16_t)cpu->SP);
-	RenderText(line, white, xoff + 10, yoff + 110);
+	RenderText(line, white);
 
 	// Total cycles
 	sprintf(line, "cycles: %lli", cpu->total_cycles);
-	RenderText(line, white, xoff + 10, yoff + 130);
+	RenderText(line, white);
 }
 
 void DrawStackView(int xoff, int yoff, State6502* cpu)
 {
 	int stack_size = min(0xFF - cpu->SP, 7);
 
-	RenderText("Stack:", cyan, xoff + 10, yoff + 10);
+	SetTextOrigin(xoff + 10, yoff + 10);
+	RenderText("Stack:", cyan);
 
 	// Draw up to 7 lines of the stack
 	for (int i = 0; i < stack_size; i++)
@@ -314,12 +373,13 @@ void DrawStackView(int xoff, int yoff, State6502* cpu)
 		char line[32];
 		sprintf(line, "$%.4X %.2X", addr, val);
 
-		RenderText(line, white, xoff + 10, yoff + 30 + i * 20);
+		RenderText(line, white);
 	}
 }
 
 void DrawProgramView(int xoff, int yoff, State6502* cpu)
 {
+	SetTextOrigin(xoff + 10, yoff + 10);
 	uint16_t PC = cpu->PC;
 	int size;
 	for (int i = 0; i < 8; i++)
@@ -327,7 +387,7 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu)
 		char* line = dissassemble(cpu, PC, &size);
 		PC += size;
 
-		RenderText(line, i == 0 ? cyan : white, xoff + 10, yoff + 10 + i * 20);
+		RenderText(line, i == 0 ? cyan : white);
 
 		free(line);
 	}
@@ -335,80 +395,89 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu)
 
 void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 {
-	RenderText("PPUCTRL   ($2000): ", white, xoff + 10, yoff + 10);
+	SetTextOrigin(xoff + 10, yoff + 10);
+	RenderText("PPUCTRL   ($2000): ", white);
+	SameLine();
 	char flags[] = "VPHBSINN";
 	for (int i = 0; i < 8; i++)
 	{
 		// We are drawing the flags from high bits to low bits 
 		bool set = ppu->PPUCTRL.reg & (1 << (7 - i));
-		RenderChar(flags[i], set ? green : red, xoff + TextLen("PPUCTRL   ($2000):  ") + 10 * i, yoff + 10);
+		RenderChar(flags[i], set ? green : red);
 	}
+	NewLine();
 
-	RenderText("PPUMASK   ($2001): ", white, xoff + 10, yoff + 30);
+	RenderText("PPUMASK   ($2001): ", white);
+	SameLine();
 	strcpy(flags, "BGRsbMmG");
 	for (int i = 0; i < 8; i++)
 	{
 		bool set = ppu->PPUMASK.reg & (1 << (7 - i));
-		RenderChar(flags[i], set ? green : red, xoff + TextLen("PPUMASK   ($2001):  ") + 10 * i, yoff + 30);
+		RenderChar(flags[i], set ? green : red);
 	}
+	NewLine();
 
-	RenderText("PPUSTATUS ($2002): ", white, xoff + 10, yoff + 50);
+	RenderText("PPUSTATUS ($2002): ", white);
+	SameLine();
 	strcpy(flags, "VSO.....");
 	for (int i = 0; i < 8; i++)
 	{
 		bool set = ppu->PPUSTATUS.reg & (1 << (7 - i));
-		RenderChar(flags[i], set ? green : red, xoff + TextLen("PPUSTATUS ($2002):  ") + 10 * i, yoff + 50);
+		RenderChar(flags[i], set ? green : red);
 	}
+	NewLine();
 
 	char line[64];
 	sprintf(line, "OAMADDR   ($2003): $%.2X", ppu->OAMADDR);
-	RenderText(line, white, xoff + 10, yoff + 70);
+	RenderText(line, white);
 
 	sprintf(line, "OAMDATA   ($2004): $%.2X", ppu->OAMDATA);
-	RenderText(line, white, xoff + 10, yoff + 90);
+	RenderText(line, white);
 
 	sprintf(line, "PPUSCROLL ($2005): $%.2X", ppu->PPUSCROLL);
-	RenderText(line, white, xoff + 10, yoff + 110);
+	RenderText(line, white);
 
 	sprintf(line, "PPUADDR   ($2006): $%.2X", ppu->PPUADDR);
-	RenderText(line, white, xoff + 10, yoff + 130);
+	RenderText(line, white);
 
 	sprintf(line, "PPUDATA   ($2007): $%.2X", ppu->PPUDATA);
-	RenderText(line, white, xoff + 10, yoff + 150);
+	RenderText(line, white);
 
 	sprintf(line, "OAMDMA    ($4014): $%.2X", ppu->OAMDMA);
-	RenderText(line, white, xoff + 10, yoff + 170);
+	RenderText(line, white);
 	
-	RenderText("Internal Registers", cyan, xoff + 280, yoff + 10);
+	SetTextOrigin(xoff + TextBounds("PPUMASK($2001) : BGRsbMmG    ").w + 10, yoff + 10);
+	RenderText("Internal Registers", cyan);
 
 	sprintf(line, "v: $%.4X; t: $%.4X", ppu->v, ppu->t);
-	RenderText(line, white, xoff + 280, yoff + 30);
+	RenderText(line, white);
 
 	sprintf(line, "fine-x: %i", ppu->x);
-	RenderText(line, white, xoff + 280, yoff + 50);
+	RenderText(line, white);
 
 	sprintf(line, "Write Toggle (w): %i", ppu->w);
-	RenderText(line, white, xoff + 280, yoff + 70);
+	RenderText(line, white);
 
 	// TODO: ppu->cycles and ppu->scanline indicate the next clock of the ppu, we want to render the current clock
 	sprintf(line, "cycles: %i", ppu->cycles);
-	RenderText(line, white, xoff + 280, yoff + 90);
+	RenderText(line, white);
 
 	sprintf(line, "scanline: %i", ppu->scanline);
-	RenderText(line, white, xoff + 280, yoff + 110);
+	RenderText(line, white);
 }
 
-void DrawPatternTable(int xoff, int yoff, float scale, int side)
+void DrawPatternTable(int xoff, int yoff, int side)
 {
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
 
-	SDL_Rect dest = { .x = xoff,.y = yoff,.w = 128 * scale,.h = 128 * scale };
+	SDL_Rect dest = { .x = xoff,.y = yoff,.w = rc.wm.pattern_table_len,.h = rc.wm.pattern_table_len };
 	SDL_RenderCopy(rc.rend, target, NULL, &dest);
 }
 
 void DrawPaletteData(int xoff, int yoff)
 {
-	SDL_Rect rect = { .x = xoff,.y = yoff,.w = 8,.h = 8 };
+	const int len = roundf(2.66 * rc.wm.window_size);
+	SDL_Rect rect = { .x = xoff,.y = yoff,.w = len,.h = len };
 	for (int y = 0; y < 8; y++)
 	{
 		rect.x = xoff;
@@ -417,9 +486,9 @@ void DrawPaletteData(int xoff, int yoff)
 			color c = PALETTE_MAP[rc.palette[y * 4 + x] & 0x3F];
 			SDL_SetRenderDrawColor(rc.rend, c.r, c.g, c.b, 255);
 			SDL_RenderFillRect(rc.rend, &rect);
-			rect.x += 8;
+			rect.x += len;
 		}
-		rect.y += 14;
+		rect.y += len + 2 * rc.wm.window_size;
 	}
 }
 
@@ -493,10 +562,10 @@ void SendPixelDataToScreen(color* pixels)
 
 void DrawNESState()
 {
-	DrawProgramView(788, 40, &rc.nes->cpu);
-	DrawStackView(980, 40, &rc.nes->cpu);
-	DrawCPUStatus(1100, 40, &rc.nes->cpu);
-	DrawPPUStatus(788, 415, &rc.nes->ppu);
+	DrawProgramView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
+	DrawStackView(rc.wm.db_x + rc.wm.db_w / 3, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
+	DrawCPUStatus(rc.wm.db_x + roundf(0.6f * rc.wm.db_w), rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
+	DrawPPUStatus(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h + TextHeight(8) + 10, &rc.nes->ppu);
 
 	// Check if palette has changed
 	if (memcmp(rc.cached_bg_palette, rc.palette, 4) != 0)
@@ -508,22 +577,22 @@ void DrawNESState()
 			RendererUpdatePatternTableTexture(1);
 	}
 
-	int x = 798;
-	int y = 220;
-	float scale = 1.45f;
+	int x = 10 + rc.wm.db_x;
+	int y = rc.wm.db_y + rc.wm.menu_button_h + TextHeight(18) + 20;
 
-	DrawPatternTable(x, y, scale, 0);
-	DrawPatternTable(x + 128 * scale + 5, y, scale, 1);
-	DrawPaletteData(x + 256 * scale + 10, y);
+	DrawPatternTable(x, y, 0);
+	DrawPatternTable(x + rc.wm.pattern_table_len + 5, y, 1);
+	DrawPaletteData(x + 2 * rc.wm.pattern_table_len + 10, y);
 }
 
 void DrawAbout(int xoff, int yoff)
 {
-	RenderText("NES Emulator by Jun Lim", cyan, xoff + 10, yoff + 10);
-	RenderText("Controls", white, xoff + 10, yoff + 30);
-	RenderText("Space - Emulate one CPU instruction", white, xoff + 10, yoff + 50);
-	RenderText("f     - Emulate one frame", white, xoff + 10, yoff + 70);
-	RenderText("p     - Emulate one master clock cycle", white, xoff + 10, yoff + 90);
+	SetTextOrigin(xoff + 10, yoff + 10);
+	RenderText("NES Emulator by Jun Lim", cyan);
+	RenderText("Controls", white);
+	RenderText("Space - Emulate one CPU instruction", white);
+	RenderText("f     - Emulate one frame", white);
+	RenderText("p     - Emulate one master clock cycle", white);
 }
 
 void DrawSettings(int xoff, int yoff)
@@ -560,32 +629,33 @@ void DrawSettings(int xoff, int yoff)
 
 	}
 
-	RenderText("ROM Infomation", cyan, xoff + 10, yoff + 190);
+	SetTextOrigin(xoff + 10, span.y + 30);
+	RenderText("ROM Infomation", cyan);
 	Header header = rc.nes->cart.header;
 	char buf[64];
 
 	sprintf(buf, "Mapper        - %u", rc.nes->cart.mapperID);
-	RenderText(buf, white, xoff + 10, yoff + 210);
+	RenderText(buf, white);
 	
 	int PRG_banks = ((uint16_t)header.PRGROM_MSB << 8) | (uint16_t)header.PRGROM_LSB;
 	sprintf(buf, "PRG ROM banks - %i [%iKB]", PRG_banks, PRG_banks * 16);
-	RenderText(buf, white, xoff + 10, yoff + 230);
+	RenderText(buf, white);
 
 	int CHR_banks = ((uint16_t)header.CHRROM_MSB << 8) | (uint16_t)header.CHRROM_LSB;
 	sprintf(buf, "CHR ROM banks - %i [%iKB]", PRG_banks, PRG_banks * 8);
-	RenderText(buf, white, xoff + 10, yoff + 250);
+	RenderText(buf, white);
 
 	sprintf(buf, "PPU mirroring - %s", header.MirrorType ? "vertical" : "horizontal");
-	RenderText(buf, white, xoff + 10, yoff + 270);
+	RenderText(buf, white);
 
 	sprintf(buf, "Battery       - %s", header.Battery ? "yes" : "no");
-	RenderText(buf, white, xoff + 10, yoff + 290);
+	RenderText(buf, white);
 
 	sprintf(buf, "Trainer       - %s", header.Trainer ? "yes" : "no");
-	RenderText(buf, white, xoff + 10, yoff + 310);
+	RenderText(buf, white);
 
 	sprintf(buf, "4-Screen      - %s", header.FourScreen ? "yes" : "no");
-	RenderText(buf, white, xoff + 10, yoff + 330);
+	RenderText(buf, white);
 }
 
 void RendererDraw()
@@ -599,16 +669,15 @@ void RendererDraw()
 	SDL_RenderClear(rc.rend);
 
 	// Draw GUI
-	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
-
-	SDL_Rect r_NesView = { 10,10,768,720 };
+	SDL_Rect r_NesView = { 10,10,rc.wm.nes_w,rc.wm.nes_h };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
 
-	SDL_Rect r_DebugView = { .x = 788,.y = 10,.w = 500,.h = 720 };
+	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
+	SDL_Rect r_DebugView = { .x = rc.wm.db_x,.y = rc.wm.db_y,.w = rc.wm.db_w,.h = rc.wm.db_h };
 	SDL_RenderFillRect(rc.rend, &r_DebugView);
 
-	int width = 100;
-	SDL_Rect span = { .x = 788,.y = 10,.w = width,.h = 30 };
+	int width = rc.wm.menu_button_w;
+	SDL_Rect span = { .x = rc.wm.db_x,.y = rc.wm.db_y,.w = width,.h = rc.wm.menu_button_h };
 	if (GuiAddButton("NES State", &span))
 	{
 		rc.target = TARGET_NES_STATE;
@@ -642,13 +711,13 @@ void RendererDraw()
 	case TARGET_APU_STATE:
 		break;
 	case TARGET_MEMORY:
-		DrawMemoryView(788, 40, &rc.nes->cpu);
+		DrawMemoryView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
 		break;
 	case TARGET_ABOUT:
-		DrawAbout(788, 40);
+		DrawAbout(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
 		break;
 	case TARGET_SETTINGS:
-		DrawSettings(788, 40);
+		DrawSettings(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
 		break;
 	}
 

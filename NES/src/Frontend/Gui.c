@@ -83,8 +83,9 @@ bool GuiAddButton(const char* label, SDL_Rect* span)
 	SDL_SetRenderDrawColor(gc.rend, c.r, c.g, c.b, 255);
 	SDL_RenderFillRect(gc.rend, span);
 
-	int len = TextLen(label);
-	RenderText(label, white, span->x + (span->w - len) / 2, span->y + (span->h - 15 + 1) / 2);
+	int len = TextBounds(label).w;
+	SetTextOrigin(span->x + (span->w - len) / 2, span->y + (span->h - 15 + 1) / 2);
+	RenderText(label, white);
 
 	return hover && gc.mouse_released;
 }
@@ -113,7 +114,8 @@ bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v)
 
 	if (label)
 	{
-		RenderText(label, white, xoff + 25, yoff + 2);
+		SetTextOrigin(xoff + 25, yoff + 2);
+		RenderText(label, white);
 	}
 
 	return pressed;
@@ -186,7 +188,7 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 		{
 			is_active = true;
 			active_grab = hash(label);
-			// Calculate offset from the top of the grab
+			// Calculate offset to the top of the grab
 			yoff = y - gc.mouse_y;
 		}
 	}

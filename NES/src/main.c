@@ -25,8 +25,8 @@ int main(int argc, char** argv)
 	//RunAllBenchmarks();
 	
 	Nes nes;
-	NESInit(&nes, "roms/DonkeyKong.nes");
-	//NESInit(&nes, "tests/roms/nestest.nes");
+	//NESInit(&nes, "roms/DonkeyKong.nes");
+	NESInit(&nes, "tests/roms/nestest.nes");
 	RendererBindNES(&nes);
 
 	// TODO: 
