@@ -4,7 +4,15 @@
 #include <SDL.h>
 #include <stdbool.h>
 
-void GuiInit(SDL_Renderer* rend);
+typedef struct
+{
+	int scroll_bar_width;
+	int checkbox_size;
+	int font_size;
+	int padding;
+} GuiMetrics;
+
+void GuiInit(SDL_Renderer* rend, GuiMetrics* metrics);
 void GuiShutdown();
 
 void GuiDispatchEvent(SDL_Event* e);
