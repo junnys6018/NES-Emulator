@@ -2,7 +2,13 @@
 #include "Frontend/Renderer.h" // To upload pixel data to renderer
 
 #include <stdio.h> // For printf
+#include <string.h> // For memset
+
 // TODO: Implment color emphasis and grey scale
+// TODO: Implement "show bg and sprits in leftmost 8 pixels of screen flag"
+
+// Disable printing
+// #define printf(x) (void)0;
 
 // Maps a 6 bit HSV color into RGB
 color PALETTE_MAP[64] =
@@ -229,19 +235,26 @@ void clock_2C02(State2C02* ppu)
 	{
 		//count = 0;
 		//printf("Reset count\n");
-		ppu->PPUSTATUS.flags.V = 1;
-		if (ppu->PPUCTRL.flags.V)
+		if (!ppu->ppustatus_read_early && !ppu->ppustatus_read_late)
+		{
+			ppu->PPUSTATUS.flags.V = 1;
+		}
+		if (ppu->PPUCTRL.flags.V && !ppu->ppustatus_read_early && !ppu->ppustatus_read_late)
 		{
 			NMI(ppu->cpu);
 		}
+
+		ppu->ppustatus_read_early = false;
+		ppu->ppustatus_read_late = false;
+
 		// Send pixel data to renderer
 		SendPixelDataToScreen(ppu->pixels);
 	}
 
 	ppu->cycles++;
 
-	// Skip a cycle on odd frames
-	if (ppu->cycles == 340 && ppu->scanline == -1 && ppu->oddframe)
+	// Skip a cycle on odd frames, but only if rendering is enabled
+	if (ppu->cycles == 340 && ppu->scanline == -1 && ppu->oddframe && ((ppu->PPUMASK.reg & 0x18) != 0))
 	{
 		ppu->cycles++;
 	}
@@ -292,6 +305,10 @@ void power_on_2C02(State2C02* ppu)
 
 	ppu->scanline = -1;
 	ppu->cycles = 0;
+
+	memset(ppu->pixels, 0, sizeof(ppu->pixels));
+	ppu->ppustatus_read_early = false;
+	ppu->ppustatus_read_late = false;
 }
 
 void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
@@ -374,6 +391,18 @@ uint8_t read_ppu(State2C02* ppu, uint16_t addr)
 	{
 	case 0x2002: // PPUSTATUS
 		ppu->w = 0;
+
+		if (ppu->cycles == 0 && ppu->scanline == 241)
+		{
+			ppu->ppustatus_read_early = true;
+			ppu->PPUSTATUS.flags.V = 0;
+		}
+		else if ((ppu->cycles == 1 || ppu->cycles == 2) && ppu->scanline == 241)
+		{
+			ppu->ppustatus_read_late = true;
+			ppu->PPUSTATUS.flags.V = 1;
+		}
+
 		uint8_t ret = ppu->PPUSTATUS.reg;
 		ppu->PPUSTATUS.flags.V = 0;
 		return ret;

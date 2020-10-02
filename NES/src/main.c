@@ -6,7 +6,8 @@
 #include "Backend/Mappers/Mapper_000.h"
 #include "Backend/nes.h"
 
-#include "test.h"
+#include "test_6502.h"
+#include "test_2C02.h"
 #include "Benchmarks.h"
 
 #include "timer.h"
@@ -21,31 +22,18 @@ int main(int argc, char** argv)
 {
 	RendererInit();
 
-	//RunAllTests();
-	//RunAllBenchmarks();
+	RunAll6502Tests();
+	RunAll2C02Tests();
 	
 	Nes nes;
 	//NESInit(&nes, "roms/DonkeyKong.nes");
-	NESInit(&nes, "tests/roms/nestest.nes");
+	NESInit(&nes, "tests/roms/blargg_vbl_nmi_timing/4.vbl_clear_timing.nes");
 	RendererBindNES(&nes);
 
 	// TODO: 
 	uint8_t* chr = ((Mapper000*)(nes.cart.mapper))->CHR;
 	RendererSetPatternTable(chr, 0);
 	RendererSetPatternTable(chr + 0x1000, 1);
-
-	//timepoint beg, end;
-	//GetTime(&beg);
-	//for (int i = 0; i <= 0xFFFF; i++)
-	//{
-	//	if (i >= 0x2000 && i < 0x4020)
-	//	{
-	//		continue;
-	//	}
-	//	uint8_t data = cpu_bus_read(&nes.cpu_bus, i);
-	//}
-	//GetTime(&end);
-	//printf("took %.3fms", GetElapsedTimeMilli(&beg, &end));
 
 	SDL_Event event;
 	while (true)

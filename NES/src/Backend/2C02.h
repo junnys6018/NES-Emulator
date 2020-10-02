@@ -121,9 +121,15 @@ typedef struct
 	int cycles; // 341 cycles per scanline
 	int scanline; // 262 scanlines per frame
 
+	// Stuff that does not represent the hardware of the 2C02
+
 	color pixels[256 * 240];
 	Bus2C02* bus;
 	struct State6502* cpu;
+	
+	// If PPUSTATUS is read at (0,241), the V flag is read as clear, and it wont be set at (1,241), and NMI will not be generated
+	// If PPUSTATUS is read at (1,241) or (2,241), the V flag is read as set, and will be cleared as usual, but NMI will be supressed
+	bool ppustatus_read_early, ppustatus_read_late;
 
 } State2C02;
 

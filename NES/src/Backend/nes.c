@@ -27,3 +27,14 @@ void NESDestroy(Nes* nes)
 {
 	free_cartridge(&nes->cart);
 }
+
+void NESReset(Nes* nes)
+{
+	nes->system_clock = 0;
+
+	power_on_6502(&nes->cpu);
+	reset_6502(&nes->cpu);
+
+	power_on_2C02(&nes->ppu);
+	reset_2C02(&nes->ppu);
+}

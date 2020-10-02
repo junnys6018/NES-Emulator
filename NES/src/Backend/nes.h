@@ -20,6 +20,7 @@ typedef struct
 
 void NESInit(Nes* nes, const char* filepath);
 void NESDestroy(Nes* nes);
+void NESReset(Nes* nes);
 
 // Emulate one cpu instruction
 inline void clock_nes_instruction(Nes* nes)
@@ -27,9 +28,12 @@ inline void clock_nes_instruction(Nes* nes)
 	while (true)
 	{
 		nes->system_clock++;
-		clock_2C02(&nes->ppu);
 		if (nes->system_clock % 3 == 0 && clock_6502(&nes->cpu) == 0)
+		{
+			clock_2C02(&nes->ppu);
 			break;
+		}
+		clock_2C02(&nes->ppu);
 	}
 }
 
@@ -39,9 +43,10 @@ inline void clock_nes_frame(Nes* nes)
 	do
 	{
 		nes->system_clock++;
-		clock_2C02(&nes->ppu);
 		if (nes->system_clock % 3 == 0)
 			clock_6502(&nes->cpu);
+
+		clock_2C02(&nes->ppu);
 	} while (!(nes->ppu.scanline == 241 && nes->ppu.cycles == 0));
 }
 
@@ -49,9 +54,10 @@ inline void clock_nes_frame(Nes* nes)
 inline void clock_nes_cycle(Nes* nes)
 {
 	nes->system_clock++;
-	clock_2C02(&nes->ppu);
 	if (nes->system_clock % 3 == 0)
 		clock_6502(&nes->cpu);
+
+	clock_2C02(&nes->ppu);
 }
 
 #endif // !NES_H

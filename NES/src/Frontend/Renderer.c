@@ -383,16 +383,15 @@ void SendPixelDataToScreen(color* pixels)
 
 void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 {
-	static int addr_offset = 0;
-	static int v2 = 0;
+	static int cpu_addr_offset = 0;
+	static int ppu_addr_offset = 0;
 
+	// Scrollbars
 	SDL_Rect span = { xoff + rc.wm.padding / 2, yoff + rc.wm.padding + TextHeight(2), TextBounds("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F").w + rc.wm.padding + 6 * rc.wm.window_scale, TextHeight(13) + 2 };
-	GuiAddScrollBar("cpu memory", &span, &addr_offset, 115, 5);
+	GuiAddScrollBar("cpu memory", &span, &cpu_addr_offset, 0x80 - 13, 5);
 	span.y = yoff + 2 * rc.wm.padding + TextHeight(15) + TextHeight(2);
-	if (GuiAddScrollBar("test2", &span, &v2, 0xFF, 5))
-	{
-		printf("scroll %i\n", v2);
-	}
+	GuiAddScrollBar("test2", &span, &ppu_addr_offset, 0x400 - 13, 5);
+
 	// Draw CPU memory
 	SetTextOrigin(xoff + rc.wm.padding, yoff + rc.wm.padding);
 	RenderText("CPU Memory", cyan);
@@ -400,7 +399,7 @@ void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 	for (int i = 0; i < 13; i++)
 	{
 		char line[128];
-		uint16_t addr = (i + addr_offset) * 16;
+		uint16_t addr = (i + cpu_addr_offset) * 16;
 		uint8_t* m = cpu->bus->memory + addr;
 		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
 			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
@@ -408,14 +407,19 @@ void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 		RenderText(line, white);
 	}
 
+	// Draw PPU memory
 	SetTextOrigin(xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + TextHeight(15));
 	RenderText("PPU Memory", cyan);
 	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan);
 	for (int i = 0; i < 13; i++)
 	{
 		char line[128];
-		uint16_t addr = i * 16;
-		uint8_t* m = cpu->bus->memory + addr;
+		uint16_t addr = (i + ppu_addr_offset) * 16;
+		uint8_t m[16];
+		for (int i = 0; i < 16; i++)
+		{
+			m[i] = ppu_bus_read(&rc.nes->ppu_bus, addr + i);
+		}
 		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
 			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
@@ -649,8 +653,7 @@ void DrawSettings(int xoff, int yoff)
 	span.y += rc.wm.padding + rc.wm.button_h; span.w = 40 * rc.wm.window_scale;
 	if (GuiAddButton("Reset", &span))
 	{
-		power_on_2C02(&rc.nes->ppu);
-		power_on_6502(&rc.nes->cpu);
+		NESReset(rc.nes);
 	}
 	span.y += rc.wm.padding + rc.wm.button_h;
 	if (GuiAddButton("Save Game", &span))
