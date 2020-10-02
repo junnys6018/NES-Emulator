@@ -9,7 +9,7 @@ typedef enum
 	NMI_SIGNAL = 2
 } InterruptSignal;
 
-typedef struct
+typedef struct State6502
 {
 	uint8_t A; // Accumilator register 
 	uint8_t X; // X and Y index registers
@@ -33,6 +33,10 @@ typedef struct
 	} status;
 
 	Bus6502* bus;
+
+	// DMA Port, Access: write, accessed from $4014
+	uint8_t OAMDMA;
+	int dma_transfer_cycles;
 
 	// Helper members
 	uint8_t operand; // Data fetched for the operand of an instruction

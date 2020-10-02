@@ -1,5 +1,6 @@
 #include "6502_Bus.h"
 #include "2C02.h"
+#include "6502.h"
 #include <stdio.h> // For printf
 
 void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
@@ -28,7 +29,8 @@ void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 		{
 			if (addr == 0x4014)
 			{
-				printf("OAMDMA\n");
+				bus->cpu->OAMDMA = data;
+				bus->cpu->dma_transfer_cycles = ((bus->cpu->total_cycles % 2 == 1) ? 514 : 513);
 			}
 		}
 		// APU and I/O functionality that is normally disabled

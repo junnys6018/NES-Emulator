@@ -548,7 +548,7 @@ void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 	sprintf(line, "PPUDATA   ($2007): $%.2X", ppu->PPUDATA);
 	RenderText(line, white);
 
-	sprintf(line, "OAMDMA    ($4014): $%.2X", ppu->OAMDMA);
+	sprintf(line, "OAMDMA    ($4014): $%.2X", rc.nes->cpu.OAMDMA);
 	RenderText(line, white);
 	
 	SetTextOrigin(xoff + TextBounds("PPUMASK($2001) : BGRsbMmG     ").w, yoff + rc.wm.padding);

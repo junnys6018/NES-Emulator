@@ -101,9 +101,6 @@ typedef struct
 	// Access: read/write, accessed from $2007
 	uint8_t PPUDATA;
 
-	// Access: write, accessed from $4014
-	uint8_t OAMDMA;
-
 	// Internal Registers
 
 	uint16_t v; // Current VRAM address (15 bits)
@@ -113,7 +110,7 @@ typedef struct
 	bool oddframe; // 0: even; 1: odd
 
 	uint16_t pt_shift_low, pt_shift_high; // Pattern table shift registers
-	uint8_t pa_shift_low, pa_shift_high; // Palatte attribute shift registers
+	uint16_t pa_shift_low, pa_shift_high; // Palatte attribute shift registers
 
 	uint8_t pt_latch_low, pt_latch_high, pa_latch_low, pa_latch_high; // Latches used to feed data into shift registers
 	uint8_t name_tbl_byte; // Byte fetched from name table
@@ -123,6 +120,8 @@ typedef struct
 
 	// Stuff that does not represent the hardware of the 2C02
 
+	uint64_t total_cycles;
+
 	color pixels[256 * 240];
 	Bus2C02* bus;
 	struct State6502* cpu;
@@ -130,6 +129,8 @@ typedef struct
 	// If PPUSTATUS is read at (0,241), the V flag is read as clear, and it wont be set at (1,241), and NMI will not be generated
 	// If PPUSTATUS is read at (1,241) or (2,241), the V flag is read as set, and will be cleared as usual, but NMI will be supressed
 	bool ppustatus_read_early, ppustatus_read_late;
+
+	uint32_t nmi_line; // bitfield of 32 past signal levels of the nmi line. bit 0 is the most recent signal level
 
 } State2C02;
 

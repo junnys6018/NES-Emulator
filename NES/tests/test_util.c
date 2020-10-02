@@ -1,5 +1,6 @@
 #include "test_util.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include "event_filter_function.h"
 
 Uint32 on_render_callback(Uint32 interval, void* param)
@@ -68,6 +69,7 @@ void EmulateUntilHalt(Nes* nes, int instructions_per_frame)
 			else if (event.type == SDL_USEREVENT && event.user.code == 0)
 			{
 				RendererDraw();
+				//printf("instr: %i\n", instructions_done);
 				instructions_done = 0;
 			}
 		}

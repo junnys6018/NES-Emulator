@@ -7,6 +7,7 @@
 /* 
  * TODO:
  * Interrupt hijacking
+ * Branch instructions and interrupts 
  * Illegal Opcodes
  * FIX ROL ASL ROR LSR (merge the matching functions)
  * Decimal Mode
@@ -56,39 +57,53 @@ int clock_6502(State6502* cpu)
 	static uint32_t remaining = 0;
 	cpu->total_cycles++;
 
-	if (remaining == 0)
+	if (cpu->dma_transfer_cycles > 0)
+	{
+		if (cpu->dma_transfer_cycles <= 512 && cpu->dma_transfer_cycles % 2 == 0)
+		{
+			uint16_t offset = 256 - cpu->dma_transfer_cycles / 2;
+			uint8_t data = cpu_bus_read(cpu->bus, (((uint16_t)cpu->OAMDMA) << 8) | offset);
+			cpu_bus_write(cpu->bus, 0x2004, data);
+		}
+		cpu->dma_transfer_cycles--;
+
+		return cpu->dma_transfer_cycles;
+	}
+
+	// Check for interrupt at the second to last cycle of the instruction
+	if (remaining == 1)
 	{
 		if (cpu->interrupt & NMI_SIGNAL)
 		{
-			remaining = 7; // 7 clock cycles to respond to interrupt
+			remaining = 7 + 1; // 7 clock cycles to respond to interrupt, plus 1 cycle to finish the current instruction
 			interrupt_sequence(cpu, 0xFFFA);
 
 			cpu->interrupt &= ~NMI_SIGNAL;
-		}
-		else if (cpu->interrupt & IRQ_SIGNAL && !cpu->status.flags.I)
-		{
-			remaining = 7; // 7 clock cycles to respond to interrupt
-			interrupt_sequence(cpu, 0xFFFE);
-
 			cpu->interrupt &= ~IRQ_SIGNAL;
 		}
-		else
+		else if (cpu->interrupt & IRQ_SIGNAL)
 		{
-			// if IRQ signal was raised, we should ignore it 
 			cpu->interrupt &= ~IRQ_SIGNAL;
 
-			uint8_t opcode = cpu_bus_read(cpu->bus, cpu->PC++);
-			Instruction inst = opcodes[opcode];
-
-			remaining = inst.cycles;
-			remaining--;
-
-			bool b = inst.adressing_mode(cpu);
-			remaining += inst.operation(cpu, b);
+			if (!cpu->status.flags.I)
+			{
+				remaining = 7 + 1;
+				interrupt_sequence(cpu, 0xFFFE);
+			}
 		}
 	}
-	else
-		remaining--;
+	else if (remaining == 0)
+	{
+		uint8_t opcode = cpu_bus_read(cpu->bus, cpu->PC++);
+		Instruction inst = opcodes[opcode];
+
+		remaining = inst.cycles;
+
+		bool b = inst.adressing_mode(cpu);
+		remaining += inst.operation(cpu, b);
+	}
+
+	remaining--;
 
 	return remaining;
 }
@@ -134,6 +149,7 @@ void power_on_6502(State6502* cpu)
 	cpu->total_cycles = 0;
 
 	cpu->interrupt = NO_INTERRUPT;
+	cpu->dma_transfer_cycles = 0;
 }
 
 void NMI(State6502* cpu)

@@ -7,9 +7,6 @@
 // TODO: Implment color emphasis and grey scale
 // TODO: Implement "show bg and sprits in leftmost 8 pixels of screen flag"
 
-// Disable printing
-// #define printf(x) (void)0;
-
 // Maps a 6 bit HSV color into RGB
 color PALETTE_MAP[64] =
 {
@@ -93,8 +90,8 @@ void FetchDataAndIncV(State2C02* ppu)
 		uint8_t shift = 2 * ((ppu->v >> 1) & 0x01) + 4 * ((ppu->v >> 6) & 0x01);
 		uint8_t palatteID = (attrib_tbl_byte >> shift) & 0x03;
 
-		ppu->pa_latch_low = (palatteID & 0x01 ? 0xFF : 0x00);
-		ppu->pa_latch_high = (palatteID & 0x02 ? 0xFF : 0x00);
+		ppu->pa_latch_low = ((palatteID & 0x01) ? 0xFF : 0x00);
+		ppu->pa_latch_high = ((palatteID & 0x02) ? 0xFF : 0x00);
 		break;
 	}
 	case 5:
@@ -185,13 +182,13 @@ void clock_2C02(State2C02* ppu)
 			{
 				uint16_t bit_mask = 0x8000 >> ppu->x;
 
-				uint8_t pixel_low = ppu->pt_shift_low & bit_mask ? 1 : 0;
-				uint8_t pixel_high = ppu->pt_shift_high & bit_mask ? 1 : 0;
-				uint8_t shade = pixel_high << 1 | pixel_low;
+				uint8_t pixel_low = (ppu->pt_shift_low & bit_mask) > 0;
+				uint8_t pixel_high = (ppu->pt_shift_high & bit_mask) > 0;
+				uint8_t shade = (pixel_high << 1) | pixel_low;
 
-				uint8_t pal_low = ppu->pa_shift_low & bit_mask ? 1 : 0;
-				uint8_t pal_high = ppu->pa_shift_high & bit_mask ? 1 : 0;
-				uint8_t palatte = pal_high << 1 | pixel_low;
+				uint8_t pal_low = (ppu->pa_shift_low & bit_mask) > 0;
+				uint8_t pal_high = (ppu->pa_shift_high & bit_mask) > 0;
+				uint8_t palatte = (pal_high << 1) | pal_low;
 
 				int index = ppu->scanline * 256 + ppu->cycles - 1;
 				if (shade == 0) // Universal background color
@@ -222,26 +219,18 @@ void clock_2C02(State2C02* ppu)
 			}
 		}
 	}
-	//static int count = 0;
-	//count++;
 
-	if (ppu->scanline == -1 && ppu->cycles == 1)
+	// TODO: figure out is this is cleared at dot 0 or dot 1. For now clear at dot 0
+	if (ppu->scanline == -1 && ppu->cycles == 0)
 	{
-		//printf("Count: %i\n", count);
 		ppu->PPUSTATUS.flags.V = 0;
 	}
 
 	if (ppu->scanline == 241 && ppu->cycles == 1)
 	{
-		//count = 0;
-		//printf("Reset count\n");
 		if (!ppu->ppustatus_read_early && !ppu->ppustatus_read_late)
 		{
 			ppu->PPUSTATUS.flags.V = 1;
-		}
-		if (ppu->PPUCTRL.flags.V && !ppu->ppustatus_read_early && !ppu->ppustatus_read_late)
-		{
-			NMI(ppu->cpu);
 		}
 
 		ppu->ppustatus_read_early = false;
@@ -249,6 +238,14 @@ void clock_2C02(State2C02* ppu)
 
 		// Send pixel data to renderer
 		SendPixelDataToScreen(ppu->pixels);
+		memset(ppu->pixels, 0, sizeof(ppu->pixels));
+	}
+
+	ppu->nmi_line = (ppu->nmi_line << 1) | !(ppu->PPUCTRL.flags.V && ppu->PPUSTATUS.flags.V);
+	const int delay = 9;
+	if (((ppu->nmi_line & (0x7 << delay)) >> delay) == 0x4) 
+	{
+		NMI(ppu->cpu);
 	}
 
 	ppu->cycles++;
@@ -269,6 +266,8 @@ void clock_2C02(State2C02* ppu)
 			ppu->oddframe = !ppu->oddframe;
 		}
 	}
+
+	ppu->total_cycles++;
 }
 
 void reset_2C02(State2C02* ppu)
@@ -284,7 +283,7 @@ void reset_2C02(State2C02* ppu)
 
 	ppu->oddframe = 0;
 
-	ppu->scanline = -1;
+	ppu->scanline = 0;
 	ppu->cycles = 0;
 }
 
@@ -303,12 +302,16 @@ void power_on_2C02(State2C02* ppu)
 
 	ppu->oddframe = 0;
 
-	ppu->scanline = -1;
+	ppu->scanline = 0;
 	ppu->cycles = 0;
 
+
+	ppu->total_cycles = 0;
 	memset(ppu->pixels, 0, sizeof(ppu->pixels));
 	ppu->ppustatus_read_early = false;
 	ppu->ppustatus_read_late = false;
+
+	ppu->nmi_line = 0xFFFFFFFF;
 }
 
 void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
@@ -327,10 +330,15 @@ void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
 		ppu->PPUMASK.reg = data;
 		break;
 	case 0x2003: // OAMADDR
-		printf("OAMADDR\n");
+		ppu->OAMADDR = data;
 		break;
 	case 0x2004: // OAMDATA
-		printf("OAMDATA\n");
+		// Only write during vertical blanking or if rendering is disabled
+		if ((ppu->scanline >= 240 && ppu->scanline <= 260) || (!ppu->PPUMASK.flags.b && !ppu->PPUMASK.flags.s))
+		{
+			ppu->bus->OAM[ppu->OAMADDR] = data;
+			ppu->OAMADDR++;
+		}
 		break;
 	case 0x2005: // PPUSCROLL
 		ppu->PPUSCROLL = data;
@@ -380,8 +388,6 @@ void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
 		ppu_bus_write(ppu->bus, ppu->v, data);
 		ppu->v += (ppu->PPUCTRL.flags.I ? 32 : 1);
 		break;
-	case 0x4014: // OAMDMA
-		break;
 	}
 }
 
@@ -407,8 +413,16 @@ uint8_t read_ppu(State2C02* ppu, uint16_t addr)
 		ppu->PPUSTATUS.flags.V = 0;
 		return ret;
 	case 0x2004: // OAMDATA
-		printf("OAMDATA\n");
+	{
+		uint8_t ret = ppu->bus->OAM[ppu->OAMADDR];
+		// Do not increment OAMADDR when during vertical blanking or forced blanking
+		if (!(ppu->scanline >= 240 && ppu->scanline <= 260) && (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s))
+		{
+			ppu->OAMADDR++;
+		}
+		return ret;
 		break;
+	}
 	case 0x2007: // PPUDATA
 	{
 		if (ppu->v >= 0 && ppu->v < 0x3F00)
