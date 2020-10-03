@@ -3,8 +3,9 @@
 
 #include <stdio.h> // For printf
 #include <string.h> // For memset
+#include <assert.h>
 
-// TODO: Implment color emphasis and grey scale
+// TODO: Implment color emphasis
 // TODO: Implement "show bg and sprits in leftmost 8 pixels of screen flag"
 
 // Maps a 6 bit HSV color into RGB
@@ -134,8 +135,27 @@ void FeedShiftRegisters(State2C02* ppu)
 	ppu->pa_shift_high = (ppu->pa_shift_high & 0xFF00) | (uint16_t)ppu->pa_latch_high;
 }
 
+void TransitionSpriteEvalulationStateMachine(State2C02* ppu)
+{
+	if (ppu->OAMADDR == 0) // Overflow
+	{
+		ppu->sprite_eval_state.state = IDLE;
+	}
+	else if (ppu->sprite_eval_state.secondary_oam_free_slot < 32) // Less than 8 sprites found
+	{
+		ppu->sprite_eval_state.state = RANGE_CHECK;
+	}
+	else
+	{
+		ppu->sprite_eval_state.write_enable = false;
+		ppu->sprite_eval_state.state = OVERFLOW_CHECK;
+	}
+}
+
 void clock_2C02(State2C02* ppu)
 {
+	uint8_t bg_shade;
+	// Background rendering
 	if (ppu->PPUMASK.flags.b)
 	{
 		// Pre render line
@@ -184,22 +204,28 @@ void clock_2C02(State2C02* ppu)
 
 				uint8_t pixel_low = (ppu->pt_shift_low & bit_mask) > 0;
 				uint8_t pixel_high = (ppu->pt_shift_high & bit_mask) > 0;
-				uint8_t shade = (pixel_high << 1) | pixel_low;
+				bg_shade = (pixel_high << 1) | pixel_low;
 
 				uint8_t pal_low = (ppu->pa_shift_low & bit_mask) > 0;
 				uint8_t pal_high = (ppu->pa_shift_high & bit_mask) > 0;
 				uint8_t palatte = (pal_high << 1) | pal_low;
 
-				int index = ppu->scanline * 256 + ppu->cycles - 1;
-				if (shade == 0) // Universal background color
+				uint8_t color; // color to be drawn to the screen during the visible scanlines
+				if (bg_shade == 0) // Universal background color
 				{
-					ppu->pixels[index] = PALETTE_MAP[ppu_bus_read(ppu->bus, 0x3F00) & 0x3F];
+					color = ppu_bus_read(ppu->bus, 0x3F00) & 0x3F;
 				}
 				else
 				{
-					uint16_t palatte_addr = 0x3F00 | palatte << 2 | shade;
-					ppu->pixels[index] = PALETTE_MAP[ppu_bus_read(ppu->bus, palatte_addr) & 0x3F];
+					uint16_t palatte_addr = 0x3F00 | palatte << 2 | bg_shade;
+					color = ppu_bus_read(ppu->bus, palatte_addr) & 0x3F;
 				}
+				int index = ppu->scanline * 256 + ppu->cycles - 1;
+				if (ppu->PPUMASK.flags.g)
+				{
+					color &= 0x30;
+				}
+				ppu->pixels[index] = PALETTE_MAP[color];
 
 				ppu->pt_shift_low <<= 1;
 				ppu->pt_shift_high <<= 1;
@@ -220,10 +246,250 @@ void clock_2C02(State2C02* ppu)
 		}
 	}
 
-	// TODO: figure out is this is cleared at dot 0 or dot 1. For now clear at dot 0
+	// Sprite rendering
+	if (ppu->PPUMASK.flags.s)
+	{
+		if (ppu->scanline >= 0 && ppu->scanline < 240)
+		{
+			if (ppu->cycles >= 1 && ppu->cycles < 257)
+			{
+				for (int i = 0; i < 8; i++)
+				{
+					if (ppu->sprite_xpos[i] == 0)
+					{
+						ppu->active_sprites |= (1 << i);
+					}
+					ppu->sprite_xpos[i]--;
+				}
+
+				int index = ppu->scanline * 256 + ppu->cycles - 1;
+				for (int i = 0; i < 8; i++)
+				{
+					if (ppu->active_sprites & (1 << i))
+					{
+						uint8_t spr_shade;
+						if (ppu->pa_sprite[i] & (1 << 6)) // Flip horizontally
+						{
+							spr_shade = (ppu->pt_sprite_high[i] & 0x1) << 1 | (ppu->pt_sprite_low[i] & 0x1);
+							ppu->pt_sprite_high[i] >>= 1;
+							ppu->pt_sprite_low[i] >>= 1;
+						}
+						else
+						{
+							spr_shade = ((ppu->pt_sprite_high[i] & 0x80) >> 6) | ((ppu->pt_sprite_low[i] & 0x80) >> 7);
+							ppu->pt_sprite_high[i] <<= 1;
+							ppu->pt_sprite_low[i] <<= 1;
+						}
+
+						if (spr_shade != 0 )
+						{
+							// Check for sprite 0 hit
+							if (i == 0 && ppu->sprite_zero_on_current_scanline && bg_shade != 0 && ppu->PPUMASK.flags.b && !ppu->PPUSTATUS.flags.S)
+							{
+								ppu->PPUSTATUS.flags.S = 1;
+								// Disable if left clipping is enabled and at the rightmost column 
+								if ((!ppu->PPUMASK.flags.M || !ppu->PPUMASK.flags.m) && ppu->cycles >= 1 && ppu->cycles <= 8)
+								{
+									ppu->PPUSTATUS.flags.S = 0;
+								}
+								if (ppu->cycles == 256)
+								{
+									ppu->PPUSTATUS.flags.S = 0;
+								}
+							}
+							if (bg_shade == 0 || !(ppu->pa_sprite[i] & 0x5)) // Get priortiy bit from sprite attribute
+							{
+								uint16_t palatte_addr = 0x3F10 | (ppu->pa_sprite[i] & 0x3) << 2 | spr_shade;
+								uint8_t color = ppu_bus_read(ppu->bus, palatte_addr);
+								ppu->pixels[index] = PALETTE_MAP[color & 0x3F];
+							}
+							break;
+						}
+					}
+				}
+
+			}
+			else if (ppu->cycles == 257)
+			{
+				ppu->active_sprites = 0;
+			}
+
+		}
+	}
+
+	// Sprite evaluation
+	if (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s)
+	{
+		if (ppu->scanline >= 0 && ppu->scanline < 240)
+		{
+			// Clear OAM
+			if (ppu->cycles == 1) // during cycles 1..64, secondary OAM is cleared to 0xFF, we clear all of it at dot 1
+			{
+				memset(ppu->bus->secondary_OAM, 0xFF, 32);
+
+				// Set up initial state
+				ppu->sprite_eval_state.state = RANGE_CHECK;
+				ppu->sprite_eval_state.write_enable = true; // Might not need this
+				ppu->sprite_eval_state.secondary_oam_free_slot = 0;
+				ppu->sprite_eval_state.remaining = 0;
+
+				ppu->sprite_zero_on_next_scanline = false;
+			}
+			// Sprite Evaluation
+			else if (ppu->cycles >= 65 && ppu->cycles < 257)
+			{
+				if (ppu->sprite_eval_state.remaining == 0)
+				{
+					switch (ppu->sprite_eval_state.state)
+					{
+					case RANGE_CHECK:
+					{
+						ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
+						ppu->OAMADDR++;
+						ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
+						// Perform y-range check
+						int height = ppu->PPUCTRL.flags.H ? 16 : 8;
+						if (ppu->scanline >= ppu->OAMDATA && ppu->scanline < ppu->OAMDATA + height)
+						{
+							if (ppu->OAMADDR == 1)
+							{
+								ppu->sprite_zero_on_next_scanline = true;
+							}
+							ppu->sprite_eval_state.secondary_oam_free_slot++;
+
+							ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
+							ppu->OAMADDR++;
+							ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
+							ppu->sprite_eval_state.secondary_oam_free_slot++;
+
+							ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
+							ppu->OAMADDR++;
+							ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
+							ppu->sprite_eval_state.secondary_oam_free_slot++;
+
+							ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
+							ppu->OAMADDR++;
+							ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
+							ppu->sprite_eval_state.secondary_oam_free_slot++;
+
+							ppu->sprite_eval_state.remaining = 8;
+
+							TransitionSpriteEvalulationStateMachine(ppu);
+						}
+						else
+						{
+							ppu->sprite_eval_state.remaining = 2;
+							ppu->OAMADDR += 3;
+							TransitionSpriteEvalulationStateMachine(ppu);
+						}
+						break;
+					}
+					case OVERFLOW_CHECK:
+					{
+						ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
+						ppu->OAMADDR++;
+						// Perform y-range check
+						int height = ppu->PPUCTRL.flags.H ? 16 : 8;
+						if (ppu->scanline >= ppu->OAMDATA && ppu->scanline < ppu->OAMDATA + height)
+						{
+							ppu->PPUSTATUS.flags.O = 1;
+							ppu->OAMADDR += 3;
+							ppu->sprite_eval_state.remaining = 8; // TODO Confirm this timing
+							ppu->sprite_eval_state.state = IDLE;
+						}
+						else
+						{
+							// Emulate sprite overflow bug 
+							uint8_t oam_addr_low = ppu->OAMADDR & 0x03;
+							uint8_t oam_addr_high = (ppu->OAMADDR & 0xFC) >> 2;
+
+							oam_addr_low++;
+							oam_addr_high++;
+							oam_addr_high &= 0x3F;
+
+							ppu->OAMADDR = (oam_addr_high << 2) | oam_addr_low;
+
+							if (oam_addr_high == 0) // Overflow
+							{
+								ppu->sprite_eval_state.state = IDLE;
+							}
+							else
+							{
+								ppu->sprite_eval_state.state = OVERFLOW_CHECK;
+							}
+
+							ppu->sprite_eval_state.remaining = 2;
+						}
+						break;
+					}
+					case IDLE:
+						ppu->OAMADDR += 4;
+						ppu->sprite_eval_state.remaining = 2;
+						break;
+					}
+					ppu->sprite_eval_state.remaining--;
+					}
+				else
+				{
+					ppu->sprite_eval_state.remaining--;
+				}
+			
+			}
+			// Sprite tile loading is normally done during dots 257..320, but we load all the data at once
+			else if (ppu->cycles == 257)
+			{
+				ppu->OAMADDR = 0;
+				ppu->sprite_zero_on_current_scanline = ppu->sprite_zero_on_next_scanline;
+
+				// 8 sprites
+				for (int i = 0; i < 8; i++)
+				{
+					uint8_t ypos = ppu->bus->secondary_OAM[4 * i];
+					uint8_t tile_index = ppu->bus->secondary_OAM[4 * i + 1];
+					ppu->pa_sprite[i] = ppu->bus->secondary_OAM[4 * i + 2];
+					ppu->sprite_xpos[i] = ppu->bus->secondary_OAM[4 * i + 3];
+
+					// Calculate the address in the pattern table
+					uint16_t pattern_table_addr;
+					if (ppu->PPUCTRL.flags.H)
+					{
+						uint8_t fine_y = ppu->scanline - ypos;
+						uint8_t tile_select = (ypos & 0x8) > 0;
+						if (ppu->pa_sprite[i] & 0x80) // vertical flip
+						{
+							fine_y = 7 - (int16_t)fine_y;
+							tile_select = 1 - (int16_t)tile_select;
+						}
+
+						pattern_table_addr = (tile_index & 1) << 12 | (tile_index & 0xFE) << 4 | tile_select << 4 | fine_y;
+					}
+					else
+					{
+						uint8_t fine_y = ppu->scanline - ypos;
+						if (ppu->pa_sprite[i] & 0x80) // vertical flip
+						{
+							fine_y = 7 - (int16_t)fine_y;
+						}
+						pattern_table_addr = (ppu->PPUCTRL.flags.S << 12) | (tile_index << 4) | fine_y;
+					}
+
+					ppu->pt_sprite_low[i] = ppu_bus_read(ppu->bus, pattern_table_addr);
+					ppu->pt_sprite_high[i] = ppu_bus_read(ppu->bus, pattern_table_addr | (1 << 3));
+
+				}
+			}
+		}
+	}
+
+	// TODO: figure out if VBL is cleared at dot 0 or dot 1. For now clear at dot 0
 	if (ppu->scanline == -1 && ppu->cycles == 0)
 	{
 		ppu->PPUSTATUS.flags.V = 0;
+	}
+	else if (ppu->scanline == -1 && ppu->cycles == 1)
+	{
+		ppu->PPUSTATUS.flags.O = 0;
+		ppu->PPUSTATUS.flags.S = 0;
 	}
 
 	if (ppu->scanline == 241 && ppu->cycles == 1)
@@ -238,12 +504,19 @@ void clock_2C02(State2C02* ppu)
 
 		// Send pixel data to renderer
 		SendPixelDataToScreen(ppu->pixels);
+
+		// Clear pixels, just in case
 		memset(ppu->pixels, 0, sizeof(ppu->pixels));
 	}
 
+	// Pull the nmi line low if we are in vertical blanking and nmi's are enabled
 	ppu->nmi_line = (ppu->nmi_line << 1) | !(ppu->PPUCTRL.flags.V && ppu->PPUSTATUS.flags.V);
-	const int delay = 9;
-	if (((ppu->nmi_line & (0x7 << delay)) >> delay) == 0x4) 
+
+	// Emulate 9 ppu cycles of propagation delay TODO
+	const int delay = 9; 
+
+	// NMI is triggered on falling edge. the line must be low for at least 2 ppu cycles, otherwise the cpu wont detect the edge
+	if (((ppu->nmi_line & (0x7 << delay)) >> delay) == 0x4)
 	{
 		NMI(ppu->cpu);
 	}
@@ -305,6 +578,7 @@ void power_on_2C02(State2C02* ppu)
 	ppu->scanline = 0;
 	ppu->cycles = 0;
 
+	ppu->active_sprites = 0;
 
 	ppu->total_cycles = 0;
 	memset(ppu->pixels, 0, sizeof(ppu->pixels));
@@ -334,9 +608,10 @@ void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
 		break;
 	case 0x2004: // OAMDATA
 		// Only write during vertical blanking or if rendering is disabled
+		ppu->OAMDATA = data;
 		if ((ppu->scanline >= 240 && ppu->scanline <= 260) || (!ppu->PPUMASK.flags.b && !ppu->PPUMASK.flags.s))
 		{
-			ppu->bus->OAM[ppu->OAMADDR] = data;
+			ppu->bus->OAM[ppu->OAMADDR] = ppu->OAMDATA;
 			ppu->OAMADDR++;
 		}
 		break;
@@ -414,13 +689,13 @@ uint8_t read_ppu(State2C02* ppu, uint16_t addr)
 		return ret;
 	case 0x2004: // OAMDATA
 	{
-		uint8_t ret = ppu->bus->OAM[ppu->OAMADDR];
-		// Do not increment OAMADDR when during vertical blanking or forced blanking
+		ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
+		// Do not increment OAMADDR during vertical blanking or forced blanking
 		if (!(ppu->scanline >= 240 && ppu->scanline <= 260) && (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s))
 		{
 			ppu->OAMADDR++;
 		}
-		return ret;
+		return ppu->OAMDATA;
 		break;
 	}
 	case 0x2007: // PPUDATA
@@ -438,6 +713,10 @@ uint8_t read_ppu(State2C02* ppu, uint16_t addr)
 			ppu->PPUDATA = ppu_bus_read(ppu->bus, 0x2000 | ppu->v & 0x0FFF);
 			uint8_t ret = ppu_bus_read(ppu->bus, ppu->v);
 			ppu->v += (ppu->PPUCTRL.flags.I ? 32 : 1);
+			if (ppu->PPUMASK.flags.g)
+			{
+				ret &= 0x30;
+			}
 			return ret;
 		}
 		break;

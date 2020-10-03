@@ -54,7 +54,6 @@ void interrupt_sequence(State6502* cpu, uint16_t interrupt_vector)
 
 int clock_6502(State6502* cpu)
 {
-	static uint32_t remaining = 0;
 	cpu->total_cycles++;
 
 	if (cpu->dma_transfer_cycles > 0)
@@ -71,11 +70,11 @@ int clock_6502(State6502* cpu)
 	}
 
 	// Check for interrupt at the second to last cycle of the instruction
-	if (remaining == 1)
+	if (cpu->remaining == 1)
 	{
 		if (cpu->interrupt & NMI_SIGNAL)
 		{
-			remaining = 7 + 1; // 7 clock cycles to respond to interrupt, plus 1 cycle to finish the current instruction
+			cpu->remaining = 7 + 1; // 7 clock cycles to respond to interrupt, plus 1 cycle to finish the current instruction
 			interrupt_sequence(cpu, 0xFFFA);
 
 			cpu->interrupt &= ~NMI_SIGNAL;
@@ -87,25 +86,25 @@ int clock_6502(State6502* cpu)
 
 			if (!cpu->status.flags.I)
 			{
-				remaining = 7 + 1;
+				cpu->remaining = 7 + 1;
 				interrupt_sequence(cpu, 0xFFFE);
 			}
 		}
 	}
-	else if (remaining == 0)
+	else if (cpu->remaining == 0)
 	{
 		uint8_t opcode = cpu_bus_read(cpu->bus, cpu->PC++);
 		Instruction inst = opcodes[opcode];
 
-		remaining = inst.cycles;
+		cpu->remaining = inst.cycles;
 
 		bool b = inst.adressing_mode(cpu);
-		remaining += inst.operation(cpu, b);
+		cpu->remaining += inst.operation(cpu, b);
 	}
 
-	remaining--;
+	cpu->remaining--;
 
-	return remaining;
+	return cpu->remaining;
 }
 
 void reset_6502(State6502* cpu)
@@ -147,6 +146,7 @@ void power_on_6502(State6502* cpu)
 
 	// Reset Cycle count (used in debugging only)
 	cpu->total_cycles = 0;
+	cpu->remaining = 0;
 
 	cpu->interrupt = NO_INTERRUPT;
 	cpu->dma_transfer_cycles = 0;
@@ -366,9 +366,10 @@ uint32_t BCC(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.C == 0)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;
@@ -380,9 +381,10 @@ uint32_t BCS(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.C == 1)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;
@@ -394,9 +396,10 @@ uint32_t BEQ(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.Z == 1)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;
@@ -421,9 +424,10 @@ uint32_t BMI(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.N == 1)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;
@@ -435,9 +439,10 @@ uint32_t BNE(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.Z == 0)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;
@@ -449,9 +454,10 @@ uint32_t BPL(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.N == 0)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;
@@ -492,9 +498,10 @@ uint32_t BVC(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.V == 0)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;
@@ -506,9 +513,10 @@ uint32_t BVS(State6502* cpu, bool c)
 	fetch(cpu);
 	if (cpu->status.flags.V == 1)
 	{
+		uint16_t old_pc = cpu->PC;
 		cpu->PC += (int8_t)cpu->operand;
 
-		return c ? 2 : 1;
+		return (old_pc & 0xFF00) == (cpu->PC & 0xFF00) ? 1 : 2;
 	}
 
 	return 0;

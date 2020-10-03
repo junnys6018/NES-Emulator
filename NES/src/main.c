@@ -23,14 +23,15 @@ int main(int argc, char** argv)
 	RendererInit();
 
 	//RunAll6502Tests();
-	//RunAll2C02Tests();
+	RunAll2C02Tests();
 	//RunAllBenchmarks();
 
 	Nes nes;
 	//NESInit(&nes, "roms/DonkeyKong.nes");
-	//NESInit(&nes, "tests/roms/oam_stress.nes");
-	NESInit(&nes, "tests/roms/nmi_sync.nes");
-	//NESInit(&nes, "tests/roms/blargg_vbl_nmi_timing/sprite_ram.nes");
+	NESInit(&nes, "roms/MicroMages.nes");
+	//NESInit(&nes, "tests/roms/palette.nes");
+	//NESInit(&nes, "tests/roms/scanline.nes");
+	//NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/3.Timing.nes");
 
 	RendererBindNES(&nes);
 
@@ -38,16 +39,17 @@ int main(int argc, char** argv)
 	uint8_t* chr = ((Mapper000*)(nes.cart.mapper))->CHR;
 	RendererSetPatternTable(chr, 0);
 	RendererSetPatternTable(chr + 0x1000, 1);
+
 	SDL_Event event;
 	while (true)
 	{
-		//timepoint beg, end;
-		//GetTime(&beg);
-		//clock_nes_frame(&nes);
-		//GetTime(&end);
-		//printf("time: %.3fms\n", GetElapsedTimeMilli(&beg, &end));
-
+		timepoint beg, end;
+		GetTime(&beg);
+		clock_nes_frame(&nes);
 		RendererDraw();
+		GetTime(&end);
+		//printf("time: %.3fms (%.0f fps)\n", GetElapsedTimeMilli(&beg, &end), 1000 / GetElapsedTimeMilli(&beg, &end));
+
 		while (SDL_PollEvent(&event) != 0)
 		{
 			GuiDispatchEvent(&event);

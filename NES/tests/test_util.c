@@ -1,7 +1,9 @@
 #include "test_util.h"
 #include <stdlib.h>
 #include <stdio.h>
+
 #include "event_filter_function.h"
+#include "string_util.h"
 
 Uint32 on_render_callback(Uint32 interval, void* param)
 {
@@ -77,4 +79,29 @@ void EmulateUntilHalt(Nes* nes, int instructions_per_frame)
 	}
 	SDL_RemoveTimer(tid);
 	SDL_SetEventFilter(reset_filter_event, NULL);
+}
+
+void TestBlarggRom(const char* name, uint16_t result_addr)
+{
+	Nes nes;
+	NESInit(&nes, name);
+
+	RendererBindNES(&nes);
+
+	EmulateUntilHalt(&nes, 100000);
+
+	// Check for success or failure
+	uint8_t result = cpu_bus_read(&nes.cpu_bus, result_addr);
+	if (result == 1)
+	{
+		printf("%s passed!\n", GetFileName(name));
+	}
+	else
+	{
+		printf("%s failed [%i]\n", GetFileName(name), result);
+	}
+
+	RendererDraw();
+
+	NESDestroy(&nes);
 }

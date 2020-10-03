@@ -138,4 +138,8 @@ void RunAll6502Tests()
 {
 	Run_6502_Interrupt_Test();
 	Run_6502_Functional_Test();
+
+	TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/1.Branch_Basics.nes", 0xF8);
+	TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/2.Backward_Branch.nes", 0xF8);
+	TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/3.Forward_Branch.nes", 0xF8);
 }

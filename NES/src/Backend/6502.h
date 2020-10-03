@@ -41,6 +41,7 @@ typedef struct State6502
 	// Helper members
 	uint8_t operand; // Data fetched for the operand of an instruction
 	uint16_t addr; // Address of the data fetched, only set for zero page, absolute addressing and indirect X, Y 
+	uint32_t remaining; // Remaining cycles in the instruction
 
 	/* 
 	 * Data fetched from an absolute indirect addressing mode operation, 
