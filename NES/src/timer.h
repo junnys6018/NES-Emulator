@@ -15,8 +15,12 @@ typedef struct
 // TODO
 #endif
 
+#include <stdint.h>
+
 void GetTime(timepoint* tp);
 float GetElapsedTimeMicro(timepoint* beg, timepoint* end);
 float GetElapsedTimeMilli(timepoint* beg, timepoint* end);
+
+void SleepMicro(uint64_t usec);
 
 #endif // ! TIMER_H

@@ -258,7 +258,7 @@ bool IND(State6502* cpu)
 
 	// Read high bits
 	// Note: Due to a hardware bug, if the specified address is $xxFF the second byte read will not cross pages
-	// ie it will be read from $xx00 instead 255 bytes earlier than expected
+	// ie it will be read from $xx00 instead, 255 bytes earlier than expected
 	cpu->indirect_fetch = cpu_bus_read(cpu->bus, (addr_high << 8) | ((addr_low + 1) & 0x00FF));
 	cpu->indirect_fetch <<= 8;
 	cpu->indirect_fetch |= cpu_bus_read(cpu->bus, addr);
@@ -913,7 +913,7 @@ uint32_t RTS(State6502* cpu, bool c)
 	cpu->SP++;
 	uint16_t PCH = cpu_bus_read(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP);
 
-	cpu->PC = (PCH << 8) | PCL + 1;
+	cpu->PC = ((PCH << 8) | PCL) + 1;
 
 	return 0;
 }

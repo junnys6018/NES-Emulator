@@ -13,7 +13,7 @@
 
 #include <SDL.h>
 
-void Run_6502_Functional_Test()
+int Run_6502_Functional_Test()
 {
 	Nes nes;
 	NESInit(&nes, "tests/roms/6502_functional_test.bin");
@@ -41,9 +41,11 @@ void Run_6502_Functional_Test()
 	RendererDraw();
 	
 	NESDestroy(&nes);
+
+	return passed ? 0 : 1;
 }
 
-void Run_6502_Interrupt_Test()
+int Run_6502_Interrupt_Test()
 {
 	Nes nes;
 	NESInit(&nes, "tests/roms/6502_interrupt_test.bin");
@@ -65,6 +67,7 @@ void Run_6502_Interrupt_Test()
 	const int instructions_per_frame = 10; // Execution speed
 	int instructions_done = 0;
 
+	bool passed = true;
 	SDL_Event event;
 	while (true)
 	{
@@ -90,7 +93,6 @@ void Run_6502_Interrupt_Test()
 			{
 				uint8_t success_opcode_pattern[] = { 0x4C, 0xBA, 0xEA, 0xBA, 0xEA };
 				uint8_t opcode_size[] = { 3, 1, 1, 1, 1 };
-				bool passed = true;
 				for (int i = 0; i < 5; i++)
 				{
 					uint8_t opcode = cpu_bus_read(&nes.cpu_bus, old_PC);
@@ -131,15 +133,20 @@ void Run_6502_Interrupt_Test()
 
 	SDL_RemoveTimer(tid);
 	SDL_SetEventFilter(reset_filter_event, NULL);
+
+	return passed ? 0 : 1;
 }
 
 
 void RunAll6502Tests()
 {
-	Run_6502_Interrupt_Test();
-	Run_6502_Functional_Test();
+	int num_failed = 0;
+	num_failed += Run_6502_Interrupt_Test();
+	num_failed += Run_6502_Functional_Test();
 
-	TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/1.Branch_Basics.nes", 0xF8);
-	TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/2.Backward_Branch.nes", 0xF8);
-	TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/3.Forward_Branch.nes", 0xF8);
+	num_failed += TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/1.Branch_Basics.nes", 0xF8);
+	num_failed += TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/2.Backward_Branch.nes", 0xF8);
+	num_failed += TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/3.Forward_Branch.nes", 0xF8);
+
+	printf("[6502 TESTS] Failed %i tests\n", num_failed);
 }

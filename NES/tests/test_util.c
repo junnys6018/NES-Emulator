@@ -81,7 +81,7 @@ void EmulateUntilHalt(Nes* nes, int instructions_per_frame)
 	SDL_SetEventFilter(reset_filter_event, NULL);
 }
 
-void TestBlarggRom(const char* name, uint16_t result_addr)
+int TestBlarggRom(const char* name, uint16_t result_addr)
 {
 	Nes nes;
 	NESInit(&nes, name);
@@ -94,14 +94,16 @@ void TestBlarggRom(const char* name, uint16_t result_addr)
 	uint8_t result = cpu_bus_read(&nes.cpu_bus, result_addr);
 	if (result == 1)
 	{
-		printf("%s passed!\n", GetFileName(name));
+		printf("Passed %s Test\n", GetFileName(name));
 	}
 	else
 	{
-		printf("%s failed [%i]\n", GetFileName(name), result);
+		printf("Failed %s Test [%i]\n", GetFileName(name), result);
 	}
 
 	RendererDraw();
 
 	NESDestroy(&nes);
+
+	return result == 1 ? 0 : 1;
 }

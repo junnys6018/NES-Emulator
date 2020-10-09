@@ -121,7 +121,7 @@ typedef struct
 	uint8_t active_sprites;
 	uint8_t pt_sprite_low[8];
 	uint8_t pt_sprite_high[8];
-	uint8_t pa_sprite[8];
+	uint8_t sprite_attribute[8];
 	uint8_t sprite_xpos[8];
 	bool sprite_zero_on_next_scanline, sprite_zero_on_current_scanline;
 	
@@ -140,12 +140,12 @@ typedef struct
 			OVERFLOW_CHECK, 
 			IDLE, 		
 		} state;
-		bool write_enable;
 		uint8_t secondary_oam_free_slot;
 		uint8_t remaining;
 	} sprite_eval_state;
 
 	uint64_t total_cycles;
+	uint32_t frame_count;
 
 	color pixels[256 * 240];
 	Bus2C02* bus;

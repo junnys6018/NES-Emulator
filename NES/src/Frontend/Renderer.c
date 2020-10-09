@@ -68,6 +68,7 @@ typedef struct
 	int font_size;
 	int text_x, text_y, origin_x;
 
+	// Window size metrics
 	WindowMetrics wm;
 
 	// Textures representing the pattern tables currently accessible on the PPU
@@ -76,6 +77,7 @@ typedef struct
 	uint8_t* left_nt_data;
 	uint8_t* right_nt_data;
 	
+	// Pointer to the nes the renderer is drawing
 	Nes* nes;
 
 	// Pointer to the PPU's palette data
@@ -91,6 +93,9 @@ typedef struct
 	DrawTarget target;
 
 	bool overscan; // true: show overscan; false: hide overscan
+
+	// Pointer to controller data
+	Controller* controller;
 } RendererContext;
 
 static RendererContext rc;
@@ -111,7 +116,7 @@ void TTF_Emit_Error(const char* message)
 	printf("[FONT ERROR]: %s\n", message);
 }
 
-void RendererInit()
+void RendererInit(Controller* cont)
 {
 	rc.wm.window_scale = 3;
 	rc.wm.padding = 3 * rc.wm.window_scale;
@@ -129,6 +134,8 @@ void RendererInit()
 	rc.wm.pattern_table_len = roundf(128 * 0.5f * rc.wm.window_scale);
 
 	rc.overscan = true;
+
+	rc.controller = cont;
 
 	// TODO: only initialize video component and initialize other components when needed (eg audio)
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
@@ -563,7 +570,6 @@ void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 	sprintf(line, "Write Toggle (w): %i", ppu->w);
 	RenderText(line, white);
 
-	// TODO: ppu->cycles and ppu->scanline indicate the next clock of the ppu, we want to render the current clock
 	sprintf(line, "cycles: %i", ppu->cycles);
 	RenderText(line, white);
 
@@ -639,20 +645,24 @@ void DrawSettings(int xoff, int yoff)
 	{
 
 	}
-	if (GuiAddCheckbox("Overscan", xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + rc.wm.button_h, &rc.overscan))
-	{
-		printf("cb %i\n", rc.overscan);
-	}
-	static bool running = false;
-	span.y = yoff + 3 * rc.wm.padding + rc.wm.button_h + 6 * rc.wm.window_scale; // 3*padding + button + checkbox
+	span.y = yoff + 2 * rc.wm.padding + rc.wm.button_h; // 3*padding + button + checkbox
 	span.w = 65 * rc.wm.window_scale;
-	if (GuiAddButton(running ? "Step Through Emulation" : "Run Emulation", &span))
+	if (GuiAddButton(rc.controller->mode == MODE_PLAY ? "Step Through Emulation" : "Run Emulation", &span))
 	{
-		running = !running;
+		rc.controller->mode = 1 - rc.controller->mode;
 	}
 	span.y += rc.wm.padding + rc.wm.button_h; span.w = 40 * rc.wm.window_scale;
 	if (GuiAddButton("Reset", &span))
 	{
+		// Clear the screen
+		color* dest;
+		int pitch;
+		SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
+
+		memset(dest, 0, 256 * 240 * sizeof(color));
+
+		SDL_UnlockTexture(rc.nes_screen);
+
 		NESReset(rc.nes);
 	}
 	span.y += rc.wm.padding + rc.wm.button_h;

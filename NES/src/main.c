@@ -1,5 +1,6 @@
 #include "Frontend/Renderer.h"
 #include "Frontend/Gui.h"
+#include "Frontend/Controller.h"
 
 #include "event_filter_function.h"
 
@@ -20,20 +21,27 @@
 
 int main(int argc, char** argv)
 {
-	RendererInit();
+	Controller controller = { .mode = MODE_STEP_THROUGH };
+	RendererInit(&controller);
 
-	//RunAll6502Tests();
+	RunAll6502Tests();
 	RunAll2C02Tests();
 	//RunAllBenchmarks();
 
 	Nes nes;
-	//NESInit(&nes, "roms/DonkeyKong.nes");
-	NESInit(&nes, "roms/MicroMages.nes");
-	//NESInit(&nes, "tests/roms/palette.nes");
-	//NESInit(&nes, "tests/roms/scanline.nes");
+	//NESInit(&nes, "roms/BalloonFight.nes");
+	//NESInit(&nes, "roms/MicroMages.nes");
 	//NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/3.Timing.nes");
-
+	NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/4.Obscure.nes");
 	RendererBindNES(&nes);
+
+	for (int i = 0; i < 299500; i++)
+	//for (int i = 0; i < 297000; i++)
+	{
+		clock_nes_cycle(&nes);
+		clock_nes_cycle(&nes);
+		clock_nes_cycle(&nes);
+	}
 
 	// TODO: 
 	uint8_t* chr = ((Mapper000*)(nes.cart.mapper))->CHR;
@@ -41,19 +49,19 @@ int main(int argc, char** argv)
 	RendererSetPatternTable(chr + 0x1000, 1);
 
 	SDL_Event event;
+	timepoint beg, end;
 	while (true)
 	{
-		timepoint beg, end;
 		GetTime(&beg);
-		clock_nes_frame(&nes);
-		RendererDraw();
-		GetTime(&end);
-		//printf("time: %.3fms (%.0f fps)\n", GetElapsedTimeMilli(&beg, &end), 1000 / GetElapsedTimeMilli(&beg, &end));
+		if (controller.mode == MODE_PLAY)
+		{
+			clock_nes_frame(&nes);
+		}
 
 		while (SDL_PollEvent(&event) != 0)
 		{
 			GuiDispatchEvent(&event);
-			if (event.type == SDL_KEYDOWN)
+			if (controller.mode == MODE_STEP_THROUGH && event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
 				{
@@ -74,6 +82,14 @@ int main(int argc, char** argv)
 			{
 				exit(EXIT_SUCCESS);
 			}
+		}
+
+		RendererDraw();
+		GetTime(&end);
+		float time = 16666 - GetElapsedTimeMicro(&beg, &end);
+		if (time > 0)
+		{
+			SleepMicro((uint64_t)time);
 		}
 	}
 

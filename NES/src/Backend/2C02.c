@@ -87,8 +87,8 @@ void FetchDataAndIncV(State2C02* ppu)
 	{
 		// AT byte
 		uint16_t attrib_tbl_addr = GetAttribTableAddr(ppu->v);
-		uint8_t attrib_tbl_byte = ppu_bus_read(ppu->bus, attrib_tbl_addr);
-		uint8_t shift = 2 * ((ppu->v >> 1) & 0x01) + 4 * ((ppu->v >> 6) & 0x01);
+		uint8_t attrib_tbl_byte = ppu_bus_read(ppu->bus, attrib_tbl_addr); // Get palette attribute
+		uint8_t shift = 2 * ((ppu->v >> 1) & 0x01) + 4 * ((ppu->v >> 6) & 0x01); // Calculate which palette to use
 		uint8_t palatteID = (attrib_tbl_byte >> shift) & 0x03;
 
 		ppu->pa_latch_low = ((palatteID & 0x01) ? 0xFF : 0x00);
@@ -147,7 +147,6 @@ void TransitionSpriteEvalulationStateMachine(State2C02* ppu)
 	}
 	else
 	{
-		ppu->sprite_eval_state.write_enable = false;
 		ppu->sprite_eval_state.state = OVERFLOW_CHECK;
 	}
 }
@@ -249,7 +248,7 @@ void clock_2C02(State2C02* ppu)
 	// Sprite rendering
 	if (ppu->PPUMASK.flags.s)
 	{
-		if (ppu->scanline >= 0 && ppu->scanline < 240)
+		if (ppu->scanline >= 1 && ppu->scanline < 240)
 		{
 			if (ppu->cycles >= 1 && ppu->cycles < 257)
 			{
@@ -263,12 +262,13 @@ void clock_2C02(State2C02* ppu)
 				}
 
 				int index = ppu->scanline * 256 + ppu->cycles - 1;
+				bool drawn = false;
 				for (int i = 0; i < 8; i++)
 				{
 					if (ppu->active_sprites & (1 << i))
 					{
 						uint8_t spr_shade;
-						if (ppu->pa_sprite[i] & (1 << 6)) // Flip horizontally
+						if (ppu->sprite_attribute[i] & (1 << 6)) // Flip horizontally
 						{
 							spr_shade = (ppu->pt_sprite_high[i] & 0x1) << 1 | (ppu->pt_sprite_low[i] & 0x1);
 							ppu->pt_sprite_high[i] >>= 1;
@@ -281,8 +281,9 @@ void clock_2C02(State2C02* ppu)
 							ppu->pt_sprite_low[i] <<= 1;
 						}
 
-						if (spr_shade != 0 )
+						if (spr_shade != 0 && !drawn)
 						{
+							drawn = true;
 							// Check for sprite 0 hit
 							if (i == 0 && ppu->sprite_zero_on_current_scanline && bg_shade != 0 && ppu->PPUMASK.flags.b && !ppu->PPUSTATUS.flags.S)
 							{
@@ -297,13 +298,16 @@ void clock_2C02(State2C02* ppu)
 									ppu->PPUSTATUS.flags.S = 0;
 								}
 							}
-							if (bg_shade == 0 || !(ppu->pa_sprite[i] & 0x5)) // Get priortiy bit from sprite attribute
+							if (bg_shade == 0 || !(ppu->sprite_attribute[i] & 0x5)) // Get priortiy bit from sprite attribute
 							{
-								uint16_t palatte_addr = 0x3F10 | (ppu->pa_sprite[i] & 0x3) << 2 | spr_shade;
-								uint8_t color = ppu_bus_read(ppu->bus, palatte_addr);
-								ppu->pixels[index] = PALETTE_MAP[color & 0x3F];
+								uint16_t palatte_addr = 0x3F10 | (ppu->sprite_attribute[i] & 0x3) << 2 | spr_shade;
+								uint8_t color = ppu_bus_read(ppu->bus, palatte_addr) & 0x3F;
+								if (ppu->PPUMASK.flags.g)
+								{
+									color &= 0x30;
+								}
+								ppu->pixels[index] = PALETTE_MAP[color];
 							}
-							break;
 						}
 					}
 				}
@@ -320,6 +324,9 @@ void clock_2C02(State2C02* ppu)
 	// Sprite evaluation
 	if (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s)
 	{
+		// Sprite evaluation occurs during the visible scanlines (0..239). 
+		// Sprites evaluated on the current scanline are drawn on the next scanline
+		// because of this no sprites will be rendered on scanline 0
 		if (ppu->scanline >= 0 && ppu->scanline < 240)
 		{
 			// Clear OAM
@@ -329,7 +336,6 @@ void clock_2C02(State2C02* ppu)
 
 				// Set up initial state
 				ppu->sprite_eval_state.state = RANGE_CHECK;
-				ppu->sprite_eval_state.write_enable = true; // Might not need this
 				ppu->sprite_eval_state.secondary_oam_free_slot = 0;
 				ppu->sprite_eval_state.remaining = 0;
 
@@ -387,13 +393,12 @@ void clock_2C02(State2C02* ppu)
 					case OVERFLOW_CHECK:
 					{
 						ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
-						ppu->OAMADDR++;
 						// Perform y-range check
 						int height = ppu->PPUCTRL.flags.H ? 16 : 8;
 						if (ppu->scanline >= ppu->OAMDATA && ppu->scanline < ppu->OAMDATA + height)
 						{
 							ppu->PPUSTATUS.flags.O = 1;
-							ppu->OAMADDR += 3;
+							ppu->OAMADDR += 4;
 							ppu->sprite_eval_state.remaining = 8; // TODO Confirm this timing
 							ppu->sprite_eval_state.state = IDLE;
 						}
@@ -401,9 +406,11 @@ void clock_2C02(State2C02* ppu)
 						{
 							// Emulate sprite overflow bug 
 							uint8_t oam_addr_low = ppu->OAMADDR & 0x03;
-							uint8_t oam_addr_high = (ppu->OAMADDR & 0xFC) >> 2;
+							uint8_t oam_addr_high = ppu->OAMADDR >> 2;
 
 							oam_addr_low++;
+							oam_addr_low &= 0x03;
+
 							oam_addr_high++;
 							oam_addr_high &= 0x3F;
 
@@ -446,27 +453,27 @@ void clock_2C02(State2C02* ppu)
 				{
 					uint8_t ypos = ppu->bus->secondary_OAM[4 * i];
 					uint8_t tile_index = ppu->bus->secondary_OAM[4 * i + 1];
-					ppu->pa_sprite[i] = ppu->bus->secondary_OAM[4 * i + 2];
+					ppu->sprite_attribute[i] = ppu->bus->secondary_OAM[4 * i + 2];
 					ppu->sprite_xpos[i] = ppu->bus->secondary_OAM[4 * i + 3];
 
 					// Calculate the address in the pattern table
 					uint16_t pattern_table_addr;
 					if (ppu->PPUCTRL.flags.H)
 					{
-						uint8_t fine_y = ppu->scanline - ypos;
-						uint8_t tile_select = (ypos & 0x8) > 0;
-						if (ppu->pa_sprite[i] & 0x80) // vertical flip
+						uint8_t fine_y = (ppu->scanline - ypos) & 0x7;
+						uint8_t tile_select = ((ppu->scanline - ypos) & 0x8) > 0;
+						if (ppu->sprite_attribute[i] & 0x80) // vertical flip
 						{
 							fine_y = 7 - (int16_t)fine_y;
-							tile_select = 1 - (int16_t)tile_select;
+							tile_select = 1 - (int8_t)tile_select;
 						}
 
 						pattern_table_addr = (tile_index & 1) << 12 | (tile_index & 0xFE) << 4 | tile_select << 4 | fine_y;
 					}
 					else
 					{
-						uint8_t fine_y = ppu->scanline - ypos;
-						if (ppu->pa_sprite[i] & 0x80) // vertical flip
+						uint8_t fine_y = (ppu->scanline - ypos) & 0x7;
+						if (ppu->sprite_attribute[i] & 0x80) // vertical flip
 						{
 							fine_y = 7 - (int16_t)fine_y;
 						}
@@ -537,6 +544,7 @@ void clock_2C02(State2C02* ppu)
 		{
 			ppu->scanline = -1;
 			ppu->oddframe = !ppu->oddframe;
+			ppu->frame_count++;
 		}
 	}
 
@@ -581,6 +589,7 @@ void power_on_2C02(State2C02* ppu)
 	ppu->active_sprites = 0;
 
 	ppu->total_cycles = 0;
+	ppu->frame_count = 0;
 	memset(ppu->pixels, 0, sizeof(ppu->pixels));
 	ppu->ppustatus_read_early = false;
 	ppu->ppustatus_read_late = false;
