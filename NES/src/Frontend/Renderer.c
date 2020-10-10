@@ -131,7 +131,7 @@ void RendererInit(Controller* cont)
 	rc.wm.menu_button_w = 34 * rc.wm.window_scale;
 	rc.wm.menu_button_h = 10 * rc.wm.window_scale;
 	rc.wm.button_h = 7 * rc.wm.window_scale;
-	rc.wm.pattern_table_len = roundf(128 * 0.5f * rc.wm.window_scale);
+	rc.wm.pattern_table_len = (int)roundf(128 * 0.5f * rc.wm.window_scale);
 
 	rc.overscan = true;
 
@@ -177,13 +177,13 @@ void RendererInit(Controller* cont)
 	}
 
 	rc.font_size = 5 * rc.wm.window_scale; // distance from highest ascender to the lowest descender in pixels
-	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, rc.font_size);
+	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, (float)rc.font_size);
 
 	stbtt_pack_context spc;
 	unsigned char* bitmap = malloc(512 * 512);
 
 	stbtt_PackBegin(&spc, bitmap, 512, 512, 0, 1, NULL);
-	stbtt_PackFontRange(&spc, rc.fontdata, 0, rc.font_size, 32, 96, rc.chardata);
+	stbtt_PackFontRange(&spc, rc.fontdata, 0, (float)rc.font_size, 32, 96, rc.chardata);
 	stbtt_PackEnd(&spc);
 
 	// Convert bitmap into SDL texture
@@ -204,10 +204,10 @@ void RendererInit(Controller* cont)
 
 	// Get font metrics
 	stbtt_GetFontVMetrics(&rc.info, &rc.ascent, &rc.descent, &rc.line_gap);
-	rc.y_advance = roundf(rc.scale * (rc.ascent - rc.descent + rc.line_gap));
-	rc.ascent = roundf(rc.scale * rc.ascent);
-	rc.descent = roundf(rc.scale * rc.descent);
-	rc.line_gap = roundf(rc.scale * rc.line_gap);
+	rc.y_advance = (int)roundf(rc.scale * (rc.ascent - rc.descent + rc.line_gap));
+	rc.ascent = (int)roundf(rc.scale * rc.ascent);
+	rc.descent = (int)roundf(rc.scale * rc.descent);
+	rc.line_gap = (int)roundf(rc.scale * rc.line_gap);
 
 	// Create nametable textures
 	rc.left_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
@@ -251,14 +251,14 @@ void RenderChar(char glyph, SDL_Color c)
 	stbtt_packedchar* info = &rc.chardata[glyph - 32];
 	SDL_Rect src_rect = { info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0 };
 
-	const int yoff = rc.text_y + rc.ascent + roundf(info->yoff);
-	const int xoff = rc.text_x + roundf(info->xoff);
+	const int yoff = rc.text_y + rc.ascent + (int)roundf(info->yoff);
+	const int xoff = rc.text_x + (int)roundf(info->xoff);
 	SDL_Rect dst_rect = { xoff, yoff, info->x1 - info->x0, info->y1 - info->y0 };
 
 	SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
 	SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
 
-	rc.text_x += roundf(info->xadvance);
+	rc.text_x += (int)roundf(info->xadvance);
 }
 
 void RenderText(const char* text, SDL_Color c)
@@ -277,7 +277,7 @@ Bounds TextBounds(const char* text)
 	int sum = 0;
 	while (*text)
 	{
-		sum += roundf(rc.chardata[*text - 32].xadvance);
+		sum += (int)roundf(rc.chardata[*text - 32].xadvance);
 		text++;
 	}
 
@@ -587,7 +587,7 @@ void DrawPatternTable(int xoff, int yoff, int side)
 
 void DrawPaletteData(int xoff, int yoff)
 {
-	const int len = roundf(2.66 * rc.wm.window_scale);
+	const int len = (int)roundf(2.66f * rc.wm.window_scale);
 	SDL_Rect rect = { .x = xoff,.y = yoff,.w = len,.h = len };
 	for (int y = 0; y < 8; y++)
 	{
@@ -607,7 +607,7 @@ void DrawNESState()
 {
 	DrawProgramView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
 	DrawStackView(rc.wm.db_x + rc.wm.db_w / 3, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
-	DrawCPUStatus(rc.wm.db_x + roundf(0.6f * rc.wm.db_w), rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
+	DrawCPUStatus(rc.wm.db_x + (int)roundf(0.6f * rc.wm.db_w), rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
 	DrawPPUStatus(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h + TextHeight(8) + rc.wm.padding, &rc.nes->ppu);
 
 	// Check if palette has changed

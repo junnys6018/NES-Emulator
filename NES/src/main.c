@@ -25,23 +25,15 @@ int main(int argc, char** argv)
 	RendererInit(&controller);
 
 	RunAll6502Tests();
-	RunAll2C02Tests();
+	//RunAll2C02Tests();
 	//RunAllBenchmarks();
 
 	Nes nes;
-	//NESInit(&nes, "roms/BalloonFight.nes");
-	//NESInit(&nes, "roms/MicroMages.nes");
+	NESInit(&nes, "roms/SuperMarioBros.nes");
+	//NESInit(&nes, "roms/DonkeyKong.nes");
 	//NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/3.Timing.nes");
-	NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/4.Obscure.nes");
+	//NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/4.Obscure.nes");
 	RendererBindNES(&nes);
-
-	for (int i = 0; i < 299500; i++)
-	//for (int i = 0; i < 297000; i++)
-	{
-		clock_nes_cycle(&nes);
-		clock_nes_cycle(&nes);
-		clock_nes_cycle(&nes);
-	}
 
 	// TODO: 
 	uint8_t* chr = ((Mapper000*)(nes.cart.mapper))->CHR;

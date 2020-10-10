@@ -28,7 +28,7 @@ SDL_Color scroll_bar = { 29,47,73 };
 SDL_Color scroll_grab_low = { 66,150,250 };
 SDL_Color scroll_grab_high = { 3,132,252 };
 
-unsigned long hash(unsigned char* str)
+unsigned long hash(const unsigned char* str)
 {
 	unsigned long hash = 5381;
 	int c;
@@ -112,7 +112,7 @@ bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v)
 	if (*v)
 	{
 		SDL_SetRenderDrawColor(gc.rend, checkbox_active.r, checkbox_active.g, checkbox_active.b, 255);
-		int offset = roundf((float)gc.metrics.checkbox_size / 4);
+		int offset = (int)roundf((float)gc.metrics.checkbox_size / 4);
 		int width = gc.metrics.checkbox_size - 2 * offset;
 		span.x += offset; span.y += offset; span.h = width; span.w = width;
 		SDL_RenderFillRect(gc.rend, &span);
