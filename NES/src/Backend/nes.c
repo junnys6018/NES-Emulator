@@ -7,6 +7,7 @@ void NESInit(Nes* nes, const char* filepath)
 	nes->cpu_bus.cartridge = &nes->cart;
 	nes->cpu_bus.ppu = &nes->ppu;
 	nes->cpu_bus.cpu = &nes->cpu;
+	nes->cpu_bus.pad = &nes->pad;
 
 	nes->ppu_bus.cartridge = &nes->cart;
 

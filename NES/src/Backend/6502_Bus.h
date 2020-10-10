@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "Cartridge.h"
+#include "Gamepad.h"
 #include "2C02.h"
 
 typedef struct
@@ -11,6 +12,7 @@ typedef struct
 	Cartridge* cartridge;
 	State2C02* ppu;
 	struct State6502* cpu;
+	Gamepad* pad;
 } Bus6502;
 
 void cpu_bus_write(Bus6502* b, uint16_t addr, uint8_t data);

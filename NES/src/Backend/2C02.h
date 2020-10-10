@@ -163,6 +163,6 @@ typedef struct
 void clock_2C02(State2C02* ppu);
 void reset_2C02(State2C02* ppu);
 void power_on_2C02(State2C02* ppu);
-void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data);
-uint8_t read_ppu(State2C02* ppu, uint16_t addr);
+void ppu_write(State2C02* ppu, uint16_t addr, uint8_t data);
+uint8_t ppu_read(State2C02* ppu, uint16_t addr);
 #endif // !_2C02_H

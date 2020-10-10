@@ -6,6 +6,7 @@
 #include "2C02.h"
 #include "2C02_Bus.h"
 #include "Cartridge.h"
+#include "Gamepad.h"
 
 typedef struct
 {
@@ -15,6 +16,7 @@ typedef struct
 	State2C02 ppu;
 
 	Cartridge cart;
+	Gamepad pad;
 	long long system_clock;
 } Nes;
 

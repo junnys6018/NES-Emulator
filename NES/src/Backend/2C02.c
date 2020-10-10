@@ -597,7 +597,7 @@ void power_on_2C02(State2C02* ppu)
 	ppu->nmi_line = 0xFFFFFFFF;
 }
 
-void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
+void ppu_write(State2C02* ppu, uint16_t addr, uint8_t data)
 {
 	ppu->PPUSTATUS.reg = (ppu->PPUSTATUS.reg & 0xE0) | (data & 0x1F);
 	switch (addr)
@@ -675,7 +675,7 @@ void write_ppu(State2C02* ppu, uint16_t addr, uint8_t data)
 	}
 }
 
-uint8_t read_ppu(State2C02* ppu, uint16_t addr)
+uint8_t ppu_read(State2C02* ppu, uint16_t addr)
 {
 	switch (addr)
 	{

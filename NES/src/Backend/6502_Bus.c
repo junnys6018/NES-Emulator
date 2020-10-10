@@ -22,7 +22,7 @@ void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 		{
 			// Mirror every 8 bytes
 			addr = 0x2000 + (addr & 0x07);
-			write_ppu(bus->ppu, addr, data);
+			ppu_write(bus->ppu, addr, data);
 		}
 		// NES APU and I/O registers
 		else if (addr >= 0x4000 && addr < 0x4018)
@@ -31,6 +31,10 @@ void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 			{
 				bus->cpu->OAMDMA = data;
 				bus->cpu->dma_transfer_cycles = ((bus->cpu->total_cycles % 2 == 1) ? 514 : 513);
+			}
+			else if (addr == 0x4016)
+			{
+				gamepad_write(bus->pad, data);
 			}
 		}
 		// APU and I/O functionality that is normally disabled
@@ -64,14 +68,15 @@ uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 		{
 			// Mirror every 8 bytes
 			addr = 0x2000 + (addr & 0x07);
-			return read_ppu(bus->ppu, addr);
+			return ppu_read(bus->ppu, addr);
 		}
 		// NES APU and I/O registers
 		else if (addr >= 0x4000 && addr < 0x4018)
 		{
-			if (addr == 0x4014)
+			// Controller output
+			if (addr == 0x4016)
 			{
-				printf("OAMDMA\n");
+				return gamepad_read(bus->pad);
 			}
 		}
 		// APU and I/O functionality that is normally disabled

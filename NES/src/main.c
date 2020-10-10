@@ -21,18 +21,19 @@
 
 int main(int argc, char** argv)
 {
-	Controller controller = { .mode = MODE_STEP_THROUGH };
+	Controller controller = { .mode = MODE_PLAY };
 	RendererInit(&controller);
 
-	RunAll6502Tests();
+	//RunAll6502Tests();
 	//RunAll2C02Tests();
 	//RunAllBenchmarks();
 
 	Nes nes;
-	NESInit(&nes, "roms/SuperMarioBros.nes");
+	//NESInit(&nes, "roms/SuperMarioBros.nes");
 	//NESInit(&nes, "roms/DonkeyKong.nes");
-	//NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/3.Timing.nes");
-	//NESInit(&nes, "tests/roms/blargg_tests/sprite_overflow_tests/4.Obscure.nes");
+	//NESInit(&nes, "tests/roms/nestest.nes");
+	//NESInit(&nes, "tests/roms/clear_color_test.nes");
+	NESInit(&nes, "tests/roms/palette.nes");
 	RendererBindNES(&nes);
 
 	// TODO: 
@@ -45,6 +46,8 @@ int main(int argc, char** argv)
 	while (true)
 	{
 		GetTime(&beg);
+		poll_keys(&nes.pad);
+
 		if (controller.mode == MODE_PLAY)
 		{
 			clock_nes_frame(&nes);
