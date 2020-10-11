@@ -333,7 +333,7 @@ void RendererUpdatePatternTableTexture(int side)
 
 			uint16_t table_addr = tile_row << 8 | tile_col << 4 | fine_y;
 
-			uint8_t palette_index = (table_data[table_addr] & (1 << fine_x)) >> fine_x | table_data[table_addr | 1 << 3] & (1 << fine_x) >> (fine_x - 1);
+			uint8_t palette_index = ((table_data[table_addr] & (1 << fine_x)) >> fine_x) | ((table_data[table_addr | 1 << 3] & (1 << fine_x)) >> (fine_x - 1));
 			color c = PALETTE_MAP[rc.palette[palette_index]];
 
 			pixels[3 * (y * 128 + x)] = c.r;
@@ -361,7 +361,6 @@ void RendererSetPatternTable(uint8_t* table_data, int side)
 }
 
 #include "Backend/Mappers/Mapper_000.h"
-#include "Backend/Mappers/Mapper_001.h"
 
 void RendererBindNES(Nes* nes)
 {
@@ -377,12 +376,6 @@ void RendererBindNES(Nes* nes)
 	if (nes->cart.mapperID == 0)
 	{
 		uint8_t* chr = ((Mapper000*)(nes->cart.mapper))->CHR;
-		RendererSetPatternTable(chr, 0);
-		RendererSetPatternTable(chr + 0x1000, 1);
-	}
-	else if (nes->cart.mapperID == 1)
-	{
-		uint8_t* chr = ((Mapper001*)(nes->cart.mapper))->CHR;
 		RendererSetPatternTable(chr, 0);
 		RendererSetPatternTable(chr + 0x1000, 1);
 	}

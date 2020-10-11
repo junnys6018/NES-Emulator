@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 	Nes nes;
 	//NESInit(&nes, "roms/SuperMarioBros.nes");
 	//NESInit(&nes, "roms/DonkeyKong.nes");
-	NESInit(&nes, "roms/Tetris.nes");
+	//NESInit(&nes, "roms/Tetris.nes");
 	//NESInit(&nes, "roms/LegendofZelda.nes");
 	//NESInit(&nes, "roms/PacMan.nes");
 	//NESInit(&nes, "roms/BalloonFight.nes");
@@ -40,7 +40,8 @@ int main(int argc, char** argv)
 	//NESInit(&nes, "tests/roms/nestest.nes");
 	//NESInit(&nes, "tests/roms/full_nes_palette.nes");
 	//NESInit(&nes, "tests/roms/nmi_sync.nes");
-	//NESInit(&nes, "tests/roms/blargg_tests/cpu_interrupts_v2/cpu_interrupts.nes");
+	//NESInit(&nes, "tests/roms/blargg_tests/sprite_hit_tests_2005.10.05/01.basics.nes");
+	//NESInit(&nes, "tests/roms/ppu_read_buffer/test_ppu_read_buffer.nes");
 
 	RendererBindNES(&nes);
 

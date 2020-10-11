@@ -1,5 +1,6 @@
 #include "Mapper_001.h"
 #include "MapperUtils.h"
+#include "Frontend/Renderer.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -37,7 +38,7 @@ uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 		{
 			if (addr >= 0xC000) // Last bank
 			{
-				return map001->PRG_ROM[((map001->PRG_ROM_banks - 1) << 14) | (addr & 0x3FFF)];
+				return map001->PRG_ROM[((uint32_t)(map001->PRG_ROM_banks - 1) << 14) | (addr & 0x3FFF)];
 			}
 			uint32_t bank_select = map001->PRG_bank_select & 0x0F;
 			uint32_t index = (bank_select << 14) | (addr & 0x3FFF);
@@ -61,14 +62,30 @@ uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
 	case 1: // swtich 2x4KB banks independently
 		if (addr < 0x1000)
 		{
-			uint32_t index = (map001->CHR_bank0_select << 12) | (addr & 0x0FFF);
+			uint32_t index = ((uint32_t)map001->CHR_bank0_select << 12) | (addr & 0x0FFF);
 			return map001->CHR[index];
 		}
 		else
 		{
-			uint32_t index = (map001->CHR_bank1_select << 12) | (addr & 0x0FFF);
+			uint32_t index = ((uint32_t)map001->CHR_bank1_select << 12) | (addr & 0x0FFF);
 			return map001->CHR[index];
 		}
+	}
+}
+
+
+void UpdateRendererPatternTable(Mapper001* mapper)
+{
+	if (mapper->control.bits.C)
+	{
+		RendererSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank0_select) << 12), 0);
+		RendererSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank1_select) << 12), 1);
+	}
+	else
+	{
+		uint32_t base_addr = ((uint32_t)mapper->CHR_bank0_select >> 1) << 13;
+		RendererSetPatternTable(mapper->CHR + base_addr, 0);
+		RendererSetPatternTable(mapper->CHR + base_addr + 0x1000, 1);
 	}
 }
 
@@ -109,6 +126,8 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 				break;
 			}
 			map001->shift_register = 0b10000;
+
+			UpdateRendererPatternTable(map001);
 		}
 	}
 }
@@ -128,12 +147,12 @@ void m001PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
 	case 1: // swtich 2x4KB banks independently
 		if (addr < 0x1000)
 		{
-			uint32_t index = (map001->CHR_bank0_select << 12) | (addr & 0x0FFF);
+			uint32_t index = ((uint32_t)map001->CHR_bank0_select << 12) | (addr & 0x0FFF);
 			map001->CHR[index] = data;
 		}
 		else
 		{
-			uint32_t index = (map001->CHR_bank1_select << 12) | (addr & 0x0FFF);
+			uint32_t index = ((uint32_t)map001->CHR_bank1_select << 12) | (addr & 0x0FFF);
 			map001->CHR[index] = data;
 		}
 		break;

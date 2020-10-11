@@ -1,6 +1,7 @@
 #include "Cartridge.h"
 #include "Mappers/Mapper_000.h"
 #include "Mappers/Mapper_001.h"
+#include "Mappers/Mapper_003.h"
 #include "Mappers/Mapper_JUN.h"
 
 #include <stdio.h>
@@ -28,6 +29,9 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 			break;
 		case 1:
 			m001LoadFromFile(&header, cart, file);
+			break;
+		case 3:
+			m003LoadFromFile(&header, cart, file);
 			break;
 		default:
 			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);
@@ -57,6 +61,10 @@ void free_cartridge(Cartridge* cart)
 		break;
 	case 1:
 		m001Free(cart->mapper);
+		break;
+	case 3:
+		m003Free(cart->mapper);
+		break;
 	case 767:
 		free(cart->mapper);
 		break;
