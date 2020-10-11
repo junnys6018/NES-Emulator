@@ -360,6 +360,9 @@ void RendererSetPatternTable(uint8_t* table_data, int side)
 	RendererUpdatePatternTableTexture(side);
 }
 
+#include "Backend/Mappers/Mapper_000.h"
+#include "Backend/Mappers/Mapper_001.h"
+
 void RendererBindNES(Nes* nes)
 {
 	rc.nes = nes;
@@ -368,6 +371,20 @@ void RendererBindNES(Nes* nes)
 	for (int i = 0; i < 4; i++)
 	{
 		rc.cached_bg_palette[i] = rc.palette[i];
+	}
+	
+	// Bind Pattern table for visualisation
+	if (nes->cart.mapperID == 0)
+	{
+		uint8_t* chr = ((Mapper000*)(nes->cart.mapper))->CHR;
+		RendererSetPatternTable(chr, 0);
+		RendererSetPatternTable(chr + 0x1000, 1);
+	}
+	else if (nes->cart.mapperID == 1)
+	{
+		uint8_t* chr = ((Mapper001*)(nes->cart.mapper))->CHR;
+		RendererSetPatternTable(chr, 0);
+		RendererSetPatternTable(chr + 0x1000, 1);
 	}
 }
 
@@ -633,9 +650,16 @@ void DrawAbout(int xoff, int yoff)
 	SetTextOrigin(xoff + rc.wm.padding, yoff + rc.wm.padding);
 	RenderText("NES Emulator by Jun Lim", cyan);
 	RenderText("Controls", white);
+	RenderText("In Step Through Mode:", cyan);
 	RenderText("Space - Emulate one CPU instruction", white);
 	RenderText("f     - Emulate one frame", white);
 	RenderText("p     - Emulate one master clock cycle", white);
+	RenderText("While Running Emulation", cyan);
+	RenderText("Z     - B button", white);
+	RenderText("X     - A button", white);
+	RenderText("Enter - Start", white);
+	RenderText("Tab   - Select", white);
+	RenderText("Arrow Keys for D-pad", white);
 }
 
 void DrawSettings(int xoff, int yoff)
@@ -689,7 +713,7 @@ void DrawSettings(int xoff, int yoff)
 	RenderText(buf, white);
 
 	int CHR_banks = ((uint16_t)header.CHRROM_MSB << 8) | (uint16_t)header.CHRROM_LSB;
-	sprintf(buf, "CHR ROM banks - %i [%iKB]", PRG_banks, PRG_banks * 8);
+	sprintf(buf, "CHR ROM banks - %i [%iKB]", CHR_banks, CHR_banks * 8);
 	RenderText(buf, white);
 
 	sprintf(buf, "PPU mirroring - %s", header.MirrorType ? "vertical" : "horizontal");

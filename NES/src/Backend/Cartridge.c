@@ -1,5 +1,6 @@
 #include "Cartridge.h"
 #include "Mappers/Mapper_000.h"
+#include "Mappers/Mapper_001.h"
 #include "Mappers/Mapper_JUN.h"
 
 #include <stdio.h>
@@ -23,52 +24,11 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 		switch (mapperID)
 		{
 		case 0:
-		{
-			cart->CPUReadCartridge = m000CPUReadCartridge;
-			cart->PPUReadCartridge = m000PPUReadCartridge;
-
-			cart->CPUWriteCartridge = m000CPUWriteCartridge;
-			cart->PPUWriteCartridge = m000PPUWriteCartridge;
-
-			cart->PPUMirrorNametable = m000PPUMirrorNametable;
-
-			Mapper000* map = malloc(sizeof(Mapper000));
-			assert(map);
-			cart->mapper = map;
-
-			// Skip trainer if present
-			if (header.Trainer)
-			{ 
-				fseek(file, 512, SEEK_CUR);
-			}
-			// Get the size of PRG ROM and read into cartridge
-			uint16_t PRGROM_Size = ((uint16_t)header.PRGROM_MSB << 8) | (uint16_t)header.PRGROM_LSB;
-
-			if (PRGROM_Size == 1)
-			{
-				map->romCap = _16K;
-				map->PRG_ROM = malloc(16 * 1024);
-				fread(map->PRG_ROM, 16 * 1024, 1, file);
-			}
-			else if (PRGROM_Size == 2)
-			{
-				map->romCap = _32K;
-				map->PRG_ROM = malloc(32 * 1024);
-				fread(map->PRG_ROM, 32 * 1024, 1, file);
-			}
-			else
-			{
-				printf("[ERROR] Invalid PRG ROM size\n");
-			}
-
-			// Read CHR ROM into cartridge
-			fread(map->CHR, 8 * 1024, 1, file);
-
-			// Set Nametable mirroring mode
-			map->mirrorMode = header.MirrorType == 0 ? HORIZONTAL : VERTICAL;
-
+			m000LoadFromFile(&header, cart, file);
 			break;
-		}
+		case 1:
+			m001LoadFromFile(&header, cart, file);
+			break;
 		default:
 			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);
 			break;
@@ -77,21 +37,7 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 	// My custom rom format, for now this format has a 16 byte header, then 64KB of data for cpu memory
 	else if (c[0] == 'J' && c[1] == 'U' && c[2] == 'N' && c[3] == 0x1A)
 	{
-		cart->mapperID = 767; // Assigm mapperID 767 to my format
-		
-		cart->CPUReadCartridge = mJUNCPUReadCartridge;
-		cart->PPUReadCartridge = mJUNPPUReadCartridge;
-
-		cart->CPUWriteCartridge = mJUNCPUWriteCartridge;
-		cart->PPUWriteCartridge = mJUNPPUWriteCartridge;
-
-		cart->PPUMirrorNametable = mJUNPPUMirrorNametable;
-
-		MapperJUN* map = malloc(sizeof(MapperJUN));
-		assert(map);
-		cart->mapper = map;
-
-		fread(map->PRG_RAM, 64 * 1024, 1, file);
+		mJUNLoadFromFile(cart, file);
 	}
 	else
 	{
@@ -109,6 +55,8 @@ void free_cartridge(Cartridge* cart)
 	case 0:
 		m000Free(cart->mapper);
 		break;
+	case 1:
+		m001Free(cart->mapper);
 	case 767:
 		free(cart->mapper);
 		break;
@@ -118,4 +66,20 @@ void free_cartridge(Cartridge* cart)
 	}
 
 	memset(cart, 0, sizeof(Cartridge));
+}
+
+int ines_file_format(Header* header)
+{
+	char* c = header->idstring;
+	bool ines1 = c[0] == 'N' && c[1] == 'E' && c[2] == 'S' && c[3] == 0x1A;
+	bool ines2 = ines1 && (header->FormatIdentifer == 0x2);
+	if (ines2)
+	{
+		return 1;
+	}
+	else if (ines1)
+	{
+		return 0;
+	}
+	return -1;
 }

@@ -153,7 +153,7 @@ void TransitionSpriteEvalulationStateMachine(State2C02* ppu)
 
 void clock_2C02(State2C02* ppu)
 {
-	uint8_t bg_shade;
+	uint8_t bg_shade = 0;
 	// Background rendering
 	if (ppu->PPUMASK.flags.b)
 	{
@@ -186,6 +186,11 @@ void clock_2C02(State2C02* ppu)
 			}
 			else if (ppu->cycles >= 321 && ppu->cycles < 337)
 			{
+				ppu->pt_shift_low <<= 1;
+				ppu->pt_shift_high <<= 1;
+				ppu->pa_shift_low <<= 1;
+				ppu->pa_shift_high <<= 1;
+
 				FetchDataAndIncV(ppu);
 			}
 		}
@@ -240,6 +245,11 @@ void clock_2C02(State2C02* ppu)
 			}
 			else if (ppu->cycles >= 321 && ppu->cycles < 337)
 			{
+				ppu->pt_shift_low <<= 1;
+				ppu->pt_shift_high <<= 1;
+				ppu->pa_shift_low <<= 1;
+				ppu->pa_shift_high <<= 1;
+
 				FetchDataAndIncV(ppu);
 			}
 		}
@@ -298,7 +308,7 @@ void clock_2C02(State2C02* ppu)
 									ppu->PPUSTATUS.flags.S = 0;
 								}
 							}
-							if (bg_shade == 0 || !(ppu->sprite_attribute[i] & 0x5)) // Get priortiy bit from sprite attribute
+							if (bg_shade == 0 || !(ppu->sprite_attribute[i] & 0x20)) // Get priortiy bit from sprite attribute
 							{
 								uint16_t palatte_addr = 0x3F10 | (ppu->sprite_attribute[i] & 0x3) << 2 | spr_shade;
 								uint8_t color = ppu_bus_read(ppu->bus, palatte_addr) & 0x3F;
@@ -448,8 +458,7 @@ void clock_2C02(State2C02* ppu)
 				ppu->OAMADDR = 0;
 				ppu->sprite_zero_on_current_scanline = ppu->sprite_zero_on_next_scanline;
 
-				// 8 sprites
-				for (int i = 0; i < 8; i++)
+				for (int i = 0; i < ppu->sprite_eval_state.secondary_oam_free_slot / 4; i++)
 				{
 					uint8_t ypos = ppu->bus->secondary_OAM[4 * i];
 					uint8_t tile_index = ppu->bus->secondary_OAM[4 * i + 1];

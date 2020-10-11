@@ -29,7 +29,7 @@ typedef struct
 	uint8_t MapperID1 : 4; // Bits 0-3
 
 	uint8_t ConsoleType : 2;
-	uint8_t FormatIdentifer : 2; // Used to determine if the supplied file is a NES 1.0 or 2.0 format
+	uint8_t FormatIdentifer : 2; // Used to determine if the supplied file is a NES 1.0 or 2.0 format, on a NES 1.0 it will have the value 0b00, on NES 2.0 it will read 0b10
 	uint8_t MapperID2 : 4; // Bits 4-7
 
 	uint8_t MapperID3 : 4; // Bits 8-11
@@ -38,8 +38,8 @@ typedef struct
 	uint8_t PRGROM_MSB : 4;
 	uint8_t CHRROM_MSB : 4;
 
-	uint8_t todo1; // TODO: Figure out what these bytes do
-	uint8_t todo2;
+	uint8_t PRGRAM_Size;
+	uint8_t CHRRAM_Size;
 
 	uint8_t TimingMode : 2;
 	uint8_t unused : 6;
@@ -71,5 +71,8 @@ typedef struct
 
 void load_cartridge_from_file(Cartridge* cart, const char* filepath);
 void free_cartridge(Cartridge* cart);
+
+// 0: INES 1.0; 1: NES 2.0; -1: unknown
+int ines_file_format(Header* header);
 
 #endif // !CARTRIDGE_H

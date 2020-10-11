@@ -31,8 +31,8 @@ void poll_keys(Gamepad* pad)
 		state = SDL_GetKeyboardState(NULL);
 	}
 	
-	pad->current_input.keys.A = state[SDL_SCANCODE_Z];
-	pad->current_input.keys.B = state[SDL_SCANCODE_X];
+	pad->current_input.keys.A = state[SDL_SCANCODE_X];
+	pad->current_input.keys.B = state[SDL_SCANCODE_Z];
 	pad->current_input.keys.Start = state[SDL_SCANCODE_RETURN]; // Enter key
 	pad->current_input.keys.Select = state[SDL_SCANCODE_TAB];
 	pad->current_input.keys.Up = state[SDL_SCANCODE_UP];

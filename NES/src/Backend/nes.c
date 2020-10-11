@@ -16,13 +16,7 @@ void NESInit(Nes* nes, const char* filepath)
 	nes->ppu.bus = &nes->ppu_bus;
 	nes->ppu.cpu = &nes->cpu;
 
-	power_on_6502(&nes->cpu);
-	reset_6502(&nes->cpu);
-
-	power_on_2C02(&nes->ppu);
-	reset_2C02(&nes->ppu);
-
-	long long clocks = 0;
+	NESReset(nes);
 }
 
 void NESDestroy(Nes* nes)

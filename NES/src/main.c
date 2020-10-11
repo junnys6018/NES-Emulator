@@ -31,15 +31,26 @@ int main(int argc, char** argv)
 	Nes nes;
 	//NESInit(&nes, "roms/SuperMarioBros.nes");
 	//NESInit(&nes, "roms/DonkeyKong.nes");
+	NESInit(&nes, "roms/Tetris.nes");
+	//NESInit(&nes, "roms/LegendofZelda.nes");
+	//NESInit(&nes, "roms/PacMan.nes");
+	//NESInit(&nes, "roms/BalloonFight.nes");
+	//NESInit(&nes, "roms/MicroMages.nes");
+
 	//NESInit(&nes, "tests/roms/nestest.nes");
-	//NESInit(&nes, "tests/roms/clear_color_test.nes");
-	NESInit(&nes, "tests/roms/palette.nes");
+	//NESInit(&nes, "tests/roms/full_nes_palette.nes");
+	//NESInit(&nes, "tests/roms/nmi_sync.nes");
+	//NESInit(&nes, "tests/roms/blargg_tests/cpu_interrupts_v2/cpu_interrupts.nes");
+
 	RendererBindNES(&nes);
 
-	// TODO: 
-	uint8_t* chr = ((Mapper000*)(nes.cart.mapper))->CHR;
-	RendererSetPatternTable(chr, 0);
-	RendererSetPatternTable(chr + 0x1000, 1);
+	//nes.pad.current_input.reg = 0x00;
+	//for (int i = 0; i < 11199700; i++)
+	//{
+	//	clock_nes_cycle(&nes);
+	//	clock_nes_cycle(&nes);
+	//	clock_nes_cycle(&nes);
+	//}
 
 	SDL_Event event;
 	timepoint beg, end;
@@ -64,16 +75,14 @@ int main(int argc, char** argv)
 					clock_nes_instruction(&nes);
 					break;
 				case SDLK_f:
-				{
 					clock_nes_frame(&nes);
 					break;
-				}
 				case SDLK_p:
 					clock_nes_cycle(&nes);
 					break;
 				}
 			}
-			if (event.type == SDL_QUIT)
+			else if (event.type == SDL_QUIT)
 			{
 				exit(EXIT_SUCCESS);
 			}
@@ -81,6 +90,7 @@ int main(int argc, char** argv)
 
 		RendererDraw();
 		GetTime(&end);
+		printf("Took %.3fms                   \r", GetElapsedTimeMilli(&beg, &end));
 		float time = 16666 - GetElapsedTimeMicro(&beg, &end);
 		if (time > 0)
 		{

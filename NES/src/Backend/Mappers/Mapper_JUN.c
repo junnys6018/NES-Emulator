@@ -1,4 +1,6 @@
 #include "Mapper_JUN.h"
+#include <stdlib.h>
+#include <assert.h>
 
 uint8_t mJUNCPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 {
@@ -46,4 +48,23 @@ NametableIndex mJUNPPUMirrorNametable(void* mapper, uint16_t addr)
 	}
 
 	return ret;
+}
+
+void mJUNLoadFromFile(Cartridge* cart, FILE* file)
+{
+	cart->mapperID = 767; // Assigm mapperID 767 to my format
+
+	cart->CPUReadCartridge = mJUNCPUReadCartridge;
+	cart->PPUReadCartridge = mJUNPPUReadCartridge;
+
+	cart->CPUWriteCartridge = mJUNCPUWriteCartridge;
+	cart->PPUWriteCartridge = mJUNPPUWriteCartridge;
+
+	cart->PPUMirrorNametable = mJUNPPUMirrorNametable;
+
+	MapperJUN* map = malloc(sizeof(MapperJUN));
+	assert(map);
+	cart->mapper = map;
+
+	fread(map->PRG_RAM, 64 * 1024, 1, file);
 }

@@ -1,6 +1,7 @@
 #ifndef MAPPER_JUN_H
 #define MAPPER_JUN_H
 #include <stdint.h>
+#include <stdio.h>
 #include "../Cartridge.h"
 
 typedef struct
@@ -16,5 +17,7 @@ void mJUNCPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 void mJUNPPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
 
 NametableIndex mJUNPPUMirrorNametable(void* mapper, uint16_t addr);
+
+void mJUNLoadFromFile(Cartridge* cart, FILE* file);
 
 #endif // !MAPPER_000_H

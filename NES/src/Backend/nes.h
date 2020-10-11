@@ -17,7 +17,7 @@ typedef struct
 
 	Cartridge cart;
 	Gamepad pad;
-	long long system_clock;
+	uint64_t system_clock;
 } Nes;
 
 void NESInit(Nes* nes, const char* filepath);
