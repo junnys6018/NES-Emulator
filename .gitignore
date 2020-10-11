@@ -6,4 +6,5 @@ bin-int
 *.vcxproj*
 Resources
 *.bak
+*.exe
 NES/roms

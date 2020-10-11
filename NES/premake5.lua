@@ -42,5 +42,17 @@ kind "ConsoleApp"
 	filter "system:windows"
 		defines { "_CRT_SECURE_NO_WARNINGS", "PLATFORM_WINDOWS" }
 
+	filter {"system:windows", "configurations:Release"}
+		postbuildcommands
+		{
+			"copy %{wks.location}bin\\" .. outputdir .. "\\%{prj.name}\\%{prj.name}.exe %{prj.location}%{prj.name}.exe"
+		}
+
 	filter "system:linux"
 		defines { "PLATFORM_LINUX" }
+
+	filter {"system:linux", "configurations:Release"}
+		postbuildcommands
+		{
+			"@cp %{wks.location}/bin/" .. outputdir .. "/%{prj.name}/%{prj.name} %{prj.location}/%{prj.name}.out"
+		}
