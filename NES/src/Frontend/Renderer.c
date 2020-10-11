@@ -13,6 +13,7 @@
 
 #include "timer.h"
 #include "Gui.h"
+#include "FileDialog.h"
 
 SDL_Color white = { 255,255,255 };
 SDL_Color cyan = { 78,201,176 };
@@ -360,8 +361,6 @@ void RendererSetPatternTable(uint8_t* table_data, int side)
 	RendererUpdatePatternTableTexture(side);
 }
 
-#include "Backend/Mappers/Mapper_000.h"
-
 void RendererBindNES(Nes* nes)
 {
 	rc.nes = nes;
@@ -370,14 +369,6 @@ void RendererBindNES(Nes* nes)
 	for (int i = 0; i < 4; i++)
 	{
 		rc.cached_bg_palette[i] = rc.palette[i];
-	}
-	
-	// Bind Pattern table for visualisation
-	if (nes->cart.mapperID == 0)
-	{
-		uint8_t* chr = ((Mapper000*)(nes->cart.mapper))->CHR;
-		RendererSetPatternTable(chr, 0);
-		RendererSetPatternTable(chr + 0x1000, 1);
 	}
 }
 
@@ -658,13 +649,28 @@ void DrawAbout(int xoff, int yoff)
 void DrawSettings(int xoff, int yoff)
 {
 	SDL_Rect span = { xoff + rc.wm.padding, yoff + rc.wm.padding,40 * rc.wm.window_scale,rc.wm.button_h };
-	if (GuiAddButton("Load ROM", &span))
-	{
 
+	char file[256];
+	if (GuiAddButton("Load ROM", &span) && OpenFileDialog(file, 256) == 1)
+	{
+		NESDestroy(rc.nes);
+		NESInit(rc.nes, file);
+		if (rc.controller->mode == MODE_NOT_RUNNING)
+		{
+			rc.controller->mode = MODE_PLAY;
+		}
+		// Clear the screen
+		color* dest;
+		int pitch;
+		SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
+
+		memset(dest, 0, 256 * 240 * sizeof(color));
+
+		SDL_UnlockTexture(rc.nes_screen);
 	}
 	span.y = yoff + 2 * rc.wm.padding + rc.wm.button_h; // 3*padding + button + checkbox
 	span.w = 65 * rc.wm.window_scale;
-	if (GuiAddButton(rc.controller->mode == MODE_PLAY ? "Step Through Emulation" : "Run Emulation", &span))
+	if (GuiAddButton(rc.controller->mode == MODE_PLAY ? "Step Through Emulation" : "Run Emulation", &span) && rc.controller->mode != MODE_NOT_RUNNING)
 	{
 		rc.controller->mode = 1 - rc.controller->mode;
 	}

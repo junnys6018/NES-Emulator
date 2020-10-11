@@ -1,4 +1,5 @@
 #include "Mapper_000.h"
+#include "Frontend/Renderer.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -109,4 +110,8 @@ void m000LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 
 	// Set Nametable mirroring mode
 	map->mirrorMode = header->MirrorType == 0 ? HORIZONTAL : VERTICAL;
+
+	// Bind Pattern table to renderer
+	RendererSetPatternTable(map->CHR, 0);
+	RendererSetPatternTable(map->CHR + 0x1000, 1);
 }

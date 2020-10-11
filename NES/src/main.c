@@ -12,6 +12,7 @@
 #include "Benchmarks.h"
 
 #include "timer.h"
+#include "FileDialog.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -21,7 +22,7 @@
 
 int main(int argc, char** argv)
 {
-	Controller controller = { .mode = MODE_PLAY };
+	Controller controller = { .mode = MODE_NOT_RUNNING };
 	RendererInit(&controller);
 
 	//RunAll6502Tests();
@@ -29,6 +30,9 @@ int main(int argc, char** argv)
 	//RunAllBenchmarks();
 
 	Nes nes;
+	RendererBindNES(&nes);
+	NESInit(&nes, NULL);
+
 	//NESInit(&nes, "roms/SuperMarioBros.nes");
 	//NESInit(&nes, "roms/DonkeyKong.nes");
 	//NESInit(&nes, "roms/Tetris.nes");
@@ -42,8 +46,6 @@ int main(int argc, char** argv)
 	//NESInit(&nes, "tests/roms/nmi_sync.nes");
 	//NESInit(&nes, "tests/roms/blargg_tests/sprite_hit_tests_2005.10.05/01.basics.nes");
 	//NESInit(&nes, "tests/roms/ppu_read_buffer/test_ppu_read_buffer.nes");
-
-	RendererBindNES(&nes);
 
 	//nes.pad.current_input.reg = 0x00;
 	//for (int i = 0; i < 11199700; i++)

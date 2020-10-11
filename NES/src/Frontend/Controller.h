@@ -3,7 +3,7 @@
 
 typedef enum
 {
-	MODE_PLAY = 0, MODE_STEP_THROUGH = 1
+	MODE_PLAY = 0, MODE_STEP_THROUGH = 1, MODE_NOT_RUNNING
 } EmulationMode;
 
 typedef struct

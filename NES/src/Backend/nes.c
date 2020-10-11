@@ -1,8 +1,33 @@
 #include "nes.h"
+#include "Backend/Mappers/Mapper_JUN.h"
+#include <string.h>
+#include <assert.h>
+#include <stdlib.h>
 
 void NESInit(Nes* nes, const char* filepath)
 {
-	load_cartridge_from_file(&nes->cart, filepath);
+	if (filepath)
+	{
+		load_cartridge_from_file(&nes->cart, filepath);
+	}
+	else // Load a dummy cart
+	{
+		memset(&nes->cart, 0, sizeof(nes->cart));
+		nes->cart.mapperID = 767;
+
+		nes->cart.CPUReadCartridge = mJUNCPUReadCartridge;
+		nes->cart.PPUReadCartridge = mJUNPPUReadCartridge;
+
+		nes->cart.CPUWriteCartridge = mJUNCPUWriteCartridge;
+		nes->cart.PPUWriteCartridge = mJUNPPUWriteCartridge;
+
+		nes->cart.PPUMirrorNametable = mJUNPPUMirrorNametable;
+
+		MapperJUN* map = malloc(sizeof(MapperJUN));
+		assert(map);
+		memset(map, 0, sizeof(MapperJUN));
+		nes->cart.mapper = map;
+	}
 
 	nes->cpu_bus.cartridge = &nes->cart;
 	nes->cpu_bus.ppu = &nes->ppu;
@@ -22,6 +47,7 @@ void NESInit(Nes* nes, const char* filepath)
 void NESDestroy(Nes* nes)
 {
 	free_cartridge(&nes->cart);
+	memset(nes, 0, sizeof(Nes));
 }
 
 void NESReset(Nes* nes)
