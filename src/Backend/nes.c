@@ -32,6 +32,7 @@ void NESInit(Nes* nes, const char* filepath)
 	nes->cpu_bus.cartridge = &nes->cart;
 	nes->cpu_bus.ppu = &nes->ppu;
 	nes->cpu_bus.cpu = &nes->cpu;
+	nes->cpu_bus.apu = &nes->apu;
 	nes->cpu_bus.pad = &nes->pad;
 
 	nes->ppu_bus.cartridge = &nes->cart;
@@ -40,6 +41,8 @@ void NESInit(Nes* nes, const char* filepath)
 
 	nes->ppu.bus = &nes->ppu_bus;
 	nes->ppu.cpu = &nes->cpu;
+
+	nes->apu.cpu = &nes->cpu;
 
 	NESReset(nes);
 }
@@ -59,4 +62,7 @@ void NESReset(Nes* nes)
 
 	power_on_2C02(&nes->ppu);
 	reset_2C02(&nes->ppu);
+
+	power_on_2A03(&nes->apu);
+	reset_2A03(&nes->apu);
 }

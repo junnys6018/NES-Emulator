@@ -5,6 +5,7 @@
 #include "6502_Bus.h"
 #include "2C02.h"
 #include "2C02_Bus.h"
+#include "2A03.h"
 #include "Cartridge.h"
 #include "Gamepad.h"
 
@@ -14,6 +15,7 @@ typedef struct
 	Bus2C02 ppu_bus;
 	State6502 cpu;
 	State2C02 ppu;
+	State2A03 apu;
 
 	Cartridge cart;
 	Gamepad pad;
@@ -36,6 +38,7 @@ inline void clock_nes_instruction(Nes* nes)
 			break;
 		}
 		clock_2C02(&nes->ppu);
+		clock_2A03(&nes->apu);
 	}
 }
 
@@ -49,6 +52,7 @@ inline void clock_nes_frame(Nes* nes)
 			clock_6502(&nes->cpu);
 
 		clock_2C02(&nes->ppu);
+		clock_2A03(&nes->apu);
 	} while (!(nes->ppu.scanline == 241 && nes->ppu.cycles == 0));
 }
 
@@ -60,6 +64,7 @@ inline void clock_nes_cycle(Nes* nes)
 		clock_6502(&nes->cpu);
 
 	clock_2C02(&nes->ppu);
+	clock_2A03(&nes->apu);
 }
 
 #endif // !NES_H

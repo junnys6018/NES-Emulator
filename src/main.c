@@ -20,10 +20,50 @@
 
 #include <SDL.h>
 
+void my_audio_callback(void* userdata, Uint8* stream, int len)
+{
+	static float freq = 440; // in hz
+	static int64_t time = 0; // in 1/spec.freq units of time
+
+	float* my_stream = (float*)stream;
+	for (int i = 0; i < len/sizeof(float); i++)
+	{
+		//my_stream[i] = 0.5 * ((float)rand() / RAND_MAX - 0.5f);
+		my_stream[i] = 0.2f * sinf(2 * M_PI * freq * time / 44100);
+		time++;
+	}
+}
+
+void play_sound()
+{
+	SDL_AudioSpec spec, have;
+	memset(&spec, 0, sizeof(spec));
+	spec.freq = 44100;
+	spec.format = AUDIO_F32;
+	spec.channels = 1;
+	spec.samples = 4096;
+	spec.callback = my_audio_callback;
+	spec.userdata = NULL;
+
+	SDL_AudioDeviceID id = SDL_OpenAudioDevice(NULL, 0, &spec, &have, 0);
+
+	SDL_PauseAudioDevice(id, 0);
+
+	//SDL_CloseAudioDevice(id);
+}
+
 int main(int argc, char** argv)
 {
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
+	{
+		printf("Could not initialize SDL");
+		exit(EXIT_FAILURE);
+	}
+
 	Controller controller = { .mode = MODE_NOT_RUNNING };
 	RendererInit(&controller);
+
+	//play_sound();
 
 	//RunAll6502Tests();
 	//RunAll2C02Tests();
@@ -93,7 +133,7 @@ int main(int argc, char** argv)
 
 		RendererDraw();
 		GetTime(&end);
-		printf("Took %.3fms                   \r", GetElapsedTimeMilli(&beg, &end));
+		//printf("Took %.3fms                   \r", GetElapsedTimeMilli(&beg, &end));
 		float time = 16666 - GetElapsedTimeMicro(&beg, &end);
 		if (time > 0)
 		{
@@ -103,6 +143,8 @@ int main(int argc, char** argv)
 
 	NESDestroy(&nes);
 	RendererShutdown();
+
+	SDL_Quit();
 
 	exit(EXIT_SUCCESS);
 }

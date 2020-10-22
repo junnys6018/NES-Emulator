@@ -5,6 +5,7 @@
 #include "Cartridge.h"
 #include "Gamepad.h"
 #include "2C02.h"
+#include "2A03.h"
 
 typedef struct
 {
@@ -12,6 +13,7 @@ typedef struct
 	Cartridge* cartridge;
 	State2C02* ppu;
 	struct State6502* cpu;
+	State2A03* apu;
 	Gamepad* pad;
 } Bus6502;
 
