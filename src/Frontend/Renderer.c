@@ -138,12 +138,6 @@ void RendererInit(Controller* cont)
 
 	rc.controller = cont;
 
-	// TODO: only initialize video component and initialize other components when needed (eg audio)
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-	{
-		SDL_Emit_Error("Could not initialize SDL");
-	}
-
 	// Create a window
 	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.wm.width, rc.wm.height, 0);
 	if (!rc.win)
@@ -240,8 +234,6 @@ void RendererShutdown()
 	SDL_DestroyRenderer(rc.rend);
 	SDL_DestroyWindow(rc.win);
 
-	SDL_Quit();
-
 	free(rc.fontdata);
 
 	GuiShutdown();
@@ -315,26 +307,44 @@ void NewLine()
 //
 ///////////////////////////
 
-// TODO: Make this more efficient, currently takes ~0.15ms to run this function
+static bool update_pattern_table0 = false; // to ensure pattern table is only updated once per frame
+static bool update_pattern_table1 = false;
 void RendererUpdatePatternTableTexture(int side)
+{
+	switch (side)
+	{
+	case 0:
+		update_pattern_table0 = true;
+		break;
+	case 1:
+		update_pattern_table1 = true;
+		break;
+	}
+}
+
+void RendererRasterizePatternTable(int side)
 {
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
 	uint8_t* table_data = (side == 0 ? rc.left_nt_data : rc.right_nt_data);
 	uint8_t* pixels = malloc(128 * 128 * 3);
 	assert(pixels);
 
-	for (int x = 0; x < 128; x++)
+	for (int y = 0; y < 128; y++)
 	{
-		for (int y = 0; y < 128; y++)
+		for (int x = 0; x < 128; x++)
 		{
 			uint16_t fine_y = y % 8;
-			uint16_t fine_x = 7 - x % 8; // Invert x
+			uint8_t fine_x = 7 - (x % 8); // Invert x
 			uint16_t tile_row = y / 8;
 			uint16_t tile_col = x / 8;
 
 			uint16_t table_addr = tile_row << 8 | tile_col << 4 | fine_y;
 
-			uint8_t palette_index = ((table_data[table_addr] & (1 << fine_x)) >> fine_x) | ((table_data[table_addr | 1 << 3] & (1 << fine_x)) >> (fine_x - 1));
+			uint8_t bit_mask = 1 << fine_x;
+
+			uint8_t pal_low = (table_data[table_addr] & bit_mask) > 0;
+			uint8_t pal_high = (table_data[table_addr | 1 << 3] & bit_mask) > 0;
+			uint8_t palette_index = pal_low | (pal_high << 1);
 			color c = PALETTE_MAP[rc.palette[palette_index]];
 
 			pixels[3 * (y * 128 + x)] = c.r;
@@ -624,6 +634,17 @@ void DrawNESState()
 	int x = rc.wm.padding + rc.wm.db_x;
 	int y = rc.wm.db_y + rc.wm.menu_button_h + TextHeight(18) + rc.wm.padding;
 
+	if (update_pattern_table0)
+	{
+		update_pattern_table0 = false;
+		RendererRasterizePatternTable(0);
+	}
+	if (update_pattern_table1)
+	{
+		update_pattern_table1 = false;
+		RendererRasterizePatternTable(1);
+	}
+
 	DrawPatternTable(x, y, 0);
 	DrawPatternTable(x + rc.wm.pattern_table_len + rc.wm.padding, y, 1);
 	DrawPaletteData(x + 2 * rc.wm.pattern_table_len + 2 * rc.wm.padding, y);
@@ -646,6 +667,17 @@ void DrawAbout(int xoff, int yoff)
 	RenderText("Arrow Keys for D-pad", white);
 }
 
+void ClearScreen()
+{
+	color* dest;
+	int pitch;
+	SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
+
+	memset(dest, 0, 256 * 240 * sizeof(color));
+
+	SDL_UnlockTexture(rc.nes_screen);
+}
+
 void DrawSettings(int xoff, int yoff)
 {
 	SDL_Rect span = { xoff + rc.wm.padding, yoff + rc.wm.padding,40 * rc.wm.window_scale,rc.wm.button_h };
@@ -659,14 +691,8 @@ void DrawSettings(int xoff, int yoff)
 		{
 			rc.controller->mode = MODE_PLAY;
 		}
-		// Clear the screen
-		color* dest;
-		int pitch;
-		SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
-
-		memset(dest, 0, 256 * 240 * sizeof(color));
-
-		SDL_UnlockTexture(rc.nes_screen);
+		
+		ClearScreen();
 	}
 	span.y = yoff + 2 * rc.wm.padding + rc.wm.button_h; // 3*padding + button + checkbox
 	span.w = 65 * rc.wm.window_scale;
@@ -677,15 +703,7 @@ void DrawSettings(int xoff, int yoff)
 	span.y += rc.wm.padding + rc.wm.button_h; span.w = 40 * rc.wm.window_scale;
 	if (GuiAddButton("Reset", &span))
 	{
-		// Clear the screen
-		color* dest;
-		int pitch;
-		SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
-
-		memset(dest, 0, 256 * 240 * sizeof(color));
-
-		SDL_UnlockTexture(rc.nes_screen);
-
+		ClearScreen();
 		NESReset(rc.nes);
 	}
 	span.y += rc.wm.padding + rc.wm.button_h;

@@ -45,7 +45,7 @@ kind "ConsoleApp"
 	filter {"system:windows", "configurations:Release"}
 		postbuildcommands
 		{
-			"copy %{wks.location}bin\\" .. outputdir .. "\\%{prj.name}\\%{prj.name}.exe %{prj.location}%{prj.name}.exe"
+			"copy \"%{wks.location}bin\\" .. outputdir .. "\\%{prj.name}\\%{prj.name}.exe\" \"%{prj.location}%{prj.name}.exe\""
 		}
 
 	filter "system:linux"

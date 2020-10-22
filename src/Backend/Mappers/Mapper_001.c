@@ -106,17 +106,21 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 		map001->shift_register = (map001->shift_register >> 1) | ((data & 0x01) << 4);
 		if (last_bit_high)
 		{
+			bool update_pattern_table = false;
 			uint8_t addr_bits_14_13 = (addr & 0x6000) >> 13;
 			switch (addr_bits_14_13)
 			{
 			case 0:
+				update_pattern_table = (map001->control.reg ^ map001->shift_register) & 0x10; // Update if the CHR_ROM bank mode has changed
 				map001->control.reg = map001->shift_register;
 				break;
 			case 1:
+				update_pattern_table = true;
 				map001->CHR_bank0_select = map001->shift_register;
 				assert(map001->CHR_bank0_select < 2 * map001->CHR_banks);
 				break;
 			case 2:
+				update_pattern_table = map001->control.bits.C; // Only update if we are switching both banks
 				map001->CHR_bank1_select = map001->shift_register;
 				assert(map001->CHR_bank1_select < 2 * map001->CHR_banks);
 				break;
@@ -127,7 +131,10 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 			}
 			map001->shift_register = 0b10000;
 
-			UpdateRendererPatternTable(map001);
+			if (update_pattern_table)
+			{
+				UpdateRendererPatternTable(map001);
+			}
 		}
 	}
 }

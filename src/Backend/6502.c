@@ -7,7 +7,6 @@
 /* 
  * TODO:
  * Interrupt hijacking
- * Branch instructions and interrupts 
  * Illegal Opcodes
  * FIX ROL ASL ROR LSR (merge the matching functions)
  * Decimal Mode

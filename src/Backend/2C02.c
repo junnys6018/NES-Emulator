@@ -528,7 +528,7 @@ void clock_2C02(State2C02* ppu)
 	// Pull the nmi line low if we are in vertical blanking and nmi's are enabled
 	ppu->nmi_line = (ppu->nmi_line << 1) | !(ppu->PPUCTRL.flags.V && ppu->PPUSTATUS.flags.V);
 
-	// Emulate 9 ppu cycles of propagation delay TODO
+	// Emulate 9 ppu cycles of propagation delay TODO: figure out this exact timing
 	const int delay = 9; 
 
 	// NMI is triggered on falling edge. the line must be low for at least 2 ppu cycles, otherwise the cpu wont detect the edge
