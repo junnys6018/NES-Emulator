@@ -5,7 +5,7 @@
 #include <string.h> // For memset
 #include <assert.h>
 
-// TODO: Implment color emphasis
+// TODO: Implement color emphasis
 // TODO: Implement "show bg and sprits in leftmost 8 pixels of screen flag"
 
 // Maps a 6 bit HSV color into RGB
@@ -135,6 +135,14 @@ void FeedShiftRegisters(State2C02* ppu)
 	ppu->pa_shift_high = (ppu->pa_shift_high & 0xFF00) | (uint16_t)ppu->pa_latch_high;
 }
 
+void Shift(State2C02* ppu)
+{
+	ppu->pt_shift_low <<= 1;
+	ppu->pt_shift_high <<= 1;
+	ppu->pa_shift_low <<= 1;
+	ppu->pa_shift_high <<= 1;
+}
+
 void TransitionSpriteEvalulationStateMachine(State2C02* ppu)
 {
 	if (ppu->OAMADDR == 0) // Overflow
@@ -167,11 +175,7 @@ void clock_2C02(State2C02* ppu)
 
 			if (ppu->cycles >= 1 && ppu->cycles < 257)
 			{
-				ppu->pt_shift_low <<= 1;
-				ppu->pt_shift_high <<= 1;
-				ppu->pa_shift_low <<= 1;
-				ppu->pa_shift_high <<= 1;
-
+				Shift(ppu);
 				FetchDataAndIncV(ppu);
 			}
 			else if (ppu->cycles == 257)
@@ -186,11 +190,7 @@ void clock_2C02(State2C02* ppu)
 			}
 			else if (ppu->cycles >= 321 && ppu->cycles < 337)
 			{
-				ppu->pt_shift_low <<= 1;
-				ppu->pt_shift_high <<= 1;
-				ppu->pa_shift_low <<= 1;
-				ppu->pa_shift_high <<= 1;
-
+				Shift(ppu);
 				FetchDataAndIncV(ppu);
 			}
 		}
@@ -231,11 +231,7 @@ void clock_2C02(State2C02* ppu)
 				}
 				ppu->pixels[index] = PALETTE_MAP[color];
 
-				ppu->pt_shift_low <<= 1;
-				ppu->pt_shift_high <<= 1;
-				ppu->pa_shift_low <<= 1;
-				ppu->pa_shift_high <<= 1;
-
+				Shift(ppu);
 				FetchDataAndIncV(ppu);
 			}
 			else if (ppu->cycles == 257)
@@ -245,11 +241,7 @@ void clock_2C02(State2C02* ppu)
 			}
 			else if (ppu->cycles >= 321 && ppu->cycles < 337)
 			{
-				ppu->pt_shift_low <<= 1;
-				ppu->pt_shift_high <<= 1;
-				ppu->pa_shift_low <<= 1;
-				ppu->pa_shift_high <<= 1;
-
+				Shift(ppu);
 				FetchDataAndIncV(ppu);
 			}
 		}
@@ -262,8 +254,10 @@ void clock_2C02(State2C02* ppu)
 		{
 			if (ppu->cycles >= 1 && ppu->cycles < 257)
 			{
+				// For each sprite on the current scanline
 				for (int i = 0; i < 8; i++)
 				{
+					// Check if any sprite become active
 					if (ppu->sprite_xpos[i] == 0)
 					{
 						ppu->active_sprites |= (1 << i);
@@ -273,11 +267,14 @@ void clock_2C02(State2C02* ppu)
 
 				int index = ppu->scanline * 256 + ppu->cycles - 1;
 				bool drawn = false;
+
+				// For each active sprite
 				for (int i = 0; i < 8; i++)
 				{
 					if (ppu->active_sprites & (1 << i))
 					{
 						uint8_t spr_shade;
+						// Get the shade of the active sprite
 						if (ppu->sprite_attribute[i] & (1 << 6)) // Flip horizontally
 						{
 							spr_shade = (ppu->pt_sprite_high[i] & 0x1) << 1 | (ppu->pt_sprite_low[i] & 0x1);
@@ -291,6 +288,7 @@ void clock_2C02(State2C02* ppu)
 							ppu->pt_sprite_low[i] <<= 1;
 						}
 
+						// If the sprite shade is not transparent and we havent rendered a sprite yet
 						if (spr_shade != 0 && !drawn)
 						{
 							drawn = true;
@@ -308,6 +306,9 @@ void clock_2C02(State2C02* ppu)
 									ppu->PPUSTATUS.flags.S = 0;
 								}
 							}
+
+							// Sprite pixel only gets rasterized if the background is transparent
+							// or priority bit is set in the sprites attribute byte
 							if (bg_shade == 0 || !(ppu->sprite_attribute[i] & 0x20)) // Get priortiy bit from sprite attribute
 							{
 								uint16_t palatte_addr = 0x3F10 | (ppu->sprite_attribute[i] & 0x3) << 2 | spr_shade;
@@ -323,6 +324,7 @@ void clock_2C02(State2C02* ppu)
 				}
 
 			}
+			// Clear active sprites at the end of the visible scanline
 			else if (ppu->cycles == 257)
 			{
 				ppu->active_sprites = 0;
@@ -331,16 +333,16 @@ void clock_2C02(State2C02* ppu)
 		}
 	}
 
-	// Sprite evaluation
+	// Sprite evaluation, only occurs is rendering is enabled
 	if (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s)
 	{
 		// Sprite evaluation occurs during the visible scanlines (0..239). 
 		// Sprites evaluated on the current scanline are drawn on the next scanline
-		// because of this no sprites will be rendered on scanline 0
+		// because of this no sprites will be rendered on scanline 0 (the first scanline)
 		if (ppu->scanline >= 0 && ppu->scanline < 240)
 		{
 			// Clear OAM
-			if (ppu->cycles == 1) // during cycles 1..64, secondary OAM is cleared to 0xFF, we clear all of it at dot 1
+			if (ppu->cycles == 1) // during cycles 1..64, secondary OAM is cleared to 0xFF, we clear all of it at cycle 1
 			{
 				memset(ppu->bus->secondary_OAM, 0xFF, 32);
 
@@ -351,7 +353,7 @@ void clock_2C02(State2C02* ppu)
 
 				ppu->sprite_zero_on_next_scanline = false;
 			}
-			// Sprite Evaluation
+			// Sprite Evaluation state machine is run from cycles 65..256
 			else if (ppu->cycles >= 65 && ppu->cycles < 257)
 			{
 				if (ppu->sprite_eval_state.remaining == 0)
@@ -360,6 +362,7 @@ void clock_2C02(State2C02* ppu)
 					{
 					case RANGE_CHECK:
 					{
+						// Read y position of the next sprite
 						ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
 						ppu->OAMADDR++;
 						ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
@@ -367,49 +370,59 @@ void clock_2C02(State2C02* ppu)
 						int height = ppu->PPUCTRL.flags.H ? 16 : 8;
 						if (ppu->scanline >= ppu->OAMDATA && ppu->scanline < ppu->OAMDATA + height)
 						{
+							// If sprite zero passed the range check
 							if (ppu->OAMADDR == 1)
 							{
 								ppu->sprite_zero_on_next_scanline = true;
 							}
 							ppu->sprite_eval_state.secondary_oam_free_slot++;
 
+							// Copy tile index byte into secondary OAM
 							ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
 							ppu->OAMADDR++;
 							ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
 							ppu->sprite_eval_state.secondary_oam_free_slot++;
 
+							// Copy attribute byte into secondary OAM
 							ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
 							ppu->OAMADDR++;
 							ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
 							ppu->sprite_eval_state.secondary_oam_free_slot++;
 
+							// Copy x position byte into secondary OAM
 							ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
 							ppu->OAMADDR++;
 							ppu->bus->secondary_OAM[ppu->sprite_eval_state.secondary_oam_free_slot] = ppu->OAMDATA;
 							ppu->sprite_eval_state.secondary_oam_free_slot++;
 
+							// Do nothing for 7 cycles
 							ppu->sprite_eval_state.remaining = 8;
-
-							TransitionSpriteEvalulationStateMachine(ppu);
 						}
-						else
+						else // Sprite failed range check
 						{
+							// Do nothing for 1 cycle
 							ppu->sprite_eval_state.remaining = 2;
+
+							// goto next sprite
 							ppu->OAMADDR += 3;
-							TransitionSpriteEvalulationStateMachine(ppu);
 						}
+						TransitionSpriteEvalulationStateMachine(ppu);
 						break;
 					}
 					case OVERFLOW_CHECK:
 					{
+						// Read y position of the next sprite
 						ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
+
 						// Perform y-range check
 						int height = ppu->PPUCTRL.flags.H ? 16 : 8;
+
+						// Check for sprite overflow
 						if (ppu->scanline >= ppu->OAMDATA && ppu->scanline < ppu->OAMDATA + height)
 						{
 							ppu->PPUSTATUS.flags.O = 1;
 							ppu->OAMADDR += 4;
-							ppu->sprite_eval_state.remaining = 8; // TODO Confirm this timing
+							ppu->sprite_eval_state.remaining = 8; // TODO: Confirm this timing
 							ppu->sprite_eval_state.state = IDLE;
 						}
 						else
@@ -426,11 +439,11 @@ void clock_2C02(State2C02* ppu)
 
 							ppu->OAMADDR = (oam_addr_high << 2) | oam_addr_low;
 
-							if (oam_addr_high == 0) // Overflow
+							if (oam_addr_high == 0) // if we have checked all sprites for overflow
 							{
 								ppu->sprite_eval_state.state = IDLE;
 							}
-							else
+							else // continue checking for overflow
 							{
 								ppu->sprite_eval_state.state = OVERFLOW_CHECK;
 							}
@@ -458,19 +471,25 @@ void clock_2C02(State2C02* ppu)
 				ppu->OAMADDR = 0;
 				ppu->sprite_zero_on_current_scanline = ppu->sprite_zero_on_next_scanline;
 
+				// For every sprite to be drawn on the next scanline
 				for (int i = 0; i < ppu->sprite_eval_state.secondary_oam_free_slot / 4; i++)
 				{
+					// Read sprite data from secondary OAM
 					uint8_t ypos = ppu->bus->secondary_OAM[4 * i];
 					uint8_t tile_index = ppu->bus->secondary_OAM[4 * i + 1];
 					ppu->sprite_attribute[i] = ppu->bus->secondary_OAM[4 * i + 2];
 					ppu->sprite_xpos[i] = ppu->bus->secondary_OAM[4 * i + 3];
 
-					// Calculate the address in the pattern table
+					// Calculate the address of the sprite in the pattern table
 					uint16_t pattern_table_addr;
-					if (ppu->PPUCTRL.flags.H)
+					if (ppu->PPUCTRL.flags.H) // 8x16 sprites
 					{
+						// Get fine y position within the tile
 						uint8_t fine_y = (ppu->scanline - ypos) & 0x7;
+
+						// Are we drawing the top or bottom tile of the sprite? 
 						uint8_t tile_select = ((ppu->scanline - ypos) & 0x8) > 0;
+
 						if (ppu->sprite_attribute[i] & 0x80) // vertical flip
 						{
 							fine_y = 7 - (int16_t)fine_y;
@@ -479,7 +498,7 @@ void clock_2C02(State2C02* ppu)
 
 						pattern_table_addr = (tile_index & 1) << 12 | (tile_index & 0xFE) << 4 | tile_select << 4 | fine_y;
 					}
-					else
+					else // 8x8 sprites
 					{
 						uint8_t fine_y = (ppu->scanline - ypos) & 0x7;
 						if (ppu->sprite_attribute[i] & 0x80) // vertical flip
@@ -504,14 +523,17 @@ void clock_2C02(State2C02* ppu)
 	}
 	else if (ppu->scanline == -1 && ppu->cycles == 1)
 	{
+		// Clear sprite overflow and sprite zero hit
 		ppu->PPUSTATUS.flags.O = 0;
 		ppu->PPUSTATUS.flags.S = 0;
 	}
 
+	// Start of vertical blanking
 	if (ppu->scanline == 241 && ppu->cycles == 1)
 	{
 		if (!ppu->ppustatus_read_early && !ppu->ppustatus_read_late)
 		{
+			// Set vertical blank flag
 			ppu->PPUSTATUS.flags.V = 1;
 		}
 
@@ -537,9 +559,11 @@ void clock_2C02(State2C02* ppu)
 		NMI(ppu->cpu);
 	}
 
+	// Increment cycles and scanline 
+
 	ppu->cycles++;
 
-	// Skip a cycle on odd frames, but only if rendering is enabled
+	// cycle (340, -1) is skipped on odd frames and only if rendering is enabled
 	if (ppu->cycles == 340 && ppu->scanline == -1 && ppu->oddframe && ((ppu->PPUMASK.reg & 0x18) != 0))
 	{
 		ppu->cycles++;
@@ -557,6 +581,7 @@ void clock_2C02(State2C02* ppu)
 		}
 	}
 
+	// Increment global cycle counter, for debugging
 	ppu->total_cycles++;
 }
 
@@ -625,7 +650,7 @@ void ppu_write(State2C02* ppu, uint16_t addr, uint8_t data)
 		ppu->OAMADDR = data;
 		break;
 	case 0x2004: // OAMDATA
-		// Only write during vertical blanking or if rendering is disabled
+		// Only perform the write during vertical blanking or if rendering is disabled
 		ppu->OAMDATA = data;
 		if ((ppu->scanline >= 240 && ppu->scanline <= 260) || (!ppu->PPUMASK.flags.b && !ppu->PPUMASK.flags.s))
 		{
@@ -689,6 +714,7 @@ uint8_t ppu_read(State2C02* ppu, uint16_t addr)
 	switch (addr)
 	{
 	case 0x2002: // PPUSTATUS
+		// Clear write toggle
 		ppu->w = 0;
 
 		if (ppu->cycles == 0 && ppu->scanline == 241)
@@ -703,12 +729,15 @@ uint8_t ppu_read(State2C02* ppu, uint16_t addr)
 		}
 
 		uint8_t ret = ppu->PPUSTATUS.reg;
+
+		// Clear vertical blank flag
 		ppu->PPUSTATUS.flags.V = 0;
+
 		return ret;
 	case 0x2004: // OAMDATA
 	{
 		ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
-		// Do not increment OAMADDR during vertical blanking or forced blanking
+		// Do not increment OAMADDR during vertical blanking or forced blanking (ie if rendering is disabled)
 		if (!(ppu->scanline >= 240 && ppu->scanline <= 260) && (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s))
 		{
 			ppu->OAMADDR++;
@@ -718,6 +747,7 @@ uint8_t ppu_read(State2C02* ppu, uint16_t addr)
 	}
 	case 0x2007: // PPUDATA
 	{
+		// Reading pattern table or nametable data returns the contents of the internal buffer then updates it after
 		if (ppu->v >= 0 && ppu->v < 0x3F00)
 		{
 			uint8_t ret = ppu->PPUDATA;
@@ -725,16 +755,20 @@ uint8_t ppu_read(State2C02* ppu, uint16_t addr)
 			ppu->v += (ppu->PPUCTRL.flags.I ? 32 : 1);
 			return ret;
 		}
+		// Reading palette data immediatly returns the requested data
 		else if (ppu->v >= 0x3F00 && ppu->v < 0x4000)
 		{
 			// Mirrored nametable data is stored in internal buffer
 			ppu->PPUDATA = ppu_bus_read(ppu->bus, 0x2000 | ppu->v & 0x0FFF);
 			uint8_t ret = ppu_bus_read(ppu->bus, ppu->v);
 			ppu->v += (ppu->PPUCTRL.flags.I ? 32 : 1);
+
+			// Apply greyscale if enabled
 			if (ppu->PPUMASK.flags.g)
 			{
 				ret &= 0x30;
 			}
+
 			return ret;
 		}
 		break;

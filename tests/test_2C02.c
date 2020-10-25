@@ -6,6 +6,7 @@
 
 void RunAll2C02Tests()
 {
+	const int num_tests = 26;
 	int num_failed = 0;
 	num_failed += TestBlarggRom("tests/roms/blargg_tests/vbl_nmi_timing/1.frame_basics.nes", 0xF8);
 	num_failed += TestBlarggRom("tests/roms/blargg_tests/vbl_nmi_timing/2.vbl_timing.nes", 0xF8);
@@ -38,5 +39,5 @@ void RunAll2C02Tests()
 	num_failed += TestBlarggRom("tests/roms/blargg_tests/sprite_hit_tests_2005.10.05/10.timing_order.nes", 0xF8);
 	num_failed += TestBlarggRom("tests/roms/blargg_tests/sprite_hit_tests_2005.10.05/11.edge_timing.nes", 0xF8);
 
-	printf("[2C02 TESTS] Failed %i tests\n", num_failed);
+	printf("[2C02 TESTS] Passed %i; Failed %i\n", num_tests - num_failed, num_failed);
 }

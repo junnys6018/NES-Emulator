@@ -69,7 +69,8 @@ typedef struct
 	void* mapper;
 } Cartridge;
 
-void load_cartridge_from_file(Cartridge* cart, const char* filepath);
+// Returns 0 on success; non zero on failure
+int load_cartridge_from_file(Cartridge* cart, const char* filepath);
 void free_cartridge(Cartridge* cart);
 
 // 0: INES 1.0; 1: NES 2.0; -1: unknown

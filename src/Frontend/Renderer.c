@@ -50,6 +50,7 @@ typedef struct
 	int menu_button_w, menu_button_h; // width and height of menu buttons
 	int button_h; // width and height of normal buttons
 
+	// width and height of pattern table visualisation
 	int pattern_table_len;
 } WindowMetrics;
 
@@ -93,8 +94,6 @@ typedef struct
 	// What screen we are currently drawing
 	DrawTarget target;
 
-	bool overscan; // true: show overscan; false: hide overscan
-
 	// Pointer to controller data
 	Controller* controller;
 } RendererContext;
@@ -119,7 +118,9 @@ void TTF_Emit_Error(const char* message)
 
 void RendererInit(Controller* cont)
 {
+	// Set this parameter and all other window metrics will be calculated to this scale
 	rc.wm.window_scale = 3;
+
 	rc.wm.padding = 3 * rc.wm.window_scale;
 	rc.wm.width = 3 * rc.wm.padding + (256 + 170) * rc.wm.window_scale;
 	rc.wm.height = 2 * rc.wm.padding + 240 * rc.wm.window_scale;
@@ -133,8 +134,6 @@ void RendererInit(Controller* cont)
 	rc.wm.menu_button_h = 10 * rc.wm.window_scale;
 	rc.wm.button_h = 7 * rc.wm.window_scale;
 	rc.wm.pattern_table_len = (int)roundf(128 * 0.5f * rc.wm.window_scale);
-
-	rc.overscan = true;
 
 	rc.controller = cont;
 
@@ -683,11 +682,19 @@ void DrawSettings(int xoff, int yoff)
 	SDL_Rect span = { xoff + rc.wm.padding, yoff + rc.wm.padding,40 * rc.wm.window_scale,rc.wm.button_h };
 
 	char file[256];
-	if (GuiAddButton("Load ROM", &span) && OpenFileDialog(file, 256) == 1)
+	if (GuiAddButton("Load ROM...", &span) && OpenFileDialog(file, 256) == 0)
 	{
 		NESDestroy(rc.nes);
-		NESInit(rc.nes, file);
-		if (rc.controller->mode == MODE_NOT_RUNNING)
+		if (NESInit(rc.nes, file) != 0)
+		{
+			// Failed to load rom
+			rc.controller->mode = MODE_NOT_RUNNING;
+
+			// ...so load a dummy one
+			NESInit(rc.nes, NULL);
+		}
+		// Successfully loaded rom
+		else if (rc.controller->mode == MODE_NOT_RUNNING)
 		{
 			rc.controller->mode = MODE_PLAY;
 		}
@@ -698,6 +705,7 @@ void DrawSettings(int xoff, int yoff)
 	span.w = 65 * rc.wm.window_scale;
 	if (GuiAddButton(rc.controller->mode == MODE_PLAY ? "Step Through Emulation" : "Run Emulation", &span) && rc.controller->mode != MODE_NOT_RUNNING)
 	{
+		// Toggle between Step Through and Playing 
 		rc.controller->mode = 1 - rc.controller->mode;
 	}
 	span.y += rc.wm.padding + rc.wm.button_h; span.w = 40 * rc.wm.window_scale;
@@ -808,6 +816,13 @@ void RendererDraw()
 		DrawSettings(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
 		break;
 	}
+
+	// Draw FPS
+	SetTextOrigin(rc.wm.db_x + rc.wm.padding, rc.wm.db_y + rc.wm.db_h - rc.font_size - rc.wm.padding);
+	char buf[128];
+	sprintf(buf, "%.0f FPS; %.3f ms/frame", rc.controller->fps, rc.controller->ms_per_frame);
+	RenderText(buf, white);
+
 
 	GuiEndFrame();
 

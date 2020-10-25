@@ -52,7 +52,7 @@ NametableIndex mJUNPPUMirrorNametable(void* mapper, uint16_t addr)
 
 void mJUNLoadFromFile(Cartridge* cart, FILE* file)
 {
-	cart->mapperID = 767; // Assigm mapperID 767 to my format
+	cart->mapperID = 767; // Assign mapperID 767 to my format
 
 	cart->CPUReadCartridge = mJUNCPUReadCartridge;
 	cart->PPUReadCartridge = mJUNPPUReadCartridge;

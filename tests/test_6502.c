@@ -83,7 +83,11 @@ int Run_6502_Interrupt_Test()
 			}
 			if (I_src & 0x01) // IRQ - level detected
 			{
-				IRQ(&nes.cpu);
+				IRQ_Set(&nes.cpu, 7);
+			}
+			else
+			{
+				IRQ_Clear(&nes.cpu, 7);
 			}
 
 			old_nmi = I_src & 0x02; // Mask out NMI bit
@@ -140,6 +144,7 @@ int Run_6502_Interrupt_Test()
 
 void RunAll6502Tests()
 {
+	const int num_tests = 5;
 	int num_failed = 0;
 	num_failed += Run_6502_Interrupt_Test();
 	num_failed += Run_6502_Functional_Test();
@@ -148,5 +153,5 @@ void RunAll6502Tests()
 	num_failed += TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/2.Backward_Branch.nes", 0xF8);
 	num_failed += TestBlarggRom("tests/roms/blargg_tests/branch_timing_tests/3.Forward_Branch.nes", 0xF8);
 
-	printf("[6502 TESTS] Failed %i tests\n", num_failed);
+	printf("[6502 TESTS] Passed: %i; Failed %i\n", num_tests - num_failed, num_failed);
 }

@@ -5,12 +5,26 @@
 
 // Forward declaration to avoid circular dependency
 struct State6502;
-void IRQ(struct State6502* cpu);
+void IRQ_Set(struct State6502* cpu, int index);
+void IRQ_Clear(struct State6502* cpu, int index);
 
 // "2A03" APU implementation
 typedef struct
 {
 	// Registers
+
+	// Access: write only, accessed from $4010
+	union
+	{
+		struct
+		{
+			uint8_t Frequency : 4; // Pulse 1 enable
+			uint8_t Unused : 2; // Pulse 2 enable
+			uint8_t L : 1; // Loop
+			uint8_t I : 1; // IRQ Enable
+		} flags;
+		uint8_t reg;
+	} DMC_FREQ;
 
 	// Access: read/write, accessed from $4015
 	union
@@ -63,7 +77,7 @@ uint8_t apu_read(State2A03* apu, uint16_t addr);
 // Common APU compnents
 typedef struct
 {
-	uint32_t period; // acutal period is one clock cycle more than given period
+	uint32_t period; // actual period is one clock cycle more than given period
 	uint32_t counter;
 } divider;
 

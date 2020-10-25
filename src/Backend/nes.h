@@ -22,8 +22,12 @@ typedef struct
 	uint64_t system_clock;
 } Nes;
 
-void NESInit(Nes* nes, const char* filepath);
+// Each successful call to NESInit() must be paired with a NESDestroy() to free resources
+// Returns 0 on success; non zero on failure
+int NESInit(Nes* nes, const char* filepath);
 void NESDestroy(Nes* nes);
+
+// Reset button on the NES
 void NESReset(Nes* nes);
 
 // Emulate one cpu instruction

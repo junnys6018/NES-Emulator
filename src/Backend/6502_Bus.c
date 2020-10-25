@@ -29,12 +29,13 @@ void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 		{
 			apu_write(bus->apu, addr, data);
 		}
-		// I/O registers
+		// DMA Port
 		else if (addr == 0x4014)
 		{
 			bus->cpu->OAMDMA = data;
 			bus->cpu->dma_transfer_cycles = ((bus->cpu->total_cycles % 2 == 1) ? 514 : 513);
 		}
+		// I/O registers
 		else if (addr == 0x4016)
 		{
 			gamepad_write(bus->pad, data);
@@ -77,7 +78,7 @@ uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 		{
 			return apu_read(bus->apu, addr);
 		}
-		// Controller output
+		// I/O registers
 		else if (addr == 0x4016)
 		{
 			return gamepad_read(bus->pad);

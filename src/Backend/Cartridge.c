@@ -9,7 +9,9 @@
 #include <assert.h>
 #include <string.h>
 
-void load_cartridge_from_file(Cartridge* cart, const char* filepath)
+// TODO: error handling for each mapper loading function
+
+int load_cartridge_from_file(Cartridge* cart, const char* filepath)
 {
 	FILE* file = fopen(filepath, "rb");
 	
@@ -35,7 +37,8 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 			break;
 		default:
 			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);
-			break;
+			fclose(file);
+			return 1;
 		}
 	}
 	// My custom rom format, for now this format has a 16 byte header, then 64KB of data for cpu memory
@@ -46,10 +49,12 @@ void load_cartridge_from_file(Cartridge* cart, const char* filepath)
 	else
 	{
 		printf("[ERROR] File %s unknown format\n", filepath);
+		fclose(file);
+		return 1;
 	}
 
-
 	fclose(file);
+	return 0;
 }
 
 void free_cartridge(Cartridge* cart)

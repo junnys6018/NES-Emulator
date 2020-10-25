@@ -4,11 +4,17 @@
 #include <assert.h>
 #include <stdlib.h>
 
-void NESInit(Nes* nes, const char* filepath)
+int NESInit(Nes* nes, const char* filepath)
 {
 	if (filepath)
 	{
-		load_cartridge_from_file(&nes->cart, filepath);
+		if (load_cartridge_from_file(&nes->cart, filepath) != 0)
+		{
+			// Loading cart failed
+			memset(nes, 0, sizeof(Nes));
+			return 1;
+		}
+
 	}
 	else // Load a dummy cart
 	{
@@ -45,6 +51,8 @@ void NESInit(Nes* nes, const char* filepath)
 	nes->apu.cpu = &nes->cpu;
 
 	NESReset(nes);
+
+	return 0;
 }
 
 void NESDestroy(Nes* nes)

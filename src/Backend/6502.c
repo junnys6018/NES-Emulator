@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h> // For printf
 #include <stdlib.h> // For malloc
+#include <assert.h>
 
 /* 
  * TODO:
@@ -56,6 +57,7 @@ int clock_6502(State6502* cpu)
 {
 	cpu->total_cycles++;
 
+	// DMA transfers stalls the CPU and inhibits polling for interrupts
 	if (cpu->dma_transfer_cycles > 0)
 	{
 		if (cpu->dma_transfer_cycles <= 512 && cpu->dma_transfer_cycles % 2 == 0)
@@ -69,26 +71,20 @@ int clock_6502(State6502* cpu)
 		return cpu->dma_transfer_cycles;
 	}
 
-	// Check for interrupt at the second to last cycle of the instruction
+	// Check for interrupt at the last cycle of the instruction
 	if (cpu->remaining == 1)
 	{
-		if (cpu->interrupt & NMI_SIGNAL)
+		if (cpu->nmi_interrupt)
 		{
 			cpu->remaining = 7 + 1; // 7 clock cycles to respond to interrupt, plus 1 cycle to finish the current instruction
 			interrupt_sequence(cpu, 0xFFFA);
 
-			cpu->interrupt &= ~NMI_SIGNAL;
-			cpu->interrupt &= ~IRQ_SIGNAL;
+			cpu->nmi_interrupt = false;
 		}
-		else if (cpu->interrupt & IRQ_SIGNAL)
+		else if (cpu->irq_interrupt != 0 && !cpu->status.flags.I)
 		{
-			cpu->interrupt &= ~IRQ_SIGNAL;
-
-			if (!cpu->status.flags.I)
-			{
-				cpu->remaining = 7 + 1;
-				interrupt_sequence(cpu, 0xFFFE);
-			}
+			cpu->remaining = 7 + 1;
+			interrupt_sequence(cpu, 0xFFFE);
 		}
 	}
 	else if (cpu->remaining == 0)
@@ -148,18 +144,26 @@ void power_on_6502(State6502* cpu)
 	cpu->total_cycles = 0;
 	cpu->remaining = 0;
 
-	cpu->interrupt = NO_INTERRUPT;
+	cpu->nmi_interrupt = false;
+	cpu->irq_interrupt = 0;
 	cpu->dma_transfer_cycles = 0;
 }
 
 void NMI(State6502* cpu)
 {
-	cpu->interrupt |= NMI_SIGNAL;
+	cpu->nmi_interrupt = true;
 }
 
-void IRQ(State6502* cpu)
+void IRQ_Set(State6502* cpu, int index)
 {
-	cpu->interrupt |= IRQ_SIGNAL;
+	assert(index < 8);
+	cpu->irq_interrupt |= (1 << index);
+}
+
+void IRQ_Clear(State6502* cpu, int index)
+{
+	assert(index < 8);
+	cpu->irq_interrupt &= ~(1 << index);
 }
 
 // 13 Adressing modes

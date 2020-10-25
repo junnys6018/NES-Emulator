@@ -56,7 +56,7 @@ typedef struct
 	{
 		struct
 		{
-			uint8_t LSB : 5; // 5 Least significant bits last witten to a PPU register
+			uint8_t LSB : 5; // 5 Least significant bits last written to a PPU register
 
 			/* * * * * * * * * 
 			 * Sprite overflow. The intent was for this flag to be set
@@ -115,7 +115,7 @@ typedef struct
 	uint16_t pa_shift_low, pa_shift_high; // Palatte attribute shift registers
 
 	uint8_t pt_latch_low, pt_latch_high, pa_latch_low, pa_latch_high; // Latches used to feed data into shift registers
-	uint8_t name_tbl_byte; // Byte fetched from name table
+	uint8_t name_tbl_byte; // Byte fetched from nametable
 	
 	// Sprite Rendering registers
 	uint8_t active_sprites;

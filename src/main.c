@@ -2,9 +2,6 @@
 #include "Frontend/Gui.h"
 #include "Frontend/Controller.h"
 
-#include "event_filter_function.h"
-
-#include "Backend/Mappers/Mapper_000.h"
 #include "Backend/nes.h"
 
 #include "test_6502.h"
@@ -73,20 +70,6 @@ int main(int argc, char** argv)
 	RendererBindNES(&nes);
 	NESInit(&nes, NULL);
 
-	//NESInit(&nes, "roms/SuperMarioBros.nes");
-	//NESInit(&nes, "roms/DonkeyKong.nes");
-	//NESInit(&nes, "roms/Tetris.nes");
-	//NESInit(&nes, "roms/LegendofZelda.nes");
-	//NESInit(&nes, "roms/PacMan.nes");
-	//NESInit(&nes, "roms/BalloonFight.nes");
-	//NESInit(&nes, "roms/MicroMages.nes");
-
-	//NESInit(&nes, "tests/roms/nestest.nes");
-	//NESInit(&nes, "tests/roms/full_nes_palette.nes");
-	//NESInit(&nes, "tests/roms/nmi_sync.nes");
-	//NESInit(&nes, "tests/roms/blargg_tests/sprite_hit_tests_2005.10.05/01.basics.nes");
-	//NESInit(&nes, "tests/roms/ppu_read_buffer/test_ppu_read_buffer.nes");
-
 	//nes.pad.current_input.reg = 0x00;
 	//for (int i = 0; i < 11199700; i++)
 	//{
@@ -95,9 +78,15 @@ int main(int argc, char** argv)
 	//	clock_nes_cycle(&nes);
 	//}
 
+	// How many frames to average fps statistic over
+	const int window = 15;
+	float total_time = 0.0f;
+	int frame = 0;
+
 	SDL_Event event;
 	timepoint beg, end;
-	while (true)
+	bool running = true;
+	while (running)
 	{
 		GetTime(&beg);
 		poll_keys(&nes.pad);
@@ -127,17 +116,27 @@ int main(int argc, char** argv)
 			}
 			else if (event.type == SDL_QUIT)
 			{
-				exit(EXIT_SUCCESS);
+				running = false;
 			}
 		}
 
 		RendererDraw();
 		GetTime(&end);
-		//printf("Took %.3fms                   \r", GetElapsedTimeMilli(&beg, &end));
-		float time = 16666 - GetElapsedTimeMicro(&beg, &end);
-		if (time > 0)
+
+		total_time += GetElapsedTimeMilli(&beg, &end);
+		if (++frame >= window)
 		{
-			SleepMicro((uint64_t)time);
+			controller.ms_per_frame = total_time / window;
+			controller.fps = 1000.0f / controller.ms_per_frame;
+
+			frame = 0;
+			total_time = 0.0f;
+		}
+
+		float sleep_time = 16666 - GetElapsedTimeMicro(&beg, &end);
+		if (sleep_time > 0)
+		{
+			SleepMicro((uint64_t)sleep_time);
 		}
 	}
 

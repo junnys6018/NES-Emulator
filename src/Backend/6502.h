@@ -2,13 +2,6 @@
 #define _6502_H
 #include "6502_Bus.h"
 
-typedef enum 
-{
-	NO_INTERRUPT = 0,
-	IRQ_SIGNAL = 1,
-	NMI_SIGNAL = 2
-} InterruptSignal;
-
 typedef struct State6502
 {
 	uint8_t A; // Accumilator register 
@@ -52,7 +45,27 @@ typedef struct State6502
 	
 	uint64_t total_cycles;
 
-	int interrupt; // Btiwise or of InterruptSignal enums, represents the internal latches that signify an interrupt
+	// Internal latch that is set on the falling edge of the interrupt line
+	bool nmi_interrupt;
+
+	// IRQ is level trigged, active low 
+	// 8 Devices on the nes are capable of pulling the IRQ line low 
+	// It is the responsibilty of the IRQ handler to acknowledge the interrupt so that
+	// the source stops pulling the line low. Each bit of the variable below represents whether 
+	// a particular source is pulling the IRQ line low (1: pulling low; 0: not pulling low)
+	// Each bit corresponds to a specific device listed below
+	//  ---- ----
+	//  7654 3210
+	//  |||| ||||
+	//  |||| |||+-- APU DMC finish
+	//  |||| ||+--- APU Frame counter
+	//  |||| |+---- MMC3
+	//  |||| +----- MMC5
+	//  |||+------- VRC4/6/7
+	//  ||+-------- FME-7
+	//  |+--------- Namco 163
+	//  +---------- FDS (and used in IRQ test code)
+	uint8_t irq_interrupt;
 
 } State6502;
 
@@ -61,7 +74,8 @@ int clock_6502(State6502* cpu);
 void reset_6502(State6502* cpu);
 void power_on_6502(State6502* cpu);
 void NMI(State6502* cpu);
-void IRQ(State6502* cpu);
+void IRQ_Set(State6502* cpu, int index);
+void IRQ_Clear(State6502* cpu, int index);
 
 char* dissassemble(State6502* cpu, uint16_t addr, int* size);
 

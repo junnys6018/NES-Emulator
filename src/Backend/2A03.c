@@ -21,8 +21,7 @@ void clock_2A03(State2A03* apu)
 			{
 				if (!apu->FRAME_COUNTER.flags.I)
 				{
-					printf("IRQ\n");
-					IRQ(apu->cpu);
+					IRQ_Set(apu->cpu, 1);
 				}
 				apu->frame_count = 0;
 			}
@@ -33,7 +32,11 @@ void clock_2A03(State2A03* apu)
 void reset_2A03(State2A03* apu)
 {
 	apu->STATUS.reg = 0x00;
+	apu->FRAME_COUNTER.reg = 0x00;
+	apu->FRAME_COUNTER.flags.I = 1; // Inhibit interrupts
 
+	apu->step = 0;
+	apu->frame_count = 0;
 
 	apu->total_cycles = 0;
 	apu->apu_cycles = 0;
@@ -41,7 +44,7 @@ void reset_2A03(State2A03* apu)
 
 void power_on_2A03(State2A03* apu)
 {
-	apu->STATUS.reg = 0x00;
+
 }
 
 void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
@@ -81,6 +84,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 	case 0x400F: // NOISE_HI: Length counter value for noise channel
 		break;
 	case 0x4010: // DMC_FREQ: Play mode and frequency for DMC samples
+		apu->DMC_FREQ.reg = (data & 0xCF);
 		break;
 	case 0x4011: // DMC_RAW: 7-bit DAC
 		break;
@@ -96,7 +100,11 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 				 // Skip 0x4016 (JOY1 data)
 
 	case 0x4017: // Frame counter control
-		apu->FRAME_COUNTER.reg = data & 0xC0;
+		apu->FRAME_COUNTER.reg = (data & 0xC0);
+		if (apu->FRAME_COUNTER.flags.I)
+		{
+			IRQ_Clear(apu->cpu, 1);
+		}
 		apu->frame_count = 0;
 		// printf("FRAME_COUNTER write: M: %i; I: %i\n", apu->FRAME_COUNTER.flags.M, apu->FRAME_COUNTER.flags.I);
 		break;
@@ -107,13 +115,13 @@ uint8_t apu_read(State2A03* apu, uint16_t addr)
 {
 	if (addr == 0x4015)
 	{
-		// printf("Read\n");
+		IRQ_Clear(apu->cpu, 1);
 	}
 	return 0;
 }
 
 
-// DIVIDER IMPLEMENTATION
+// Divider Implementation
 
 bool clock_divider(divider* div)
 {
