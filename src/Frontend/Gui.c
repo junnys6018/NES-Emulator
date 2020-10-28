@@ -8,7 +8,20 @@
 
 typedef struct
 {
+	SDL_Color button_high;
+	SDL_Color button_low;
+	SDL_Color checkbox_high;
+	SDL_Color checkbox_low;
+	SDL_Color checkbox_active;
+	SDL_Color scroll_bar;
+	SDL_Color scroll_grab_low;
+	SDL_Color scroll_grab_high;
+} Style;
+
+typedef struct
+{
 	SDL_Renderer* rend;
+	Style style;
 
 	GuiMetrics metrics;
 
@@ -18,15 +31,6 @@ typedef struct
 } GuiContext;
 
 static GuiContext gc;
-
-SDL_Color button_high = { 66, 150,250 };
-SDL_Color button_low = { 35,69,109 };
-SDL_Color checkbox_high = { 35,69,109 };
-SDL_Color checkbox_low = { 29,47,73 };
-SDL_Color checkbox_active = { 66,150,250 };
-SDL_Color scroll_bar = { 29,47,73 };
-SDL_Color scroll_grab_low = { 66,150,250 };
-SDL_Color scroll_grab_high = { 3,132,252 };
 
 unsigned long hash(const unsigned char* str)
 {
@@ -42,12 +46,23 @@ unsigned long hash(const unsigned char* str)
 void GuiInit(SDL_Renderer* r, GuiMetrics* metrics)
 {
 	gc.rend = r;
+
+	// Set style 
+	gc.style.button_high = (SDL_Color){ 66, 150,250 };
+	gc.style.button_low = (SDL_Color){ 35,69,109 };
+	gc.style.checkbox_high = (SDL_Color){ 35,69,109 };
+	gc.style.checkbox_low = (SDL_Color){ 29,47,73 };
+	gc.style.checkbox_active = (SDL_Color){ 66,150,250 };
+	gc.style.scroll_bar = (SDL_Color){ 29,47,73 };
+	gc.style.scroll_grab_low = (SDL_Color){ 66,150,250 };
+	gc.style.scroll_grab_high = (SDL_Color){ 3,132,252 };
+
 	memcpy(&gc.metrics, metrics, sizeof(GuiMetrics));
 }
 
 void GuiShutdown()
 {
-
+	// Clean up here 
 }
 
 void GuiDispatchEvent(SDL_Event* e)
@@ -80,8 +95,10 @@ bool RectIntersectMouse(SDL_Rect* rect)
 
 bool GuiAddButton(const char* label, SDL_Rect* span)
 {
+	Style* s = &gc.style;
+
 	bool hover = RectIntersectMouse(span);
-	SDL_Color c = hover ? button_high : button_low;
+	SDL_Color c = hover ? s->button_high : s->button_low;
 
 	SDL_SetRenderDrawColor(gc.rend, c.r, c.g, c.b, 255);
 	SDL_RenderFillRect(gc.rend, span);
@@ -95,9 +112,11 @@ bool GuiAddButton(const char* label, SDL_Rect* span)
 
 bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v)
 {
+	Style* s = &gc.style;
+
 	SDL_Rect span = { xoff,yoff,gc.metrics.checkbox_size,gc.metrics.checkbox_size };
 	bool hover = RectIntersectMouse(&span);
-	SDL_Color c = hover ? checkbox_high : checkbox_low;
+	SDL_Color c = hover ? s->checkbox_high : s->checkbox_low;
 
 	// Render checkbox
 	SDL_SetRenderDrawColor(gc.rend, c.r, c.g, c.b, 255);
@@ -111,7 +130,7 @@ bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v)
 
 	if (*v)
 	{
-		SDL_SetRenderDrawColor(gc.rend, checkbox_active.r, checkbox_active.g, checkbox_active.b, 255);
+		SDL_SetRenderDrawColor(gc.rend, s->checkbox_active.r, s->checkbox_active.g, s->checkbox_active.b, 255);
 		int offset = (int)roundf((float)gc.metrics.checkbox_size / 4);
 		int width = gc.metrics.checkbox_size - 2 * offset;
 		span.x += offset; span.y += offset; span.h = width; span.w = width;
@@ -129,6 +148,8 @@ bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v)
 
 bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int scale)
 {
+	Style* s = &gc.style;
+
 	// Is there an active grab?
 	static bool is_active = false;
 	// If so, whats the id of the active grab
@@ -157,7 +178,7 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 
 	// Render scroll bar
 	SDL_Rect bar = { span->x + span->w - gc.metrics.scroll_bar_width, span->y, gc.metrics.scroll_bar_width,span->h };
-	SDL_SetRenderDrawColor(gc.rend, scroll_bar.r, scroll_bar.g, scroll_bar.b, 255);
+	SDL_SetRenderDrawColor(gc.rend, s->scroll_bar.r, s->scroll_bar.g, s->scroll_bar.b, 255);
 	SDL_RenderFillRect(gc.rend, &bar);
 
 	// Render the grab
@@ -179,7 +200,7 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 		int y = *v * (span->h - height) / max + span->y;
 
 		SDL_Rect grab = { x,y,gc.metrics.scroll_bar_width,height };
-		SDL_SetRenderDrawColor(gc.rend, scroll_grab_high.r, scroll_grab_high.g, scroll_grab_high.b, 255);
+		SDL_SetRenderDrawColor(gc.rend, s->scroll_grab_high.r, s->scroll_grab_high.g, s->scroll_grab_high.b, 255);
 		SDL_RenderFillRect(gc.rend, &grab);
 		if (gc.mouse_released)
 		{
@@ -190,7 +211,7 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 	{
 		int y = *v * (span->h - height) / max + span->y;
 		SDL_Rect grab = { x,y,gc.metrics.scroll_bar_width,height };
-		SDL_Color c = RectIntersectMouse(&grab) ? scroll_grab_high : scroll_grab_low;
+		SDL_Color c = RectIntersectMouse(&grab) ? s->scroll_grab_high : s->scroll_grab_low;
 		SDL_SetRenderDrawColor(gc.rend, c.r, c.g, c.b, 255);
 		SDL_RenderFillRect(gc.rend, &grab);
 

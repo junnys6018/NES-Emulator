@@ -64,6 +64,7 @@ void NESDestroy(Nes* nes)
 void NESReset(Nes* nes)
 {
 	nes->system_clock = 0;
+	nes->audio_time = 0.0f;
 
 	power_on_6502(&nes->cpu);
 	reset_6502(&nes->cpu);

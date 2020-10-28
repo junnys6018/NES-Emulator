@@ -381,15 +381,12 @@ void RendererBindNES(Nes* nes)
 	}
 }
 
+static bool update_pixel_data = false;
+static color frame_buffer[256 * 240];
 void SendPixelDataToScreen(color* pixels)
 {
-	color* dest;
-	int pitch;
-	SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
-
-	memcpy(dest, pixels, 256 * 240 * sizeof(color));
-
-	SDL_UnlockTexture(rc.nes_screen);
+	memcpy(frame_buffer, pixels, sizeof(frame_buffer));
+	update_pixel_data = true;
 }
 
 ///////////////////////////
@@ -681,24 +678,30 @@ void DrawSettings(int xoff, int yoff)
 {
 	SDL_Rect span = { xoff + rc.wm.padding, yoff + rc.wm.padding,40 * rc.wm.window_scale,rc.wm.button_h };
 
-	char file[256];
-	if (GuiAddButton("Load ROM...", &span) && OpenFileDialog(file, 256) == 0)
+	if (GuiAddButton("Load ROM...", &span))
 	{
-		NESDestroy(rc.nes);
-		if (NESInit(rc.nes, file) != 0)
-		{
-			// Failed to load rom
-			rc.controller->mode = MODE_NOT_RUNNING;
+		char file[256];
+		SDL_PauseAudioDevice(rc.controller->audio_id, 1); // Pause the audio thread while loading a file
 
-			// ...so load a dummy one
-			NESInit(rc.nes, NULL);
-		}
-		// Successfully loaded rom
-		else if (rc.controller->mode == MODE_NOT_RUNNING)
+		if (OpenFileDialog(file, 256) == 0)
 		{
-			rc.controller->mode = MODE_PLAY;
+			NESDestroy(rc.nes);
+			if (NESInit(rc.nes, file) != 0)
+			{
+				// Failed to load rom
+				rc.controller->mode = MODE_NOT_RUNNING;
+
+				// ...so load a dummy one
+				NESInit(rc.nes, NULL);
+			}
+			// Successfully loaded rom
+			else if (rc.controller->mode == MODE_NOT_RUNNING)
+			{
+				rc.controller->mode = MODE_PLAY;
+			}
 		}
 		
+		SDL_PauseAudioDevice(rc.controller->audio_id, 0); // Resume the audio thread
 		ClearScreen();
 	}
 	span.y = yoff + 2 * rc.wm.padding + rc.wm.button_h; // 3*padding + button + checkbox
@@ -758,6 +761,9 @@ void RendererDraw()
 {
 	assert(rc.nes); // Nes must be bound for rendering
 
+	if (!update_pixel_data && rc.controller->mode == MODE_PLAY)
+		return;
+
 	//timepoint beg, end;
 	//GetTime(&beg);
 	// Clear screen to black
@@ -765,6 +771,19 @@ void RendererDraw()
 	SDL_RenderClear(rc.rend);
 
 	// Draw GUI
+	if (update_pixel_data)
+	{
+		update_pixel_data = false;
+
+		color* dest;
+		int pitch;
+		SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
+
+		memcpy(dest, frame_buffer, 256 * 240 * sizeof(color));
+
+		SDL_UnlockTexture(rc.nes_screen);
+	}
+
 	SDL_Rect r_NesView = { rc.wm.padding,rc.wm.padding,rc.wm.nes_w,rc.wm.nes_h };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
 

@@ -333,7 +333,7 @@ void clock_2C02(State2C02* ppu)
 		}
 	}
 
-	// Sprite evaluation, only occurs is rendering is enabled
+	// Sprite evaluation, only occurs if rendering is enabled
 	if (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s)
 	{
 		// Sprite evaluation occurs during the visible scanlines (0..239). 
@@ -542,8 +542,7 @@ void clock_2C02(State2C02* ppu)
 
 		// Send pixel data to renderer
 		SendPixelDataToScreen(ppu->pixels);
-
-		// Clear pixels, just in case
+		// Clear pixels
 		memset(ppu->pixels, 0, sizeof(ppu->pixels));
 	}
 

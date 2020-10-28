@@ -4,7 +4,7 @@ workspace "Emulation"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}"
 
-project "Emulation" 
+project "NES-Emulator" 
 kind "ConsoleApp"
 	language "C"
 

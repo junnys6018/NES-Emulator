@@ -5,10 +5,8 @@
 
 int OpenFileDialog(char* filepath, int size)
 {
-	OPENFILENAME ofn;       // common dialog box structure
-	HANDLE hf;              // file handle
+	OPENFILENAMEA ofn;
 
-	// Initialize OPENFILENAME
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.lpstrFile = filepath;
@@ -18,10 +16,7 @@ int OpenFileDialog(char* filepath, int size)
 	ofn.nMaxFile = size;
 	ofn.lpstrFilter = "All\0*.*\0Nes (.nes)\0*.nes\0";
 	ofn.nFilterIndex = 2;
-	ofn.lpstrFileTitle = NULL;
-	ofn.nMaxFileTitle = 0;
-	ofn.lpstrInitialDir = NULL;
-	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
 	return ((GetOpenFileNameA(&ofn) != 0) ? 0 : 1);
 }

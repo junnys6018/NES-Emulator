@@ -9,44 +9,77 @@
 #include "Benchmarks.h"
 
 #include "timer.h"
-#include "FileDialog.h"
 
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include <SDL.h>
 
+float absf(float f)
+{
+	return f < 0.0f ? -f : f;
+}
+
+typedef struct
+{
+	Nes* nes;
+	Controller* controller;
+} Userdata;
+
+struct
+{
+	float last_sample;
+	float last_filter;
+} DC_cutoff_filter;
+
 void my_audio_callback(void* userdata, Uint8* stream, int len)
 {
-	static float freq = 440; // in hz
-	static int64_t time = 0; // in 1/spec.freq units of time
-
 	float* my_stream = (float*)stream;
-	for (int i = 0; i < len/sizeof(float); i++)
+	Nes* nes = ((Userdata*)userdata)->nes;
+	Controller* controller = ((Userdata*)userdata)->controller;
+	if (controller->mode == MODE_PLAY)
 	{
-		//my_stream[i] = 0.5 * ((float)rand() / RAND_MAX - 0.5f);
-		my_stream[i] = 0.2f * sinf(2 * M_PI * freq * time / 44100);
-		time++;
+		for (int i = 0; i < len / sizeof(float); i++)
+		{
+			// Clock until an audio sample is ready
+			while (!clock_nes_cycle(nes));
+
+			float filtered = nes->apu.audio_sample - DC_cutoff_filter.last_sample + 0.995f * DC_cutoff_filter.last_filter;
+			DC_cutoff_filter.last_sample = nes->apu.audio_sample;
+			DC_cutoff_filter.last_filter = filtered;
+			my_stream[i] = filtered;
+			
+			if (!(absf(my_stream[i]) <= 1.0f))
+			{
+				my_stream[i] = 0.0f;
+				printf("[ERROR] sound\n");
+			}
+		}
+	}
+	else
+	{
+		memset(stream, 0, len);
 	}
 }
 
-void play_sound()
+SDL_AudioDeviceID play_sound(Userdata* data)
 {
 	SDL_AudioSpec spec, have;
 	memset(&spec, 0, sizeof(spec));
-	spec.freq = 44100;
+	spec.freq = SAMPLE_RATE;
 	spec.format = AUDIO_F32;
 	spec.channels = 1;
-	spec.samples = 4096;
+	spec.samples = 128;
 	spec.callback = my_audio_callback;
-	spec.userdata = NULL;
+	spec.userdata = data;
 
 	SDL_AudioDeviceID id = SDL_OpenAudioDevice(NULL, 0, &spec, &have, 0);
 
 	SDL_PauseAudioDevice(id, 0);
 
-	//SDL_CloseAudioDevice(id);
+	return id;
 }
 
 int main(int argc, char** argv)
@@ -59,16 +92,32 @@ int main(int argc, char** argv)
 
 	Controller controller = { .mode = MODE_NOT_RUNNING };
 	RendererInit(&controller);
-
-	//play_sound();
-
-	//RunAll6502Tests();
-	//RunAll2C02Tests();
-	//RunAllBenchmarks();
-
 	Nes nes;
-	RendererBindNES(&nes);
 	NESInit(&nes, NULL);
+	RendererBindNES(&nes);
+
+	if (argc == 2 && strcmp(argv[1], "--test") == 0)
+	{
+		RunAll6502Tests();
+		RunAll2C02Tests();
+		RunAllBenchmarks();
+
+		RendererBindNES(&nes);
+	}
+	else if (argc == 2)
+	{
+		NESDestroy(&nes);
+		if (NESInit(&nes, argv[1]) == 0)
+		{
+			controller.mode = MODE_PLAY;
+		}
+		else
+		{
+			NESInit(&nes, NULL);
+		}
+	}
+	Userdata data = { .nes = &nes, .controller = &controller };
+	controller.audio_id = play_sound(&data);
 
 	//nes.pad.current_input.reg = 0x00;
 	//for (int i = 0; i < 11199700; i++)
@@ -84,17 +133,10 @@ int main(int argc, char** argv)
 	int frame = 0;
 
 	SDL_Event event;
-	timepoint beg, end;
 	bool running = true;
 	while (running)
 	{
-		GetTime(&beg);
 		poll_keys(&nes.pad);
-
-		if (controller.mode == MODE_PLAY)
-		{
-			clock_nes_frame(&nes);
-		}
 
 		while (SDL_PollEvent(&event) != 0)
 		{
@@ -121,28 +163,11 @@ int main(int argc, char** argv)
 		}
 
 		RendererDraw();
-		GetTime(&end);
-
-		total_time += GetElapsedTimeMilli(&beg, &end);
-		if (++frame >= window)
-		{
-			controller.ms_per_frame = total_time / window;
-			controller.fps = 1000.0f / controller.ms_per_frame;
-
-			frame = 0;
-			total_time = 0.0f;
-		}
-
-		float sleep_time = 16666 - GetElapsedTimeMicro(&beg, &end);
-		if (sleep_time > 0)
-		{
-			SleepMicro((uint64_t)sleep_time);
-		}
 	}
 
+	SDL_CloseAudioDevice(controller.audio_id);
 	NESDestroy(&nes);
 	RendererShutdown();
-
 	SDL_Quit();
 
 	exit(EXIT_SUCCESS);
