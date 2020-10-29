@@ -11,6 +11,11 @@ uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 	Mapper001* map001 = (Mapper001*)mapper;
 	if (addr >= 0x6000 && addr < 0x8000)
 	{
+		// PRG Ram chip enable (active low)
+		if (map001->PRG_bank_select & 0x10)
+		{
+			return 0;
+		}
 		return map001->PRG_RAM[addr & 0x1FFF];
 	}
 	else if (addr >= 0x8000 && addr <= 0xFFFF)
@@ -46,6 +51,7 @@ uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 		}
 		}
 	}
+	return 0;
 }
 
 uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
@@ -71,6 +77,7 @@ uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
 			return map001->CHR[index];
 		}
 	}
+	return 0;
 }
 
 

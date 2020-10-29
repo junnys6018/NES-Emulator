@@ -66,7 +66,7 @@ inline void clock_nes_frame(Nes* nes)
 // Emulate one master clock cycle, returns true when an audio sample is ready
 // This is for syncing to audio
 
-#define SAMPLE_RATE  (41000)
+#define SAMPLE_RATE  (44100)
 #define SAMPLE_PERIOD (1.0f / SAMPLE_RATE)
 inline bool clock_nes_cycle(Nes* nes)
 {

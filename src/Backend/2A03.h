@@ -263,6 +263,7 @@ typedef struct
 
 	// Frame Counter
 	uint32_t frame_count;
+	bool IRQ_flag;
 
 	// Counts the number of master clock cycles ie PPU cycles
 	uint64_t total_cycles;
@@ -286,7 +287,6 @@ typedef struct
 	struct State6502* cpu;
 } State2A03;
 
-// returns true if a new audio sample was generated
 void clock_2A03(State2A03* apu);
 void reset_2A03(State2A03* apu);
 void power_on_2A03(State2A03* apu);

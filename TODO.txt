@@ -5,6 +5,8 @@ Micro mages and Zelda halting
 Render IRQ and NMI in Debug
 WASM
 NSF Files
-Open bus
+Open bus behaviour 
 Second controller
 APU testing
+more mappers
+linux support

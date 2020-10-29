@@ -33,7 +33,7 @@ float sinc(float x)
 void AudioInit()
 {
 	// Low pass filter:	https://rjeschke.tumblr.com/post/8382596050/fir-filters-in-practice
-	const float cutoff_freq = 20050.0f;
+	const float cutoff_freq = 22050.0f;
 	const float sample_rate = SAMPLE_RATE;
 
 	const float cutoff = cutoff_freq / sample_rate;
@@ -110,7 +110,6 @@ void quarter_frame(State2A03* apu)
 		apu->SQ1_envelope.start_flag = false;
 		apu->SQ1_envelope.decay = 0x0F;
 		reload_divider(&apu->SQ1_envelope.div);
-		
 	}
 	else if (clock_divider(&apu->SQ1_envelope.div))
 	{
@@ -122,7 +121,6 @@ void quarter_frame(State2A03* apu)
 		{
 			apu->SQ1_envelope.decay = 0x0F;
 		}
-
 	}
 
 	// Pulse 2
@@ -131,7 +129,6 @@ void quarter_frame(State2A03* apu)
 		apu->SQ2_envelope.start_flag = false;
 		apu->SQ2_envelope.decay = 0x0F;
 		reload_divider(&apu->SQ2_envelope.div);
-
 	}
 	else if (clock_divider(&apu->SQ2_envelope.div))
 	{
@@ -143,11 +140,9 @@ void quarter_frame(State2A03* apu)
 		{
 			apu->SQ2_envelope.decay = 0x0F;
 		}
-
 	}
 
 	// Triangle
-
 	if (apu->TRI_linear_reload_flag)
 	{
 		apu->TRI_linear_counter = apu->TRI_LINEAR.bits.R;
@@ -168,7 +163,6 @@ void quarter_frame(State2A03* apu)
 		apu->NOISE_envelope.start_flag = false;
 		apu->NOISE_envelope.decay = 0x0F;
 		reload_divider(&apu->NOISE_envelope.div);
-
 	}
 	else if (clock_divider(&apu->NOISE_envelope.div))
 	{
@@ -180,7 +174,6 @@ void quarter_frame(State2A03* apu)
 		{
 			apu->NOISE_envelope.decay = 0x0F;
 		}
-
 	}
 }
 
@@ -233,6 +226,8 @@ void half_frame(State2A03* apu)
 
 void clock_frame_counter(State2A03* apu)
 {
+	apu->frame_count++;
+
 	if (apu->FRAME_COUNTER.flags.M)
 	{
 		if (apu->frame_count == 7456 || apu->frame_count == 18640)
@@ -265,6 +260,7 @@ void clock_frame_counter(State2A03* apu)
 			if (!apu->FRAME_COUNTER.flags.I)
 			{
 				IRQ_Set(apu->cpu, 1);
+				apu->IRQ_flag = true;
 			}
 			apu->frame_count = 0;
 		}
@@ -278,8 +274,6 @@ void clock_2A03(State2A03* apu)
 	if (apu->total_cycles % 6 == 0)
 	{
 		apu->apu_cycles++;
-		apu->frame_count++;
-
 		clock_frame_counter(apu);
 
 		// Pulse 1
@@ -369,6 +363,7 @@ void reset_2A03(State2A03* apu)
 	apu->FRAME_COUNTER.flags.I = 1; // Inhibit interrupts
 
 	apu->frame_count = 0;
+	apu->IRQ_flag = false;
 
 	apu->total_cycles = 0;
 	apu->apu_cycles = 0;
@@ -452,7 +447,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		apu->SQ2_envelope.start_flag = true;
 		apu->SQ2_timer.period = ((uint32_t)apu->SQ2_HI.bits.H << 8) | (uint32_t)apu->SQ2_LO;
 		apu->SQ2_sequence_sel = 0x80;
-		if (apu->STATUS.flags.P1)
+		if (apu->STATUS.flags.P2)
 		{
 			apu->SQ2_length_counter = LENGTH_COUNTER_LUT[apu->SQ2_HI.bits.L];
 		}
@@ -537,10 +532,11 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 				 // Skip 0x4016 (JOY1 data)
 
 	case 0x4017: // Frame counter control
-		apu->FRAME_COUNTER.reg = (data & 0xC0);
+		apu->FRAME_COUNTER.reg = data;
 		if (apu->FRAME_COUNTER.flags.I)
 		{
 			IRQ_Clear(apu->cpu, 1);
+			apu->IRQ_flag = false;
 		}
 		apu->frame_count = 0;
 		if (apu->FRAME_COUNTER.flags.M)
@@ -567,11 +563,15 @@ uint8_t apu_read(State2A03* apu, uint16_t addr)
 				uint8_t T : 1;
 				uint8_t N : 1;
 				uint8_t D : 1;
-				uint8_t Unused : 3;
+				uint8_t Unused : 1;
+				uint8_t F : 1; // Frame interrupt flag
+				uint8_t I : 1; // DMC bytes remaining
 			} bits;
 			uint8_t reg;
 		} ret;
 		ret.reg = 0;
+		ret.bits.F = apu->IRQ_flag;
+		apu->IRQ_flag = false;
 		if (apu->SQ1_length_counter > 0)
 		{
 			ret.bits.SQ1 = 1;
@@ -580,7 +580,14 @@ uint8_t apu_read(State2A03* apu, uint16_t addr)
 		{
 			ret.bits.SQ2 = 1;
 		}
-
+		if (apu->TRI_length_counter > 0)
+		{
+			ret.bits.T = 1;
+		}
+		if (apu->NOISE_length_counter > 0)
+		{
+			ret.bits.N = 1;
+		}
 		return ret.reg;
 	}
 	return 0;
@@ -616,4 +623,3 @@ void reload_divider(divider* div)
 {
 	div->counter = div->period;
 }
-
