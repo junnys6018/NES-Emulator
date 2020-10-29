@@ -72,6 +72,7 @@ typedef struct
 
 	// Window size metrics
 	WindowMetrics wm;
+	GuiMetrics gm;
 
 	// Textures representing the pattern tables currently accessible on the PPU
 	SDL_Texture* left_nametable;
@@ -211,12 +212,11 @@ void RendererInit(Controller* cont)
 	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
 
 	// GUI
-	GuiMetrics metrics;
-	metrics.scroll_bar_width = 6 * rc.wm.window_scale;
-	metrics.checkbox_size = 6 * rc.wm.window_scale;
-	metrics.font_size = rc.font_size;
-	metrics.padding = rc.wm.padding;
-	GuiInit(rc.rend, &metrics);
+	rc.gm.scroll_bar_width = 6 * rc.wm.window_scale;
+	rc.gm.checkbox_size = 6 * rc.wm.window_scale;
+	rc.gm.font_size = rc.font_size;
+	rc.gm.padding = rc.wm.padding;
+	GuiInit(rc.rend, &rc.gm);
 
 	rc.target = TARGET_NES_STATE;
 }
@@ -646,6 +646,22 @@ void DrawNESState()
 	DrawPaletteData(x + 2 * rc.wm.pattern_table_len + 2 * rc.wm.padding, y);
 }
 
+void DrawAPUState(int xoff, int yoff)
+{
+	static bool SQ1 = true, SQ2 = true, TRI = true, NOISE = true, DMC = true;
+
+	if (GuiAddCheckbox("Square 1", xoff + rc.wm.padding, yoff + rc.wm.padding, &SQ1))
+	{
+		apu_channel_set(&rc.nes->apu, CHANNEL_SQ1, SQ1);
+	}
+
+	if (GuiAddCheckbox("Square 2", xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + rc.gm.checkbox_size, &SQ2))
+	{
+		apu_channel_set(&rc.nes->apu, CHANNEL_SQ2, SQ2);
+	}
+
+}
+
 void DrawAbout(int xoff, int yoff)
 {
 	SetTextOrigin(xoff + rc.wm.padding, yoff + rc.wm.padding);
@@ -824,6 +840,7 @@ void RendererDraw()
 		DrawNESState();
 		break;
 	case TARGET_APU_STATE:
+		DrawAPUState(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
 		break;
 	case TARGET_MEMORY:
 		DrawMemoryView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);

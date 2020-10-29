@@ -26,19 +26,20 @@ typedef struct
 {
 	Nes* nes;
 	Controller* controller;
-} Userdata;
 
-struct
-{
+	// For DC cutoff filter
 	float last_sample;
 	float last_filter;
-} DC_cutoff_filter;
+
+} Userdata;
+
 
 void my_audio_callback(void* userdata, Uint8* stream, int len)
 {
 	float* my_stream = (float*)stream;
-	Nes* nes = ((Userdata*)userdata)->nes;
-	Controller* controller = ((Userdata*)userdata)->controller;
+	Userdata* data = (Userdata*)userdata;
+	Nes* nes = data->nes;
+	Controller* controller = data->controller;
 	if (controller->mode == MODE_PLAY)
 	{
 		for (int i = 0; i < len / sizeof(float); i++)
@@ -46,9 +47,11 @@ void my_audio_callback(void* userdata, Uint8* stream, int len)
 			// Clock until an audio sample is ready
 			while (!clock_nes_cycle(nes));
 
-			float filtered = nes->apu.audio_sample - DC_cutoff_filter.last_sample + 0.995f * DC_cutoff_filter.last_filter;
-			DC_cutoff_filter.last_sample = nes->apu.audio_sample;
-			DC_cutoff_filter.last_filter = filtered;
+			float sample = apu_filtered_sample(&nes->apu);
+
+			float filtered = sample - data->last_sample + 0.995f * data->last_filter;
+			data->last_sample = sample;
+			data->last_filter = filtered;
 			my_stream[i] = filtered;
 			
 			if (!(absf(my_stream[i]) <= 1.0f))
@@ -92,9 +95,11 @@ int main(int argc, char** argv)
 
 	Controller controller = { .mode = MODE_NOT_RUNNING };
 	RendererInit(&controller);
+	AudioInit();
 	Nes nes;
 	NESInit(&nes, NULL);
 	RendererBindNES(&nes);
+	RendererDraw();
 
 	if (argc == 2 && strcmp(argv[1], "--test") == 0)
 	{

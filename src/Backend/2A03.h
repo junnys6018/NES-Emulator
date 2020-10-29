@@ -3,19 +3,21 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define AUDIO_SAMPLES (40)
+
 // Forward declaration to avoid circular dependency
 struct State6502;
 void IRQ_Set(struct State6502* cpu, int index);
 void IRQ_Clear(struct State6502* cpu, int index);
 
-typedef struct
+enum
 {
-	float factor;
-	float last_sample;
-	float last_filter;
-} filter_data;
-float run_high_pass(filter_data* filter, float sample);
-float run_low_pass(filter_data* filter, float sample);
+	CHANNEL_SQ1 = 1,
+	CHANNEL_SQ2 = 1 << 1,
+	CHANNEL_TRI = 1 << 2,
+	CHANNEL_NOISE = 1 << 3,
+	CHANNEL_DMC = 1 << 4,
+};
 
 // Common APU compnents
 typedef struct
@@ -70,12 +72,12 @@ typedef struct
 
 	divider SQ1_timer;
 	uint8_t SQ1_sequencer;
+	uint8_t SQ1_sequence_sel;
 	uint8_t SQ1_length_counter;
 	struct
 	{
 		divider div;
 		uint8_t decay;
-		uint8_t output;
 		bool start_flag;
 	} SQ1_envelope;
 
@@ -83,6 +85,7 @@ typedef struct
 	{
 		divider div;
 		bool reload_flag;
+		uint32_t target;
 	} SQ1_sweep;
 
 	// Pulse 2 registers, write only, accessed from $4004-$4007
@@ -125,12 +128,12 @@ typedef struct
 
 	divider SQ2_timer;
 	uint8_t SQ2_sequencer;
+	uint8_t SQ2_sequence_sel;
 	uint8_t SQ2_length_counter;
 	struct
 	{
 		divider div;
 		uint8_t decay;
-		uint8_t output;
 		bool start_flag;
 	} SQ2_envelope;
 
@@ -138,6 +141,7 @@ typedef struct
 	{
 		divider div;
 		bool reload_flag;
+		uint32_t target;
 	} SQ2_sweep;
 
 	// Triangle channel registers, write only
@@ -204,9 +208,10 @@ typedef struct
 		uint8_t pulse2;
 	} channel_out;
 
-	
-	filter_data filters[3];
-	float audio_sample;
+	// Allows the emulator to enable/disable channels. For debugging
+	int channel_enable;
+
+	float audio_samples[AUDIO_SAMPLES];
 	struct State6502* cpu;
 } State2A03;
 
@@ -216,5 +221,10 @@ void reset_2A03(State2A03* apu);
 void power_on_2A03(State2A03* apu);
 void apu_write(State2A03* apu, uint16_t addr, uint8_t data);
 uint8_t apu_read(State2A03* apu, uint16_t addr);
+
+float apu_filtered_sample(State2A03* apu);
+void apu_channel_set(State2A03* apu, int channel, bool en);
+
+void AudioInit();
 
 #endif
