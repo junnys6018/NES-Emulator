@@ -144,11 +144,80 @@ typedef struct
 		uint32_t target;
 	} SQ2_sweep;
 
-	// Triangle channel registers, write only
+	// Triangle channel registers, write only, accessed from $4008-$400B
 
+	union
+	{
+		struct
+		{
+			uint8_t R : 7; // Linear counter reload
+			uint8_t C : 1; // Control flag
+		} bits;
+		uint8_t reg;
+	} TRI_LINEAR; // $4008
 
+	uint8_t TRI_LOW; // Timer low 8 bits, $400A
 
+	union
+	{
+		struct
+		{
+			uint8_t H : 3; // Timer high 3 bits
+			uint8_t l : 5; // Length counter reload
+		} bits;
+		uint8_t reg;
+	} TRI_HIGH; // Timer high bits and length counter $400B
 
+	divider TRI_timer;
+	uint8_t TRI_length_counter;
+	uint8_t TRI_linear_counter;
+	bool TRI_linear_reload_flag;
+	int TRI_sequence_index;
+
+	// Noise channel registers, write only, accessed from $400C-400F
+
+	union
+	{
+		struct
+		{
+			uint8_t V : 4; // Volume
+			uint8_t C : 1; // Constant volume flag
+			uint8_t L : 1; // Envelope loop/ length counter halt
+			uint8_t Unused : 2;
+		} bits;
+		uint8_t reg;
+	} NOISE_VOL; // $400C
+
+	union
+	{
+		struct
+		{
+			uint8_t P : 4; // Period
+			uint8_t Unused : 3;
+			uint8_t L : 1; // Loop flag
+		} bits;
+		uint8_t reg;
+	} NOISE_PERIOD; // $400E
+
+	union
+	{
+		struct
+		{
+			uint8_t Unused : 3;
+			uint8_t L : 5; // Length counter load
+		} bits;
+		uint8_t reg;
+	} NOISE_COUNT; // $400F
+
+	divider NOISE_timer;
+	uint8_t NOISE_length_counter;
+	struct
+	{
+		divider div;
+		uint8_t decay;
+		bool start_flag;
+	} NOISE_envelope;
+	uint16_t NOISE_LFSR; // Linear feed back shift register (15 bits)
 
 	// Access: write only, accessed from $4010
 	union
@@ -206,6 +275,8 @@ typedef struct
 		// 4 bits
 		uint8_t pulse1;
 		uint8_t pulse2;
+		uint8_t triangle;
+		uint8_t noise;
 	} channel_out;
 
 	// Allows the emulator to enable/disable channels. For debugging

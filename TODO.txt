@@ -6,3 +6,5 @@ Render IRQ and NMI in Debug
 WASM
 NSF Files
 Open bus
+Second controller
+APU testing

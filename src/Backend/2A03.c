@@ -10,7 +10,11 @@ enum
 	SQ2 = 1,
 };
 
+// Look up tables
+
 static int LENGTH_COUNTER_LUT[32] = { 10,254,20,2,40,4,80,6,160,8,60,10,14,12,26,14,12,16,24,18,48,20,96,22,192,24,72,26,16,28,32,30 };
+static uint8_t TRI_SEQUENCER[32] = { 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
+static uint32_t NOISE_PERIOD_LUT[16] = { 4,8,16,32,64,96,128,160,202,254,380,508,762,1016,2034,4068 };
 static float LOW_PASS_WEIGHTS[AUDIO_SAMPLES];
 static float PULSE_LUT[31];
 static float TND_LUT[203];
@@ -141,6 +145,43 @@ void quarter_frame(State2A03* apu)
 		}
 
 	}
+
+	// Triangle
+
+	if (apu->TRI_linear_reload_flag)
+	{
+		apu->TRI_linear_counter = apu->TRI_LINEAR.bits.R;
+	}
+	else if (apu->TRI_linear_counter > 0)
+	{
+		apu->TRI_linear_counter--;
+	}
+
+	if (!apu->TRI_LINEAR.bits.C)
+	{
+		apu->TRI_linear_reload_flag = false;
+	}
+
+	// Noise
+	if (apu->NOISE_envelope.start_flag)
+	{
+		apu->NOISE_envelope.start_flag = false;
+		apu->NOISE_envelope.decay = 0x0F;
+		reload_divider(&apu->NOISE_envelope.div);
+
+	}
+	else if (clock_divider(&apu->NOISE_envelope.div))
+	{
+		if (apu->NOISE_envelope.decay > 0)
+		{
+			apu->NOISE_envelope.decay--;
+		}
+		else if (apu->NOISE_PERIOD.bits.L)
+		{
+			apu->NOISE_envelope.decay = 0x0F;
+		}
+
+	}
 }
 
 void half_frame(State2A03* apu)
@@ -175,6 +216,18 @@ void half_frame(State2A03* apu)
 	{
 		apu->SQ2_sweep.reload_flag = false;
 		reload_divider(&apu->SQ2_sweep.div);
+	}
+
+	// Triangle
+	if (apu->TRI_length_counter > 0 && !apu->TRI_LINEAR.bits.C)
+	{
+		apu->TRI_length_counter--;
+	}
+
+	// Noise
+	if (apu->NOISE_length_counter > 0 && !apu->NOISE_VOL.bits.L)
+	{
+		apu->NOISE_length_counter--;
 	}
 }
 
@@ -221,10 +274,13 @@ void clock_frame_counter(State2A03* apu)
 void clock_2A03(State2A03* apu)
 {
 	apu->total_cycles++;
+
 	if (apu->total_cycles % 6 == 0)
 	{
 		apu->apu_cycles++;
 		apu->frame_count++;
+
+		clock_frame_counter(apu);
 
 		// Pulse 1
 		if (clock_divider(&apu->SQ1_timer))
@@ -258,7 +314,31 @@ void clock_2A03(State2A03* apu)
 			}
 		}
 
-		clock_frame_counter(apu);
+		// Noise
+		if (clock_divider(&apu->NOISE_timer))
+		{
+			uint16_t feedback = (apu->NOISE_LFSR & 1) ^ ((apu->NOISE_LFSR & (apu->NOISE_PERIOD.bits.L ? 1 << 6 : 2)) > 0);
+			apu->NOISE_LFSR = (apu->NOISE_LFSR >> 1) | (feedback << 14);
+
+			if (!(apu->NOISE_LFSR & 1) && apu->NOISE_length_counter != 0)
+			{
+				apu->channel_out.noise = apu->NOISE_VOL.bits.C ? apu->NOISE_VOL.bits.V : apu->NOISE_envelope.decay;
+			}
+			else
+			{
+				apu->channel_out.noise = 0;
+			}
+		}
+	}
+
+	// Triangle timer clocked at twice the freqency as the pulse channel
+	if (apu->total_cycles % 3 == 0)
+	{
+		if (clock_divider(&apu->TRI_timer) && apu->TRI_length_counter != 0 && apu->TRI_linear_counter != 0)
+		{
+			apu->TRI_sequence_index = (apu->TRI_sequence_index + 1) % 32;
+			apu->channel_out.triangle = TRI_SEQUENCER[apu->TRI_sequence_index];
+		}
 
 		// Shift right
 		for (int i = AUDIO_SAMPLES - 1; i > 0; i--)
@@ -272,7 +352,13 @@ void clock_2A03(State2A03* apu)
 		if (apu->channel_enable & CHANNEL_SQ2)
 			pulse_index += apu->channel_out.pulse2;
 
-		apu->audio_samples[0] = PULSE_LUT[pulse_index];
+		int tnd_index = 0;
+		if (apu->channel_enable & CHANNEL_TRI)
+			tnd_index += 3 * apu->channel_out.triangle;
+		if (apu->channel_enable & CHANNEL_NOISE)
+			tnd_index += 2 * apu->channel_out.noise;
+
+		apu->audio_samples[0] = PULSE_LUT[pulse_index] + TND_LUT[tnd_index];
 	}
 }
 
@@ -288,11 +374,15 @@ void reset_2A03(State2A03* apu)
 	apu->apu_cycles = 0;
 
 	apu->SQ1_sequence_sel = 0x80;
+	apu->SQ2_sequence_sel = 0x80;
+
+	apu->TRI_sequence_index = 0;
 }
 
 void power_on_2A03(State2A03* apu)
 {
 	apu->channel_enable = ~0x0; // Enable all channels
+	apu->NOISE_LFSR = 1;
 }
 
 void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
@@ -368,20 +458,50 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		}
 		break;
 	case 0x4008: // TRI_LINEAR: Triangle wave linear counter
+		apu->TRI_LINEAR.reg = data;
 		break;
 	case 0x4009: // Unused
 		break;
 	case 0x400A: // TRI_LOW: Low byte period for triangle channel
+		apu->TRI_LOW = data;
+
+		apu->TRI_timer.period = ((uint32_t)apu->TRI_HIGH.bits.H << 8) | (uint32_t)apu->TRI_LOW;
 		break;
 	case 0x400B: // TRI_HIGH: High byte period for triangle channel
+		apu->TRI_HIGH.reg = data;
+
+		apu->TRI_timer.period = ((uint32_t)apu->TRI_HIGH.bits.H << 8) | (uint32_t)apu->TRI_LOW;
+
+		// Set linear counter reload flag
+		apu->TRI_linear_reload_flag = true;
+
+		if (apu->STATUS.flags.T)
+		{
+			apu->TRI_length_counter = LENGTH_COUNTER_LUT[apu->TRI_HIGH.bits.l];
+		}
 		break;
 	case 0x400C: // NOISE_VOL: Volume for noise channel
+		apu->NOISE_VOL.reg = data;
+
+		apu->NOISE_envelope.div.period = apu->NOISE_VOL.bits.V;
 		break;
 	case 0x400D: // Unused
 		break;
-	case 0x400E: // NOISE_LO: Period and waveform shape for noise channel
+	case 0x400E: // NOISE_PERIOD: Period and waveform shape for noise channel
+		apu->NOISE_PERIOD.reg = data;
+
+		apu->NOISE_timer.period = NOISE_PERIOD_LUT[apu->NOISE_PERIOD.bits.P];
 		break;
-	case 0x400F: // NOISE_HI: Length counter value for noise channel
+	case 0x400F: // NOISE_COUNT: Length counter value for noise channel
+		apu->NOISE_COUNT.reg = data;
+
+		apu->NOISE_envelope.start_flag = true;
+
+		if (apu->STATUS.flags.N)
+		{
+			apu->NOISE_length_counter = LENGTH_COUNTER_LUT[apu->NOISE_COUNT.bits.L];
+		}
+
 		break;
 	case 0x4010: // DMC_FREQ: Play mode and frequency for DMC samples
 		apu->DMC_FREQ.reg = (data & 0xCF);
@@ -404,6 +524,14 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		if (!apu->STATUS.flags.P2)
 		{
 			apu->SQ2_length_counter = 0;
+		}
+		if (!apu->STATUS.flags.T)
+		{
+			apu->TRI_length_counter = 0;
+		}
+		if (!apu->STATUS.flags.N)
+		{
+			apu->NOISE_length_counter = 0;
 		}
 		break;
 				 // Skip 0x4016 (JOY1 data)

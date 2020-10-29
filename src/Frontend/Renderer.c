@@ -79,7 +79,17 @@ typedef struct
 	SDL_Texture* right_nametable;
 	uint8_t* left_nt_data;
 	uint8_t* right_nt_data;
-	
+
+	// Flags used to disable each of the channels, for debugging
+	struct
+	{
+		bool SQ1;
+		bool SQ2;
+		bool TRI; 
+		bool NOISE;
+		bool DMC;
+	} ch;
+
 	// Pointer to the nes the renderer is drawing
 	Nes* nes;
 
@@ -210,6 +220,13 @@ void RendererInit(Controller* cont)
 
 	// And main screen 
 	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+
+	// Enable channels
+	rc.ch.SQ1 = true;
+	rc.ch.SQ2 = true;
+	rc.ch.TRI = true;
+	rc.ch.NOISE = true;
+	rc.ch.DMC = true;
 
 	// GUI
 	rc.gm.scroll_bar_width = 6 * rc.wm.window_scale;
@@ -648,18 +665,44 @@ void DrawNESState()
 
 void DrawAPUState(int xoff, int yoff)
 {
-	static bool SQ1 = true, SQ2 = true, TRI = true, NOISE = true, DMC = true;
-
-	if (GuiAddCheckbox("Square 1", xoff + rc.wm.padding, yoff + rc.wm.padding, &SQ1))
+	if (GuiAddCheckbox("Square 1", xoff + rc.wm.padding, yoff + rc.wm.padding, &rc.ch.SQ1))
 	{
-		apu_channel_set(&rc.nes->apu, CHANNEL_SQ1, SQ1);
+		apu_channel_set(&rc.nes->apu, CHANNEL_SQ1, rc.ch.SQ1);
 	}
 
-	if (GuiAddCheckbox("Square 2", xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + rc.gm.checkbox_size, &SQ2))
+	if (GuiAddCheckbox("Square 2", xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + rc.gm.checkbox_size, &rc.ch.SQ2))
 	{
-		apu_channel_set(&rc.nes->apu, CHANNEL_SQ2, SQ2);
+		apu_channel_set(&rc.nes->apu, CHANNEL_SQ2, rc.ch.SQ2);
 	}
 
+	if (GuiAddCheckbox("Triangle", xoff + rc.wm.padding, yoff + 3 * rc.wm.padding + 2 * rc.gm.checkbox_size, &rc.ch.TRI))
+	{
+		apu_channel_set(&rc.nes->apu, CHANNEL_TRI, rc.ch.TRI);
+	}
+
+	if (GuiAddCheckbox("Noise", xoff + rc.wm.padding, yoff + 4 * rc.wm.padding + 3 * rc.gm.checkbox_size, &rc.ch.NOISE))
+	{
+		apu_channel_set(&rc.nes->apu, CHANNEL_NOISE, rc.ch.NOISE);
+	}
+
+	SetTextOrigin(xoff + rc.wm.padding, yoff + 5 * rc.wm.padding + 4 * rc.gm.checkbox_size);
+	char buf[256];
+	sprintf(buf, "tri period: %i, tri en: %i", rc.nes->apu.TRI_timer.period, rc.nes->apu.STATUS.flags.T);
+	RenderText(buf, white);
+	sprintf(buf, "$4008: %.2X; reload: %i", rc.nes->apu.TRI_LINEAR.reg, rc.nes->apu.TRI_linear_reload_flag);
+	RenderText(buf, white);
+	sprintf(buf, "c: %i (loadval %i, (%i)); lc: %i", rc.nes->apu.TRI_length_counter,
+		rc.nes->apu.TRI_HIGH.bits.l, rc.nes->apu.TRI_HIGH.bits.H, rc.nes->apu.TRI_linear_counter);
+	RenderText(buf, white);
+}
+
+void SetAPUChannels()
+{
+	apu_channel_set(&rc.nes->apu, CHANNEL_SQ1, rc.ch.SQ1);
+	apu_channel_set(&rc.nes->apu, CHANNEL_SQ2, rc.ch.SQ2);
+	apu_channel_set(&rc.nes->apu, CHANNEL_TRI, rc.ch.TRI);
+	apu_channel_set(&rc.nes->apu, CHANNEL_NOISE, rc.ch.NOISE);
+	apu_channel_set(&rc.nes->apu, CHANNEL_DMC, rc.ch.DMC);
 }
 
 void DrawAbout(int xoff, int yoff)
@@ -715,6 +758,7 @@ void DrawSettings(int xoff, int yoff)
 			{
 				rc.controller->mode = MODE_PLAY;
 			}
+			SetAPUChannels(); // Configue APU channels to current settings
 		}
 		
 		SDL_PauseAudioDevice(rc.controller->audio_id, 0); // Resume the audio thread
@@ -732,6 +776,7 @@ void DrawSettings(int xoff, int yoff)
 	{
 		ClearScreen();
 		NESReset(rc.nes);
+		SetAPUChannels(); // Configue APU channels to current settings
 	}
 	span.y += rc.wm.padding + rc.wm.button_h;
 	if (GuiAddButton("Save Game", &span))

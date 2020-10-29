@@ -99,7 +99,6 @@ int main(int argc, char** argv)
 	Nes nes;
 	NESInit(&nes, NULL);
 	RendererBindNES(&nes);
-	RendererDraw();
 
 	if (argc == 2 && strcmp(argv[1], "--test") == 0)
 	{
