@@ -8,3 +8,6 @@ Resources
 *.bak
 *.exe
 /roms
+Makefile
+*.make
+*.out

@@ -45,5 +45,29 @@ void SleepMicro(uint64_t usec)
 #endif
 
 #ifdef PLATFORM_LINUX
-// TODO
+
+#include <stddef.h>
+
+void GetTime(timepoint* tp)
+{
+	gettimeofday(tp, NULL);
+}
+
+float GetElapsedTimeMicro(timepoint* beg, timepoint* end)
+{
+	long beg_time = 1000000 * beg->tv_sec + beg->tv_usec;
+	long end_time = 1000000 * end->tv_sec + end->tv_usec;
+
+	return end_time - beg_time;
+}
+float GetElapsedTimeMilli(timepoint* beg, timepoint* end)
+{
+	return GetElapsedTimeMicro(beg,end) / 1000.0f;
+}
+
+#include <unistd.h>
+void SleepMicro(uint64_t usec)
+{
+	usleep(usec);
+}
 #endif

@@ -24,6 +24,32 @@ int OpenFileDialog(char* filepath, int size)
 #endif
 
 #ifdef PLATFORM_LINUX
-//TODO https://stackoverflow.com/questions/18948783/c-simple-open-file-dialog-in-linux
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+int OpenFileDialog(char* filepath, int size)
+{
+	FILE* f = popen("zenity --file-selection --modal", "r");
+	if (!f)
+	{
+		return 1;
+	}
+
+	fgets(filepath, size, f);
+	printf(filepath);
+
+	// Remove newline
+	char* newline = strrchr(filepath, '\n');
+	*newline = '\0';
+
+	if (pclose(f) == -1)
+	{
+		return 1;
+	}
+
+	return 0;
+}
 #endif
 

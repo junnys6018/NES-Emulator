@@ -75,3 +75,41 @@ void NESReset(Nes* nes)
 	power_on_2A03(&nes->apu);
 	reset_2A03(&nes->apu);
 }
+
+void clock_nes_instruction(Nes* nes)
+{
+	while (true)
+	{
+		nes->system_clock++;
+		if (nes->system_clock % 3 == 0 && clock_6502(&nes->cpu) == 0)
+		{
+			clock_2C02(&nes->ppu);
+			break;
+		}
+		clock_2C02(&nes->ppu);
+		clock_2A03(&nes->apu);
+	}
+}
+
+void clock_nes_frame(Nes* nes)
+{
+	do
+	{
+		nes->system_clock++;
+		if (nes->system_clock % 3 == 0)
+			clock_6502(&nes->cpu);
+
+		clock_2C02(&nes->ppu);
+		clock_2A03(&nes->apu);
+	} while (!(nes->ppu.scanline == 241 && nes->ppu.cycles == 0));
+}
+
+void clock_nes_cycle(Nes* nes)
+{
+	nes->system_clock++;
+	if (nes->system_clock % 3 == 0)
+		clock_6502(&nes->cpu);
+
+	clock_2C02(&nes->ppu);
+	clock_2A03(&nes->apu);
+}

@@ -12,7 +12,12 @@ typedef struct
 #endif
 
 #ifdef PLATFORM_LINUX
-// TODO
+
+#include <sys/time.h>
+// This struct should be treated as opaque.
+// I've exposed its definition so users can create timepoints on the stack
+typedef struct timeval timepoint;
+
 #endif
 
 #include <stdint.h>

@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include <stb_ds.h>
 

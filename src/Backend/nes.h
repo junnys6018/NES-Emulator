@@ -34,43 +34,12 @@ void NESDestroy(Nes* nes);
 void NESReset(Nes* nes);
 
 // Emulate one cpu instruction
-inline void clock_nes_instruction(Nes* nes)
-{
-	while (true)
-	{
-		nes->system_clock++;
-		if (nes->system_clock % 3 == 0 && clock_6502(&nes->cpu) == 0)
-		{
-			clock_2C02(&nes->ppu);
-			break;
-		}
-		clock_2C02(&nes->ppu);
-		clock_2A03(&nes->apu);
-	}
-}
+void clock_nes_instruction(Nes* nes);
 
 // Emulate a whole frame
-inline void clock_nes_frame(Nes* nes)
-{
-	do
-	{
-		nes->system_clock++;
-		if (nes->system_clock % 3 == 0)
-			clock_6502(&nes->cpu);
+void clock_nes_frame(Nes* nes);
 
-		clock_2C02(&nes->ppu);
-		clock_2A03(&nes->apu);
-	} while (!(nes->ppu.scanline == 241 && nes->ppu.cycles == 0));
-}
-
-inline void clock_nes_cycle(Nes* nes)
-{
-	nes->system_clock++;
-	if (nes->system_clock % 3 == 0)
-		clock_6502(&nes->cpu);
-
-	clock_2C02(&nes->ppu);
-	clock_2A03(&nes->apu);
-}
+// Emulate one master clock cycle
+void clock_nes_cycle(Nes* nes);
 
 #endif // !NES_H

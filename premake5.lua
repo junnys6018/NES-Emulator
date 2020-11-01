@@ -50,6 +50,7 @@ kind "ConsoleApp"
 
 	filter "system:linux"
 		defines { "PLATFORM_LINUX" }
+		links { "m" } -- Link with math library
 
 	filter {"system:linux", "configurations:Release"}
 		postbuildcommands

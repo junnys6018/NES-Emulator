@@ -502,6 +502,11 @@ void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 	RenderText(line, white);
 }
 
+int min(int a, int b)
+{
+	return a < b ? a : b;
+}
+
 void DrawStackView(int xoff, int yoff, State6502* cpu)
 {
 	int stack_size = min(0xFF - cpu->SP, 7);
