@@ -22,22 +22,6 @@ SDL_Color green = { 0,255,0 };
 SDL_Color blue = { 0,122,204 };
 SDL_Color light_blue = { 28,151,234 };
 
-#define RNG_BUF_SIZE 8
-typedef color FRAME_BUFFER[256 * 240];
-typedef struct
-{
-	FRAME_BUFFER ring_buf[RNG_BUF_SIZE];
-	SDL_SpinLock index_lock;
-
-	// push index points one past the end of the ring buffer
-	// pop index points at the beggining of the ring buffer
-	// We use volatile because the audio thread modifies push_index
-	// whenever a new frame is generated
-	volatile int push_index, pop_index;
-} FrameQueue;
-
-static FrameQueue frame_queue;
-
 ///////////////////////////
 //
 // Section: Structs and enums
@@ -171,7 +155,7 @@ void RendererInit(Controller* cont)
 		SDL_Emit_Error("Could not create window");
 	}
 
-	// Create a renderer to render our images 
+	// Create a renderer
 	rc.rend = SDL_CreateRenderer(rc.win, -1, SDL_RENDERER_ACCELERATED);
 	if (!rc.rend)
 	{
@@ -190,7 +174,6 @@ void RendererInit(Controller* cont)
 	}
 	fread(rc.fontdata, 1, size, file);
 	fclose(file);
-
 
 	if (!stbtt_InitFont(&rc.info, rc.fontdata, 0))
 	{
@@ -237,7 +220,7 @@ void RendererInit(Controller* cont)
 	// And main screen 
 	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
 
-	// Enable channels
+	// Enable sound channels
 	rc.ch.SQ1 = true;
 	rc.ch.SQ2 = true;
 	rc.ch.TRI = true;
@@ -250,9 +233,6 @@ void RendererInit(Controller* cont)
 	rc.gm.font_size = rc.font_size;
 	rc.gm.padding = rc.wm.padding;
 	GuiInit(rc.rend, &rc.gm);
-
-	// clear buffer
-	memset(&frame_queue, 0, sizeof(FrameQueue));
 
 	rc.target = TARGET_NES_STATE;
 }
@@ -342,7 +322,9 @@ void NewLine()
 //
 ///////////////////////////
 
-static bool update_pattern_table0 = false; // to ensure pattern table is only updated once per frame
+// Whenever the pattern tables have been modified, the backend code will call this function 
+// indicating the renderer should update the pattern table visualisation
+static bool update_pattern_table0 = false;
 static bool update_pattern_table1 = false;
 void RendererUpdatePatternTableTexture(int side)
 {
@@ -357,6 +339,7 @@ void RendererUpdatePatternTableTexture(int side)
 	}
 }
 
+// This code does the actual work rasterizing the pattern table
 void RendererRasterizePatternTable(int side)
 {
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
@@ -392,6 +375,8 @@ void RendererRasterizePatternTable(int side)
 	free(pixels);
 }
 
+// Whenever a pattern table has been bank switched, the pointer the renderer has to the pattern table
+// will be invalid, backend code will call this function to update that pointer to the new pattern table
 void RendererSetPatternTable(uint8_t* table_data, int side)
 {
 	if (side == 0)
@@ -417,15 +402,16 @@ void RendererBindNES(Nes* nes)
 	}
 }
 
+// The PPU will call this function whenever a new frame is ready
 void SendPixelDataToScreen(color* pixels)
 {
-	SDL_AtomicLock(&frame_queue.index_lock);
-	if (((frame_queue.push_index + 1) % RNG_BUF_SIZE) != frame_queue.pop_index)
-	{
-		memcpy(frame_queue.ring_buf[frame_queue.push_index], pixels, sizeof(FRAME_BUFFER));
-		frame_queue.push_index = (frame_queue.push_index + 1) % RNG_BUF_SIZE;
-	}
-	SDL_AtomicUnlock(&frame_queue.index_lock);
+	color* dest;
+	int pitch;
+	SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
+
+	memcpy(dest, pixels, 256 * 240 * 3);
+
+	SDL_UnlockTexture(rc.nes_screen);
 }
 
 ///////////////////////////
@@ -746,7 +732,6 @@ void DrawAbout(int xoff, int yoff)
 
 void ClearScreen()
 {
-	memset(frame_queue.ring_buf, 0, sizeof(frame_queue.ring_buf));
 	color* dest;
 	int pitch;
 	SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
@@ -762,8 +747,6 @@ void DrawSettings(int xoff, int yoff)
 
 	if (GuiAddButton("Load ROM...", &span))
 	{
-		SDL_PauseAudioDevice(rc.controller->audio_id, 1); // Pause the audio thread while loading a file
-		bool success = true;
 		char file[256];
 		if (OpenFileDialog(file, 256) == 0)
 		{
@@ -772,7 +755,6 @@ void DrawSettings(int xoff, int yoff)
 			{
 				// Failed to load rom
 				rc.controller->mode = MODE_NOT_RUNNING;
-				success = false;
 
 				// ...so load a dummy one
 				NESInit(rc.nes, NULL);
@@ -782,10 +764,7 @@ void DrawSettings(int xoff, int yoff)
 			{
 				rc.controller->mode = MODE_PLAY;
 			}
-			SetAPUChannels(); // Configue APU channels to current settings
 		}
-		if (success && rc.controller->mode == MODE_PLAY)
-			SDL_PauseAudioDevice(rc.controller->audio_id, 0); // Resume the audio thread
 		ClearScreen();
 	}
 	span.y = yoff + 2 * rc.wm.padding + rc.wm.button_h;
@@ -794,33 +773,13 @@ void DrawSettings(int xoff, int yoff)
 	{
 		// Toggle between Step Through and Playing 
 		rc.controller->mode = 1 - rc.controller->mode;
-		if (rc.controller->mode == MODE_PLAY)
-		{
-			SDL_PauseAudioDevice(rc.controller->audio_id, 0); // Resume the audio thread
-		}
-		else
-		{
-			SDL_PauseAudioDevice(rc.controller->audio_id, 1); // Pause the audio thread
-
-			// If we are waiting for a frame to be pushed, we need to decrement the pop index
-			// so that we render the last frame when the game is freezed. If we dont do this,
-			// pop_index will be incremented in each frame until it loops back to the previous frame
-			// this causes visible artifacts
-			if (frame_queue.pop_index == frame_queue.push_index)
-				frame_queue.pop_index = frame_queue.pop_index > 0 ? frame_queue.pop_index - 1 : RNG_BUF_SIZE - 1;
-		}
 	}
 	span.y += rc.wm.padding + rc.wm.button_h; span.w = 40 * rc.wm.window_scale;
 	if (GuiAddButton("Reset", &span))
 	{
-		SDL_PauseAudioDevice(rc.controller->audio_id, 1); // Pause the audio thread
-
 		ClearScreen();
 		NESReset(rc.nes);
 		SetAPUChannels(); // Configue APU channels to current settings
-
-		if (rc.controller->mode == MODE_PLAY)
-			SDL_PauseAudioDevice(rc.controller->audio_id, 0); // Resume the audio thread
 	}
 	span.y += rc.wm.padding + rc.wm.button_h;
 	if (GuiAddButton("Save Game", &span))
@@ -860,35 +819,6 @@ void DrawSettings(int xoff, int yoff)
 
 	sprintf(buf, "4-Screen      - %s", header.FourScreen ? "yes" : "no");
 	RenderText(buf, white);
-
-	// Visualise framebuffer queue
-
-	int x = xoff + rc.wm.padding;
-	int y = rc.text_y + rc.wm.padding;
-	const int width = 7 * rc.wm.window_scale;
-
-	SDL_Rect fill = { .x = x,.y = y,.w = width * RNG_BUF_SIZE,.h = width };
-	SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
-	SDL_RenderFillRect(rc.rend, &fill);
-
-	if (rc.controller->mode == MODE_PLAY)
-	{
-		SDL_Rect rect = { .y = y, .w = width,.h = width };
-		SDL_SetRenderDrawColor(rc.rend, 0, 255, 0, 255);
-		for (int i = frame_queue.pop_index; i != frame_queue.push_index; i = (i + 1) % RNG_BUF_SIZE)
-		{
-			rect.x = x + i * width;
-			SDL_RenderFillRect(rc.rend, &rect);
-		}
-	}
-
-	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
-	SDL_RenderDrawLine(rc.rend, x, y, x + width * RNG_BUF_SIZE, y);
-	SDL_RenderDrawLine(rc.rend, x, y + width, x + width * RNG_BUF_SIZE, y + width);
-	for (int i = 0; i <= RNG_BUF_SIZE; i++)
-	{
-		SDL_RenderDrawLine(rc.rend, x + i * width, y, x + i * width, y + width);
-	}
 }
 
 void RendererDraw()
@@ -898,27 +828,6 @@ void RendererDraw()
 	// Clear screen to black
 	SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
 	SDL_RenderClear(rc.rend);
-
-	// Busy wait until frame has been pushed onto ring buffer
-	bool wait = true;
-	while (wait && rc.controller->mode == MODE_PLAY) 
-	{
-		SDL_AtomicLock(&frame_queue.index_lock);
-		wait = frame_queue.pop_index == frame_queue.push_index;
-		SDL_AtomicUnlock(&frame_queue.index_lock);
-	}
-
-	color* dest;
-	int pitch;
-	SDL_LockTexture(rc.nes_screen, NULL, &dest, &pitch);
-
-	memcpy(dest, frame_queue.ring_buf[frame_queue.pop_index], sizeof(FRAME_BUFFER));
-	if (rc.controller->mode == MODE_PLAY || ((frame_queue.pop_index + 1) % RNG_BUF_SIZE) != frame_queue.push_index)
-	{
-		frame_queue.pop_index = (frame_queue.pop_index + 1) % RNG_BUF_SIZE;
-	}
-
-	SDL_UnlockTexture(rc.nes_screen);
 
 	SDL_Rect r_NesView = { rc.wm.padding,rc.wm.padding,rc.wm.nes_w,rc.wm.nes_h };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);

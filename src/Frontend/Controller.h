@@ -12,6 +12,5 @@ typedef enum
 typedef struct
 {
 	EmulationMode mode;
-	SDL_AudioDeviceID audio_id;
 } Controller;
 #endif // !CONTROLLER_H

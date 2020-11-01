@@ -25,11 +25,13 @@ int main(int argc, char** argv)
 		exit(EXIT_FAILURE);
 	}
 
-	Controller controller = { .mode = MODE_STEP_THROUGH };
+	// Initialize all the things
+	Controller controller = { .mode = MODE_NOT_RUNNING };
 	RendererInit(&controller);
-	AudioInit();
+	AudioPrecompute();
+	InitSDLAudio();
 	Nes nes;
-	NESInit(&nes, "roms/LegendofZelda.nes");
+	NESInit(&nes, NULL);
 	RendererBindNES(&nes);
 
 	if (argc == 2 && strcmp(argv[1], "--test") == 0)
@@ -55,10 +57,8 @@ int main(int argc, char** argv)
 			NESInit(&nes, NULL);
 		}
 	}
-	Userdata data = { .nes = &nes };
-	controller.audio_id = init_sdl_audio(&data);
 
-	//nes.pad.current_input.reg = 0x00;
+	// Micro mages halts at this point
 	//for (int i = 0; i < 11199700; i++)
 	//{
 	//	clock_nes_cycle(&nes);
@@ -66,12 +66,13 @@ int main(int argc, char** argv)
 	//	clock_nes_cycle(&nes);
 	//}
 
-	//for (int i = 0; i < 57003000; i++)//57003300
-	{
-		clock_nes_cycle(&nes);
-		clock_nes_cycle(&nes);
-		clock_nes_cycle(&nes);
-	}
+	// Zelda halts at this point
+	//for (int i = 0; i < 57003000; i++) // 57003300
+	//{
+	//	clock_nes_cycle(&nes);
+	//	clock_nes_cycle(&nes);
+	//	clock_nes_cycle(&nes);
+	//}
 
 	SDL_Event event;
 	timepoint beg, end;
@@ -80,6 +81,17 @@ int main(int argc, char** argv)
 	{
 		GetTime(&beg);
 		poll_keys(&nes.pad);
+
+		if (controller.mode == MODE_PLAY)
+		{
+			clock_nes_frame(&nes);
+			if (nes.apu.audio_pos != 0)
+			{
+				WriteSamples(nes.apu.audio_buffer, nes.apu.audio_pos);
+				nes.apu.audio_pos = 0;
+			}
+		}
+
 		RendererDraw();
 
 		while (SDL_PollEvent(&event) != 0)
@@ -108,15 +120,15 @@ int main(int argc, char** argv)
 
 		GetTime(&end);
 		float elapsed = GetElapsedTimeMicro(&beg, &end);
-		if (elapsed < 16393) // 61 FPS
+		if (elapsed < 16666) // 60 FPS
 		{
-			SleepMicro((uint64_t)(16393 - elapsed));
+			SleepMicro((uint64_t)(16666 - elapsed));
 		}
 	}
 
-	SDL_CloseAudioDevice(controller.audio_id);
 	NESDestroy(&nes);
 	RendererShutdown();
+	ShutdownSDLAudio();
 	SDL_Quit();
 
 	exit(EXIT_SUCCESS);

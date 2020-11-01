@@ -4,6 +4,8 @@
 #include <stdbool.h>
 
 #define AUDIO_SAMPLES (40)
+#define SAMPLE_RATE  (44100)
+#define SAMPLE_PERIOD (1.0f / SAMPLE_RATE)
 
 // Forward declaration to avoid circular dependency
 struct State6502;
@@ -283,7 +285,14 @@ typedef struct
 	// Allows the emulator to enable/disable channels. For debugging
 	int channel_enable;
 
+	// Stores audio samples at the native sample rate of 1.8MHz
 	float audio_samples[AUDIO_SAMPLES];
+
+	// Stores audio samples at a down sampled rate for our PC's audio driver to play
+	float audio_buffer[4096];
+	uint32_t audio_pos;
+	float real_time;
+
 	struct State6502* cpu;
 } State2A03;
 
@@ -293,9 +302,8 @@ void power_on_2A03(State2A03* apu);
 void apu_write(State2A03* apu, uint16_t addr, uint8_t data);
 uint8_t apu_read(State2A03* apu, uint16_t addr);
 
-float apu_filtered_sample(State2A03* apu);
 void apu_channel_set(State2A03* apu, int channel, bool en);
 
-void AudioInit();
+void AudioPrecompute();
 
 #endif

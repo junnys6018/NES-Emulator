@@ -1,19 +1,10 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 #include <SDL.h>
-#include "Backend/nes.h"
-#include "Frontend/Controller.h"
+// Synchronous sound queue, code adapted from http://www.slack.net/~ant/
 
-typedef struct
-{
-	Nes* nes;
-
-	// For DC cutoff filter
-	float last_sample;
-	float last_filter;
-
-} Userdata;
-
-SDL_AudioDeviceID init_sdl_audio(Userdata* data);
+void WriteSamples(const float* in, int count);
+void InitSDLAudio();
+void ShutdownSDLAudio();
 
 #endif // !AUDIO_H

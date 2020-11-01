@@ -3,6 +3,7 @@
 #include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <string.h>
 
 enum
 {
@@ -30,7 +31,7 @@ float sinc(float x)
 	return 1.0f;
 }
 
-void AudioInit()
+void AudioPrecompute()
 {
 	// Low pass filter:	https://rjeschke.tumblr.com/post/8382596050/fir-filters-in-practice
 	const float cutoff_freq = 22050.0f;
@@ -270,6 +271,7 @@ void clock_frame_counter(State2A03* apu)
 void clock_2A03(State2A03* apu)
 {
 	apu->total_cycles++;
+	apu->real_time += 1.0f / 5369318.0f; // PPU Clock Frequency
 
 	if (apu->total_cycles % 6 == 0)
 	{
@@ -353,6 +355,14 @@ void clock_2A03(State2A03* apu)
 			tnd_index += 2 * apu->channel_out.noise;
 
 		apu->audio_samples[0] = PULSE_LUT[pulse_index] + TND_LUT[tnd_index];
+
+		if (apu->real_time > SAMPLE_PERIOD)
+		{
+			apu->real_time -= SAMPLE_PERIOD;
+			apu->audio_buffer[apu->audio_pos] = apu_filtered_sample(apu);
+			if (apu->audio_pos < 4095)
+				apu->audio_pos++;
+		}
 	}
 }
 
@@ -372,6 +382,10 @@ void reset_2A03(State2A03* apu)
 	apu->SQ2_sequence_sel = 0x80;
 
 	apu->TRI_sequence_index = 0;
+
+	memset(apu->audio_buffer, 0, sizeof(apu->audio_buffer));
+	apu->audio_pos = 0;
+	apu->real_time = 0.0f;
 }
 
 void power_on_2A03(State2A03* apu)
