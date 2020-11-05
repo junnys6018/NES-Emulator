@@ -229,10 +229,10 @@ void m001LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 		fseek(file, 512, SEEK_CUR);
 	}
 
-	map->PRG_ROM_banks = ((uint16_t)header->PRGROM_MSB << 8) | (uint16_t)header->PRGROM_LSB;
+	map->PRG_ROM_banks = num_prg_banks(header);
 	assert(map->PRG_ROM_banks <= 16); // Too many banks
-	map->CHR_banks = ((uint16_t)header->CHRROM_MSB << 8) | (uint16_t)header->CHRROM_LSB;
-	if (map->CHR_banks == 0)
+	map->CHR_banks = num_chr_banks(header);
+	if (chr_is_ram(header))
 	{
 		map->CHR_banks = 1; // CHR is a RAM
 	}

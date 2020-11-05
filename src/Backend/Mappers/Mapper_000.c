@@ -15,7 +15,7 @@ uint8_t m000CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 		return map000->PRG_RAM[addr];
 	}
 	// Read from PGR_ROM
-	else if (addr >= 0x8000 && addr < 0xFFFF)
+	else if (addr >= 0x8000 && addr <= 0xFFFF)
 	{
 		addr &= (map000->PRG_ROM_Banks == 1 ? 0x3FFF : 0x7FFF);
 		return map000->PRG_ROM[addr];
@@ -45,7 +45,10 @@ void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 void m000PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
 {
 	Mapper000* map000 = (Mapper000*)mapper;
-	map000->CHR[addr] = data;
+	if (map000->chr_is_ram)
+	{
+		map000->CHR[addr] = data;
+	}
 }
 
 NametableIndex m000PPUMirrorNametable(void* mapper, uint16_t addr)
@@ -81,21 +84,22 @@ void m000LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 	memset(map, 0, sizeof(Mapper000));
 	cart->mapper = map;
 
+	map->chr_is_ram = chr_is_ram(header);
+
 	// Skip trainer if present
 	if (header->Trainer)
 	{
 		fseek(file, 512, SEEK_CUR);
 	}
-	// Get the size of PRG ROM and read into cartridge
-	uint16_t PRG_ROM_Size = ((uint16_t)header->PRGROM_MSB << 8) | (uint16_t)header->PRGROM_LSB;
-	map->PRG_ROM_Banks = PRG_ROM_Size;
 
-	if (PRG_ROM_Size == 1)
+	map->PRG_ROM_Banks = num_prg_banks(header);
+
+	if (map->PRG_ROM_Banks == 1)
 	{
 		map->PRG_ROM = malloc(16 * 1024);
 		fread(map->PRG_ROM, 16 * 1024, 1, file);
 	}
-	else if (PRG_ROM_Size == 2)
+	else if (map->PRG_ROM_Banks == 2)
 	{
 		map->PRG_ROM = malloc(32 * 1024);
 		fread(map->PRG_ROM, 32 * 1024, 1, file);

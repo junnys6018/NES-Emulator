@@ -88,11 +88,35 @@ int ines_file_format(Header* header)
 	bool ines2 = ines1 && (header->FormatIdentifer == 0x2);
 	if (ines2)
 	{
-		return 1;
+		return INES2_0;
 	}
 	else if (ines1)
 	{
-		return 0;
+		return INES1_0;
 	}
-	return -1;
+	return INES_UNKNOWN;
+}
+
+uint16_t num_prg_banks(Header* header)
+{
+	return ((uint16_t)header->PRGROM_MSB << 8) | (uint16_t)header->PRGROM_LSB;
+}
+
+uint16_t num_chr_banks(Header* header)
+{
+	return ((uint16_t)header->CHRROM_MSB << 8) | (uint16_t)header->CHRROM_LSB;
+}
+
+bool chr_is_ram(Header* header)
+{
+	if (ines_file_format(header) == INES1_0 && num_chr_banks(header) == 0)
+	{
+		return true;
+	}
+
+	if ((ines_file_format(header) == INES2_0) && (header->CHRRAM_Size.non_volatile_shift_count != 0 || header->CHRRAM_Size.volatile_shift_count != 0))
+	{
+		return true;
+	}
+	return false;
 }

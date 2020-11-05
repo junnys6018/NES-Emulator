@@ -38,8 +38,17 @@ typedef struct
 	uint8_t PRGROM_MSB : 4;
 	uint8_t CHRROM_MSB : 4;
 
-	uint8_t PRGRAM_Size;
-	uint8_t CHRRAM_Size;
+	struct
+	{
+		uint8_t volatile_shift_count : 4;
+		uint8_t non_volatile_shift_count : 4;
+	} PRGRAM_Size;
+
+	struct
+	{
+		uint8_t volatile_shift_count : 4;
+		uint8_t non_volatile_shift_count : 4;
+	} CHRRAM_Size;
 
 	uint8_t TimingMode : 2;
 	uint8_t unused : 6;
@@ -73,7 +82,19 @@ typedef struct
 int load_cartridge_from_file(Cartridge* cart, const char* filepath);
 void free_cartridge(Cartridge* cart);
 
+
+// Header utility functions
+
 // 0: INES 1.0; 1: NES 2.0; -1: unknown
+enum
+{
+	INES1_0 = 0,
+	INES2_0 = 1,
+	INES_UNKNOWN = -1,
+};
 int ines_file_format(Header* header);
+uint16_t num_prg_banks(Header* header);
+uint16_t num_chr_banks(Header* header);
+bool chr_is_ram(Header* header);
 
 #endif // !CARTRIDGE_H

@@ -58,14 +58,6 @@ int main(int argc, char** argv)
 		}
 	}
 
-	// Micro mages halts at this point
-	//for (int i = 0; i < 11199700; i++)
-	//{
-	//	clock_nes_cycle(&nes);
-	//	clock_nes_cycle(&nes);
-	//	clock_nes_cycle(&nes);
-	//}
-
 	SDL_Event event;
 	timepoint beg, end;
 	bool running = true;

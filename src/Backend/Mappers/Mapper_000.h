@@ -14,8 +14,8 @@ typedef struct
 	// Mapped from $8000-$FFFF
 	uint8_t PRG_RAM[8 * 1024];
 
-
 	uint8_t CHR[8 * 1024];
+	bool chr_is_ram;
 
 	MirrorMode mirrorMode;
 	uint16_t PRG_ROM_Banks;
