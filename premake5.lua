@@ -41,6 +41,10 @@ kind "ConsoleApp"
 
 	filter "system:windows"
 		defines { "_CRT_SECURE_NO_WARNINGS", "PLATFORM_WINDOWS" }
+		files
+		{
+			"res/NES-Emulator.rc"
+		}
 
 	filter {"system:windows", "configurations:Release"}
 		postbuildcommands
