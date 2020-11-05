@@ -6,7 +6,7 @@
 #include <assert.h>
 
 // TODO: Implement color emphasis
-// TODO: Implement "show bg and sprits in leftmost 8 pixels of screen flag"
+// TODO: Implement "show bg and sprites in leftmost 8 pixels of screen flag"
 
 // Maps a 6 bit HSV color into RGB
 color PALETTE_MAP[64] =
@@ -471,6 +471,14 @@ void clock_2C02(State2C02* ppu)
 				ppu->OAMADDR = 0;
 				ppu->sprite_zero_on_current_scanline = ppu->sprite_zero_on_next_scanline;
 
+				for (int i = 0; i < 8; i++)
+				{
+					ppu->sprite_attribute[i] = 0;
+					ppu->sprite_xpos[i] = 0;
+					ppu->pt_sprite_low[i] = 0;
+					ppu->pt_sprite_high[i] = 0;
+				}
+
 				// For every sprite to be drawn on the next scanline
 				for (int i = 0; i < ppu->sprite_eval_state.secondary_oam_free_slot / 4; i++)
 				{
@@ -510,7 +518,6 @@ void clock_2C02(State2C02* ppu)
 
 					ppu->pt_sprite_low[i] = ppu_bus_read(ppu->bus, pattern_table_addr);
 					ppu->pt_sprite_high[i] = ppu_bus_read(ppu->bus, pattern_table_addr | (1 << 3));
-
 				}
 			}
 		}

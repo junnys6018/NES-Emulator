@@ -66,14 +66,6 @@ int main(int argc, char** argv)
 	//	clock_nes_cycle(&nes);
 	//}
 
-	// Zelda halts at this point
-	//for (int i = 0; i < 57003000; i++) // 57003300
-	//{
-	//	clock_nes_cycle(&nes);
-	//	clock_nes_cycle(&nes);
-	//	clock_nes_cycle(&nes);
-	//}
-
 	SDL_Event event;
 	timepoint beg, end;
 	bool running = true;

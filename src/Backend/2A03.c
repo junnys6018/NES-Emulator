@@ -13,9 +13,9 @@ enum
 
 // Look up tables
 
-static int LENGTH_COUNTER_LUT[32] = { 10,254,20,2,40,4,80,6,160,8,60,10,14,12,26,14,12,16,24,18,48,20,96,22,192,24,72,26,16,28,32,30 };
-static uint8_t TRI_SEQUENCER[32] = { 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
-static uint32_t NOISE_PERIOD_LUT[16] = { 4,8,16,32,64,96,128,160,202,254,380,508,762,1016,2034,4068 };
+static int LENGTH_COUNTER_LUT[32] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
+static uint8_t TRI_SEQUENCER[32] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+static uint32_t NOISE_PERIOD_LUT[16] = {4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068};
 static float LOW_PASS_WEIGHTS[AUDIO_SAMPLES];
 static float PULSE_LUT[31];
 static float TND_LUT[203];
@@ -57,7 +57,6 @@ void AudioPrecompute()
 	{
 		TND_LUT[i] = 163.67f / (24329.0f / i + 100.0f);
 	}
-
 }
 
 float apu_filtered_sample(State2A03* apu)
@@ -403,10 +402,18 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 
 		switch (apu->SQ1_VOL.bits.D)
 		{
-		case 0: apu->SQ1_sequencer = 0b00000001; break;
-		case 1: apu->SQ1_sequencer = 0b00000011; break;
-		case 2: apu->SQ1_sequencer = 0b00001111; break;
-		case 3: apu->SQ1_sequencer = 0b11111100; break;
+		case 0:
+			apu->SQ1_sequencer = 0b00000001;
+			break;
+		case 1:
+			apu->SQ1_sequencer = 0b00000011;
+			break;
+		case 2:
+			apu->SQ1_sequencer = 0b00001111;
+			break;
+		case 3:
+			apu->SQ1_sequencer = 0b11111100;
+			break;
 		}
 		apu->SQ1_envelope.div.period = apu->SQ1_VOL.bits.EV;
 		break;
@@ -437,10 +444,18 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 
 		switch (apu->SQ2_VOL.bits.D)
 		{
-		case 0: apu->SQ2_sequencer = 0b00000001; break;
-		case 1: apu->SQ2_sequencer = 0b00000011; break;
-		case 2: apu->SQ2_sequencer = 0b00001111; break;
-		case 3: apu->SQ2_sequencer = 0b11111100; break;
+		case 0:
+			apu->SQ2_sequencer = 0b00000001;
+			break;
+		case 1:
+			apu->SQ2_sequencer = 0b00000011;
+			break;
+		case 2:
+			apu->SQ2_sequencer = 0b00001111;
+			break;
+		case 3:
+			apu->SQ2_sequencer = 0b11111100;
+			break;
 		}
 		apu->SQ2_envelope.div.period = apu->SQ2_VOL.bits.EV;
 		break;
@@ -521,7 +536,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		break;
 	case 0x4013: // DMC_LEN
 		break;
-				 // Skip 0x4014 (OAMDMA)
+		// Skip 0x4014 (OAMDMA)
 
 	case 0x4015: // STATUS: Sound channel enable and status
 		apu->STATUS.reg = data & 0x1F;
@@ -543,7 +558,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 			apu->NOISE_length_counter = 0;
 		}
 		break;
-				 // Skip 0x4016 (JOY1 data)
+		// Skip 0x4016 (JOY1 data)
 
 	case 0x4017: // Frame counter control
 		apu->FRAME_COUNTER.reg = data;

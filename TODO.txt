@@ -1,12 +1,14 @@
 Test every offset
-APU IRQ
-APU Debug
+APU dmc IRQ
+APU Debug view
 Micro mages and Zelda halting
 Render IRQ and NMI in Debug
 WASM
 NSF Files
 Open bus behaviour 
 Second controller
+controller input
 APU testing
 more mappers
-linux support
+scanline post processing effect
+CI

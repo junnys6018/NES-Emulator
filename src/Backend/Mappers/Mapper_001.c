@@ -25,8 +25,8 @@ uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 		case 0: // switch 32KB at $8000
 		case 1:
 		{
-			uint32_t bank_select = (map001->PRG_bank_select & 0x0E) >> 1;
-			uint32_t index = (bank_select << 15) | (addr & 0x7FFF);
+			uint32_t bank_select = map001->PRG_bank_select & 0x0E;
+			uint32_t index = (bank_select << 14) | (addr & 0x7FFF);
 			return map001->PRG_ROM[index];
 		}
 		case 2: // fix first bank at $8000 and switch 16 KB bank at $C000
@@ -61,8 +61,8 @@ uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
 	{
 	case 0: // swtich 8KB at a time
 	{
-		uint32_t bank_select = map001->CHR_bank0_select >> 1;
-		uint32_t index = (bank_select << 13) | addr;
+		uint32_t bank_select = map001->CHR_bank0_select & 0x1E;
+		uint32_t index = (bank_select << 12) | addr;
 		return map001->CHR[index];
 	}
 	case 1: // swtich 2x4KB banks independently
@@ -101,11 +101,20 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
 	Mapper001* map001 = (Mapper001*)mapper;
-	if (addr >= 0x8000 && addr <= 0xFFFF)
+	if (addr >= 0x6000 && addr < 0x8000)
+	{
+		// PRG Ram chip enable (active low)
+		if (!(map001->PRG_bank_select & 0x10))
+		{
+			map001->PRG_RAM[addr & 0x1FFF] = data;
+		}
+	}
+	else if (addr >= 0x8000 && addr <= 0xFFFF)
 	{
 		if (data & 0x80)
 		{
 			map001->shift_register = 0b10000;
+			map001->control.reg = map001->control.reg | 0x0C;
 			return;
 		}
 		
@@ -153,8 +162,8 @@ void m001PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
 	{
 	case 0: // swtich 8KB at a time
 	{
-		uint32_t bank_select = map001->CHR_bank0_select >> 1;
-		uint32_t index = (bank_select << 13) | addr;
+		uint32_t bank_select = map001->CHR_bank0_select & 0x1E;
+		uint32_t index = (bank_select << 12) | addr;
 		map001->CHR[index] = data;
 		break;
 	}
@@ -186,6 +195,8 @@ NametableIndex m001PPUMirrorNametable(void* mapper, uint16_t addr)
 		return MirrorVertical(addr);
 	case HORIZONTAL:
 		return MirrorHorizontal(addr);
+	default:
+		printf("[ERROR] Unreachable code in mapper_001.c\n");
 	}
 }
 
@@ -219,13 +230,13 @@ void m001LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 	}
 
 	map->PRG_ROM_banks = ((uint16_t)header->PRGROM_MSB << 8) | (uint16_t)header->PRGROM_LSB;
-	assert(map->PRG_ROM_banks < 16); // Too many banks
+	assert(map->PRG_ROM_banks <= 16); // Too many banks
 	map->CHR_banks = ((uint16_t)header->CHRROM_MSB << 8) | (uint16_t)header->CHRROM_LSB;
 	if (map->CHR_banks == 0)
 	{
 		map->CHR_banks = 1; // CHR is a RAM
 	}
-	assert(map->CHR_banks < 16); 
+	assert(map->CHR_banks <= 16); 
 
 	map->PRG_RAM_banks = 1;
 

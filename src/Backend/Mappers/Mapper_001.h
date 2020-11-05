@@ -17,6 +17,7 @@ typedef struct
 			uint8_t M : 2; // Mirror mode (0: one-screen lower; 1: one-screen upper; 2: vertical; 3: horizontal)
 			uint8_t P : 2; // PRG_ROM bank mode (0,1: switch 32KB at $8000; 2: fix first bank at $8000 and switch 16 KB bank at $C000; 3: fix last bank at $C000 and switch 16 KB bank at $8000))
 			uint8_t C : 1; // CHR_ROM bank mode (0: swtich 8KB at a time; 1: swtich 2x4KB banks independently)
+			uint8_t Unused : 3;
 		} bits;
 		uint8_t reg;
 	} control; // 5 bits

@@ -482,13 +482,13 @@ void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 	// Draw Registers, PC and SP
 	char line[32];
 
-	sprintf(line, "A: $%.2X", cpu->A);
+	sprintf(line, "A:  $%.2X", cpu->A);
 	RenderText(line, white);
 
-	sprintf(line, "X: $%.2X", cpu->X);
+	sprintf(line, "X:  $%.2X", cpu->X);
 	RenderText(line, white);
 
-	sprintf(line, "Y: $%.2X", cpu->Y);
+	sprintf(line, "Y:  $%.2X", cpu->Y);
 	RenderText(line, white);
 
 	sprintf(line, "PC: $%.4X", cpu->PC);
@@ -502,14 +502,9 @@ void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 	RenderText(line, white);
 }
 
-int min(int a, int b)
-{
-	return a < b ? a : b;
-}
-
 void DrawStackView(int xoff, int yoff, State6502* cpu)
 {
-	int stack_size = min(0xFF - cpu->SP, 7);
+	int stack_size = (0xFF - cpu->SP) < 7 ? (0xFF - cpu->SP) : 7;
 
 	SetTextOrigin(xoff + rc.wm.padding, yoff + rc.wm.padding);
 	RenderText("Stack:", cyan);
