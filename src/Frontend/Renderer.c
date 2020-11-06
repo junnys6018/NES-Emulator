@@ -883,10 +883,10 @@ void RendererDraw()
 	}
 
 	// Draw FPS
-	//SetTextOrigin(rc.wm.db_x + rc.wm.padding, rc.wm.db_y + rc.wm.db_h - rc.font_size - rc.wm.padding);
-	//char buf[128];
-	//sprintf(buf, "%.0f FPS; %.3f ms/frame", rc.controller->fps, rc.controller->ms_per_frame);
-	//RenderText(buf, white);
+	SetTextOrigin(rc.wm.db_x + rc.wm.padding, rc.wm.db_y + rc.wm.db_h - rc.font_size - rc.wm.padding);
+	char buf[64];
+	sprintf(buf, "%.3f ms/frame", rc.controller->ms_per_frame);
+	RenderText(buf, white);
 
 	GuiEndFrame();
 

@@ -1,8 +1,6 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#include <SDL.h>
-
 typedef enum
 {
 	MODE_PLAY = 0, MODE_STEP_THROUGH = 1, MODE_NOT_RUNNING
@@ -11,6 +9,8 @@ typedef enum
 // Struct used to pass data between the renderer and the main game loop
 typedef struct
 {
+	float ms_per_frame;
 	EmulationMode mode;
 } Controller;
+
 #endif // !CONTROLLER_H

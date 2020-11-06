@@ -54,9 +54,13 @@ int main(int argc, char** argv)
 		}
 		else
 		{
+			printf("[ERROR] Failed to load %s as an ines rom\n", argv[1]);
 			NESInit(&nes, NULL);
 		}
 	}
+	int window = 10;
+	float total_time = 0.0f;
+	int curr_frame = 0;
 
 	SDL_Event event;
 	timepoint beg, end;
@@ -103,6 +107,16 @@ int main(int argc, char** argv)
 		}
 
 		GetTime(&end);
+		total_time += GetElapsedTimeMilli(&beg, &end);
+		curr_frame++;
+		if (curr_frame == window)
+		{
+			controller.ms_per_frame = total_time / window;
+
+			total_time = 0.0f;
+			curr_frame = 0;
+		}
+
 		float elapsed = GetElapsedTimeMicro(&beg, &end);
 		if (elapsed < 16666) // 60 FPS
 		{
