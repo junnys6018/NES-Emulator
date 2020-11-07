@@ -16,6 +16,7 @@ enum
 static int LENGTH_COUNTER_LUT[32] = {10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22, 192, 24, 72, 26, 16, 28, 32, 30};
 static uint8_t TRI_SEQUENCER[32] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 static uint32_t NOISE_PERIOD_LUT[16] = {4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068};
+static uint32_t DMC_RATE_LUT[16] = {214, 190, 170, 160, 143, 127, 113, 107, 95, 80, 71, 64, 53, 42, 36, 27};
 static float LOW_PASS_WEIGHTS[AUDIO_SAMPLES];
 static float PULSE_LUT[31];
 static float TND_LUT[203];
@@ -100,6 +101,54 @@ bool is_mute(State2A03* apu, int channel)
 		}
 	}
 	return false;
+}
+
+void apu_restart_dmc_sample(State2A03* apu)
+{
+	apu->DMC_memory_reader.addr_counter = 0xC000 | (apu->DMC_ADDR << 6);
+	apu->DMC_memory_reader.bytes_remaining = (apu->DMC_LENGTH << 4) + 1;
+}
+
+void apu_dmc_read_byte(State2A03* apu)
+{
+	if (apu->DMC_sample_buffer_empty && apu->DMC_memory_reader.bytes_remaining != 0)
+	{
+		apu->DMC_sample_buffer_empty = false;
+		apu->DMC_sample_buffer = cpu_bus_read(apu->cpu->bus, apu->DMC_memory_reader.addr_counter);
+
+		// Stall the CPU
+		if (apu->cpu->dma_transfer_cycles != 0)
+		{
+			// For 2 cycles during DMA
+			apu->cpu->apu_stall_cycles = 2;
+		}
+		else
+		{
+			// Otherwise for 4 cycles
+			apu->cpu->apu_stall_cycles = 4;
+		}
+
+		apu->DMC_memory_reader.addr_counter++;
+
+		if (apu->DMC_memory_reader.addr_counter == 0) // Overflow
+		{
+			apu->DMC_memory_reader.addr_counter = 0x8000;
+		}
+
+		apu->DMC_memory_reader.bytes_remaining--;
+		if (apu->DMC_memory_reader.bytes_remaining == 0)
+		{
+			if (apu->DMC_FREQ.flags.L)
+			{
+				apu_restart_dmc_sample(apu);
+			}
+			else if (apu->DMC_FREQ.flags.I)
+			{
+				IRQ_Set(apu->cpu, 0);
+				apu->DMC_IRQ_flag = true;
+			}
+		}
+	}
 }
 
 void quarter_frame(State2A03* apu)
@@ -260,7 +309,7 @@ void clock_frame_counter(State2A03* apu)
 			if (!apu->FRAME_COUNTER.flags.I)
 			{
 				IRQ_Set(apu->cpu, 1);
-				apu->IRQ_flag = true;
+				apu->frame_counter_IRQ_flag = true;
 			}
 			apu->frame_count = 0;
 		}
@@ -324,9 +373,45 @@ void clock_2A03(State2A03* apu)
 				apu->channel_out.noise = 0;
 			}
 		}
+
+		// Delta modulation channel
+		
+		apu_dmc_read_byte(apu);
+
+		if (clock_divider(&apu->DMC_timer))
+		{
+			if (!apu->DMC_output_unit.silence_flag)
+			{
+				if ((apu->DMC_output_unit.shift_register & 1) && apu->DMC_LOAD_COUNTER <= 125)
+				{
+					apu->DMC_LOAD_COUNTER += 2;
+				}
+				else if (apu->DMC_LOAD_COUNTER >= 2)
+				{
+					apu->DMC_LOAD_COUNTER = (int16_t)apu->DMC_LOAD_COUNTER - 2;
+				}
+			}
+			apu->DMC_output_unit.shift_register >>= 1;
+			apu->DMC_output_unit.bits_remaining--;
+
+			if (apu->DMC_output_unit.bits_remaining == 0) // Output cycle finished
+			{
+				apu->DMC_output_unit.bits_remaining = 8;
+				if (apu->DMC_sample_buffer_empty)
+				{
+					apu->DMC_output_unit.silence_flag = true;
+				}
+				else
+				{
+					apu->DMC_output_unit.silence_flag = false;
+					apu->DMC_output_unit.shift_register = apu->DMC_sample_buffer;
+					apu->DMC_sample_buffer_empty = true;
+				}
+			}
+		}
 	}
 
-	// Triangle timer clocked at twice the freqency as the pulse channel
+	// Triangle timer clocked at twice the freqency of the other channels
 	if (apu->total_cycles % 3 == 0)
 	{
 		if (clock_divider(&apu->TRI_timer) && apu->TRI_length_counter != 0 && apu->TRI_linear_counter != 0)
@@ -352,6 +437,8 @@ void clock_2A03(State2A03* apu)
 			tnd_index += 3 * apu->channel_out.triangle;
 		if (apu->channel_enable & CHANNEL_NOISE)
 			tnd_index += 2 * apu->channel_out.noise;
+		if (apu->channel_enable & CHANNEL_DMC)
+			tnd_index += apu->DMC_LOAD_COUNTER;
 
 		apu->audio_samples[0] = PULSE_LUT[pulse_index] + TND_LUT[tnd_index];
 
@@ -372,7 +459,7 @@ void reset_2A03(State2A03* apu)
 	apu->FRAME_COUNTER.flags.I = 1; // Inhibit interrupts
 
 	apu->frame_count = 0;
-	apu->IRQ_flag = false;
+	apu->frame_counter_IRQ_flag = false;
 
 	apu->total_cycles = 0;
 	apu->apu_cycles = 0;
@@ -391,6 +478,7 @@ void power_on_2A03(State2A03* apu)
 {
 	apu->channel_enable = ~0x0; // Enable all channels
 	apu->NOISE_LFSR = 1;
+	apu->DMC_LOAD_COUNTER = 0;
 }
 
 void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
@@ -528,14 +616,25 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 
 		break;
 	case 0x4010: // DMC_FREQ: Play mode and frequency for DMC samples
-		apu->DMC_FREQ.reg = (data & 0xCF);
+		apu->DMC_FREQ.reg = data;
+		apu->DMC_timer.period = DMC_RATE_LUT[apu->DMC_FREQ.flags.Frequency];
+		if (!apu->DMC_FREQ.flags.I)
+		{
+			IRQ_Clear(apu->cpu, 0);
+			apu->DMC_IRQ_flag = false;
+		}
+
 		break;
-	case 0x4011: // DMC_RAW: 7-bit DAC
+	case 0x4011: // DMC_LOAD_COUNTER: 7-bit DAC
+		apu->DMC_LOAD_COUNTER = data & 0x7F; // only 7 bits
 		break;
-	case 0x4012: // DMC_START
+	case 0x4012: // DMC_ADDR
+		apu->DMC_ADDR = data;
 		break;
-	case 0x4013: // DMC_LEN
+	case 0x4013: // DMC_LENGTH
+		apu->DMC_LENGTH = data;
 		break;
+
 		// Skip 0x4014 (OAMDMA)
 
 	case 0x4015: // STATUS: Sound channel enable and status
@@ -557,7 +656,24 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		{
 			apu->NOISE_length_counter = 0;
 		}
+		if (!apu->STATUS.flags.D)
+		{
+			apu->DMC_memory_reader.bytes_remaining = 0;
+		}
+		else if (apu->DMC_memory_reader.bytes_remaining == 0)
+		{
+			apu_restart_dmc_sample(apu);
+			if (apu->DMC_output_unit.bits_remaining == 0)
+			{
+				apu_dmc_read_byte(apu);
+			}
+		}
+
+		IRQ_Clear(apu->cpu, 0);
+		apu->DMC_IRQ_flag = false;
+
 		break;
+
 		// Skip 0x4016 (JOY1 data)
 
 	case 0x4017: // Frame counter control
@@ -565,7 +681,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		if (apu->FRAME_COUNTER.flags.I)
 		{
 			IRQ_Clear(apu->cpu, 1);
-			apu->IRQ_flag = false;
+			apu->frame_counter_IRQ_flag = false;
 		}
 		apu->frame_count = 0;
 		if (apu->FRAME_COUNTER.flags.M)
@@ -581,8 +697,6 @@ uint8_t apu_read(State2A03* apu, uint16_t addr)
 {
 	if (addr == 0x4015)
 	{
-		IRQ_Clear(apu->cpu, 1);
-
 		union
 		{
 			struct
@@ -594,29 +708,24 @@ uint8_t apu_read(State2A03* apu, uint16_t addr)
 				uint8_t D : 1;
 				uint8_t Unused : 1;
 				uint8_t F : 1; // Frame interrupt flag
-				uint8_t I : 1; // DMC bytes remaining
+				uint8_t I : 1; // DMC interrupt
 			} bits;
 			uint8_t reg;
 		} ret;
 		ret.reg = 0;
-		ret.bits.F = apu->IRQ_flag;
-		apu->IRQ_flag = false;
-		if (apu->SQ1_length_counter > 0)
-		{
-			ret.bits.SQ1 = 1;
-		}
-		if (apu->SQ2_length_counter > 0)
-		{
-			ret.bits.SQ2 = 1;
-		}
-		if (apu->TRI_length_counter > 0)
-		{
-			ret.bits.T = 1;
-		}
-		if (apu->NOISE_length_counter > 0)
-		{
-			ret.bits.N = 1;
-		}
+
+		ret.bits.SQ1 = apu->SQ1_length_counter > 0;
+		ret.bits.SQ2 = apu->SQ2_length_counter > 0;
+		ret.bits.T = apu->TRI_length_counter > 0;
+		ret.bits.N = apu->NOISE_length_counter > 0;
+		ret.bits.D = apu->DMC_memory_reader.bytes_remaining > 0;
+
+		ret.bits.F = apu->frame_counter_IRQ_flag;
+		ret.bits.I = apu->DMC_IRQ_flag;
+
+		IRQ_Clear(apu->cpu, 1);
+		apu->frame_counter_IRQ_flag = false;
+
 		return ret.reg;
 	}
 	return 0;

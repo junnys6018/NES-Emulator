@@ -133,16 +133,16 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 			case 1:
 				update_pattern_table = true;
 				map001->CHR_bank0_select = map001->shift_register;
-				assert(map001->CHR_bank0_select < 2 * map001->CHR_banks);
+				map001->CHR_bank0_select = map001->CHR_bank0_select % (2 * map001->CHR_banks);
 				break;
 			case 2:
 				update_pattern_table = map001->control.bits.C; // Only update if we are switching both banks
 				map001->CHR_bank1_select = map001->shift_register;
-				assert(map001->CHR_bank1_select < 2 * map001->CHR_banks);
+				map001->CHR_bank1_select = map001->CHR_bank1_select % (2 * map001->CHR_banks);
 				break;
 			case 3:
 				map001->PRG_bank_select = map001->shift_register;
-				assert(map001->PRG_bank_select < map001->PRG_ROM_banks);
+				map001->PRG_bank_select = map001->PRG_bank_select % map001->PRG_ROM_banks;
 				break;
 			}
 			map001->shift_register = 0b10000;
@@ -222,6 +222,9 @@ void m001LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 	assert(map);
 	memset(map, 0, sizeof(Mapper001));
 	cart->mapper = map;
+
+	// Power on in the last bank
+	map->control.bits.P = 3;
 
 	// Skip trainer if present
 	if (header->Trainer)

@@ -57,6 +57,12 @@ int clock_6502(State6502* cpu)
 {
 	cpu->total_cycles++;
 
+	if (cpu->apu_stall_cycles > 0)
+	{
+		cpu->apu_stall_cycles--;
+		return cpu->apu_stall_cycles;
+	}
+
 	// DMA transfers stalls the CPU and inhibits polling for interrupts
 	if (cpu->dma_transfer_cycles > 0)
 	{
@@ -117,6 +123,8 @@ void reset_6502(State6502* cpu)
 
 	// Reset Cycle count (used in debugging only)
 	cpu->total_cycles = 0;
+
+	cpu->apu_stall_cycles = 0;
 }
 
 void power_on_6502(State6502* cpu)

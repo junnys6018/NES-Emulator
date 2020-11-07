@@ -31,6 +31,9 @@ typedef struct State6502
 	uint8_t OAMDMA;
 	int dma_transfer_cycles;
 
+	// APU can stall the cpu when its reading memory for DMC
+	int apu_stall_cycles;
+
 	// Helper members
 	uint8_t operand; // Data fetched for the operand of an instruction
 	uint16_t addr; // Address of the data fetched, only set for zero page, absolute addressing and indirect X, Y 

@@ -221,7 +221,8 @@ typedef struct
 	} NOISE_envelope;
 	uint16_t NOISE_LFSR; // Linear feed back shift register (15 bits)
 
-	// Access: write only, accessed from $4010
+	// DMC channel registers, write only, accessed from $4010-4013
+
 	union
 	{
 		struct
@@ -233,6 +234,29 @@ typedef struct
 		} flags;
 		uint8_t reg;
 	} DMC_FREQ;
+
+	uint8_t DMC_LOAD_COUNTER;
+	uint8_t DMC_ADDR;
+	uint8_t DMC_LENGTH;
+
+	uint8_t DMC_sample_buffer;	
+	bool DMC_sample_buffer_empty;
+
+	bool DMC_IRQ_flag;
+	struct
+	{
+		uint16_t addr_counter;
+		uint8_t bytes_remaining;
+	} DMC_memory_reader;
+
+	struct 
+	{
+		uint8_t shift_register;
+		uint8_t bits_remaining;
+		bool silence_flag;
+	} DMC_output_unit;
+
+	divider DMC_timer;
 
 	// Access: read/write, accessed from $4015
 	union
@@ -265,7 +289,7 @@ typedef struct
 
 	// Frame Counter
 	uint32_t frame_count;
-	bool IRQ_flag;
+	bool frame_counter_IRQ_flag;
 
 	// Counts the number of master clock cycles ie PPU cycles
 	uint64_t total_cycles;

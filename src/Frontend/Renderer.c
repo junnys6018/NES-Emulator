@@ -693,7 +693,12 @@ void DrawAPUState(int xoff, int yoff)
 		apu_channel_set(&rc.nes->apu, CHANNEL_NOISE, rc.ch.NOISE);
 	}
 
-	SetTextOrigin(xoff + rc.wm.padding, yoff + 5 * rc.wm.padding + 4 * rc.gm.checkbox_size);
+	if (GuiAddCheckbox("DMC", xoff + rc.wm.padding, yoff + 5 * rc.wm.padding + 4 * rc.gm.checkbox_size, &rc.ch.DMC))
+	{
+		apu_channel_set(&rc.nes->apu, CHANNEL_DMC, rc.ch.DMC);
+	}
+
+	SetTextOrigin(xoff + rc.wm.padding, yoff + 6 * rc.wm.padding + 5 * rc.gm.checkbox_size);
 	char buf[256];
 	sprintf(buf, "tri period: %i, tri en: %i", rc.nes->apu.TRI_timer.period, rc.nes->apu.STATUS.flags.T);
 	RenderText(buf, white);
@@ -764,6 +769,7 @@ void DrawSettings(int xoff, int yoff)
 			{
 				rc.controller->mode = MODE_PLAY;
 			}
+			SetAPUChannels();
 		}
 		ClearScreen();
 	}
@@ -832,10 +838,9 @@ void RendererDraw()
 	SDL_Rect r_NesView = { rc.wm.padding,rc.wm.padding,rc.wm.nes_w,rc.wm.nes_h };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
 	
-	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
-
 #if 0
 	// Draw 8x8 grid over nes screen for debugging
+	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
 	for (int i = 0; i < 32; i++)
 	{
 		int x = rc.wm.padding + 8 * rc.wm.window_scale * i;
