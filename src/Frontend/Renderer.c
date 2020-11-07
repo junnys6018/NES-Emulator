@@ -831,6 +831,22 @@ void RendererDraw()
 
 	SDL_Rect r_NesView = { rc.wm.padding,rc.wm.padding,rc.wm.nes_w,rc.wm.nes_h };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
+	
+	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
+
+#if 0
+	// Draw 8x8 grid over nes screen for debugging
+	for (int i = 0; i < 32; i++)
+	{
+		int x = rc.wm.padding + 8 * rc.wm.window_scale * i;
+		SDL_RenderDrawLine(rc.rend, x, rc.wm.padding, x, rc.wm.padding + rc.wm.nes_h);
+	}
+	for (int i = 0; i < 30; i++)
+	{
+		int y = rc.wm.padding + 8 * rc.wm.window_scale * i;
+		SDL_RenderDrawLine(rc.rend, rc.wm.padding, y, rc.wm.padding + rc.wm.nes_w, y);
+	}
+#endif
 
 	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
 	SDL_Rect r_DebugView = { .x = rc.wm.db_x,.y = rc.wm.db_y,.w = rc.wm.db_w,.h = rc.wm.db_h };
