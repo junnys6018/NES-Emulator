@@ -31,6 +31,19 @@ typedef struct
 bool clock_divider(divider* div);
 void reload_divider(divider* div);
 
+typedef struct
+{
+	float buffer[2048];
+	int write_pos;
+
+	// For DC cutoff filter
+	float last_sample;
+	float last_filter;
+} AudioWindow;
+
+void WindowInit(AudioWindow* win);
+void WindowAddSample(AudioWindow* win, float sample);
+
 // "2A03" APU implementation
 typedef struct
 {
@@ -314,6 +327,13 @@ typedef struct
 
 	// Stores audio samples at a down sampled rate for our PC's audio driver to play
 	float audio_buffer[4096];
+
+	// Stores audio samples for each channel, to visualise the waveform
+	AudioWindow SQ1_win;
+	AudioWindow SQ2_win;
+	AudioWindow TRI_win;
+	AudioWindow NOISE_win;
+
 	uint32_t audio_pos;
 	float real_time;
 

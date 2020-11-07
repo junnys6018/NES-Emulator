@@ -1,6 +1,3 @@
-APU dmc IRQ
-APU Debug view
-APU DMC
 WASM
 NSF Files
 Open bus behaviour 

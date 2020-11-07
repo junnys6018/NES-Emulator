@@ -448,6 +448,11 @@ void clock_2A03(State2A03* apu)
 			apu->audio_buffer[apu->audio_pos] = apu_filtered_sample(apu);
 			if (apu->audio_pos < 4095)
 				apu->audio_pos++;
+
+			WindowAddSample(&apu->SQ1_win, apu->channel_enable & CHANNEL_SQ1 ? PULSE_LUT[apu->channel_out.pulse1] : 0.0f);
+			WindowAddSample(&apu->SQ2_win, apu->channel_enable & CHANNEL_SQ2 ? PULSE_LUT[apu->channel_out.pulse2] : 0.0f);
+			WindowAddSample(&apu->TRI_win, apu->channel_enable & CHANNEL_TRI ? TND_LUT[3 * apu->channel_out.triangle] : 0.0f);
+			WindowAddSample(&apu->NOISE_win, apu->channel_enable & CHANNEL_NOISE ? TND_LUT[2 * apu->channel_out.noise] : 0.0f);
 		}
 	}
 }
@@ -479,6 +484,11 @@ void power_on_2A03(State2A03* apu)
 	apu->channel_enable = ~0x0; // Enable all channels
 	apu->NOISE_LFSR = 1;
 	apu->DMC_LOAD_COUNTER = 0;
+
+	WindowInit(&apu->SQ1_win);
+	WindowInit(&apu->SQ2_win);
+	WindowInit(&apu->TRI_win);
+	WindowInit(&apu->NOISE_win);
 }
 
 void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
@@ -760,4 +770,19 @@ bool clock_divider(divider* div)
 void reload_divider(divider* div)
 {
 	div->counter = div->period;
+}
+
+void WindowInit(AudioWindow* win)
+{
+	memset(win, 0, sizeof(AudioWindow));
+}
+
+void WindowAddSample(AudioWindow* win, float sample)
+{
+	float filtered = sample - win->last_sample + 0.995f * win->last_filter;
+	win->last_sample = sample;
+	win->last_filter = filtered;
+
+	win->buffer[win->write_pos] = filtered;
+	win->write_pos = (win->write_pos + 1) % 2048;
 }

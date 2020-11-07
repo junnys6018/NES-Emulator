@@ -31,7 +31,7 @@ SDL_Color light_blue = { 28,151,234 };
 typedef enum
 {
 	TARGET_NES_STATE,
-	TARGET_APU_STATE,
+	TARGET_APU_OSC,
 	TARGET_MEMORY,
 	TARGET_ABOUT,
 	TARGET_SETTINGS
@@ -671,42 +671,126 @@ void DrawNESState()
 	DrawPaletteData(x + 2 * rc.wm.pattern_table_len + 2 * rc.wm.padding, y);
 }
 
-void DrawAPUState(int xoff, int yoff)
+typedef int (*TRIGGER_FUNC)(AudioWindow* win);
+
+int pulse_trigger(AudioWindow* win)
+{
+	float max_slope = -100.0f;
+	int max_x = 0;
+	for (int x = 0; x < 1024; x++)
+	{
+		float slope = win->buffer[(win->write_pos + 511 + x) % 2048] - win->buffer[(win->write_pos + 513 + x) % 2048];
+		if (slope > max_slope)
+		{
+			max_slope = slope;
+			max_x = x;
+		}
+	}
+
+	return max_x;
+}
+
+int triangle_trigger(AudioWindow* win)
+{
+	int zero_x = 0;
+	float zero_sample = 100.0f;
+	for (int x = 0; x < 1024; x++)
+	{
+		float slope = win->buffer[(win->write_pos + 500 + x) % 2048] - win->buffer[(win->write_pos + 524 + x) % 2048];
+		float abs_sample = win->buffer[(win->write_pos + 512 + x) % 2048];
+		abs_sample = abs_sample < 0.0f ? -abs_sample : abs_sample;
+		if (slope > 0 && abs_sample < zero_sample)
+		{
+			zero_sample = abs_sample;
+			zero_x = x;
+		}
+	}
+
+	return zero_x;
+}
+
+int no_trigger(AudioWindow* win)
+{
+	return 0;
+}
+
+void DrawWaveform(SDL_Rect* rect, AudioWindow* win, float vertical_scale, TRIGGER_FUNC trigger)
+{
+	static SDL_Color waveform_colour = {247, 226, 64};
+
+	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
+	SDL_RenderFillRect(rc.rend, rect);
+
+	SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
+	int mid_y = rect->y + rect->h / 2;
+	int mid_x = rect->x + rect->w / 2;
+	SDL_RenderDrawLine(rc.rend, rect->x, mid_y, rect->x + rect->w, mid_y);
+	SDL_RenderDrawLine(rc.rend, mid_x, rect->y, mid_x, rect->y + rect->h);
+
+	SDL_SetRenderDrawColor(rc.rend, waveform_colour.r, waveform_colour.g, waveform_colour.b, 255);
+
+	int trigger_x = trigger(win);
+
+	SDL_Point* points = malloc(rect->w * sizeof(SDL_Point));
+
+	int start_index = (win->write_pos + trigger_x) % 2048;
+	float curr_index = 0.0f;
+	float index_inc = 1024.0f / (float)rect->w;
+	for (int i = 0; i < rect->w; i++)
+	{
+		points[i].x = rect->x + i;
+		points[i].y = win->buffer[(int)roundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
+		curr_index += index_inc;
+	}
+	SDL_RenderDrawLines(rc.rend, points, rect->w);
+
+	free(points);
+}
+
+void DrawAPUOsc(int xoff, int yoff)
 {
 	if (GuiAddCheckbox("Square 1", xoff + rc.wm.padding, yoff + rc.wm.padding, &rc.ch.SQ1))
 	{
 		apu_channel_set(&rc.nes->apu, CHANNEL_SQ1, rc.ch.SQ1);
 	}
+	int height = 33 * rc.wm.window_scale;
 
-	if (GuiAddCheckbox("Square 2", xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + rc.gm.checkbox_size, &rc.ch.SQ2))
+	SDL_Rect rect = {.x = xoff + rc.wm.padding, .y = yoff + 2 * rc.wm.padding + rc.gm.checkbox_size, .w = rc.wm.db_w - 2 * rc.wm.padding, .h = height};
+	DrawWaveform(&rect, &rc.nes->apu.SQ1_win, 350.0f, pulse_trigger);
+
+	int curr_height = yoff + 3 * rc.wm.padding + rc.gm.checkbox_size + height;
+	if (GuiAddCheckbox("Square 2", xoff + rc.wm.padding, curr_height, &rc.ch.SQ2))
 	{
 		apu_channel_set(&rc.nes->apu, CHANNEL_SQ2, rc.ch.SQ2);
 	}
+	curr_height += rc.wm.padding + rc.gm.checkbox_size;
+	rect.y = curr_height;
+	DrawWaveform(&rect, &rc.nes->apu.SQ2_win, 350.0f, pulse_trigger);
 
-	if (GuiAddCheckbox("Triangle", xoff + rc.wm.padding, yoff + 3 * rc.wm.padding + 2 * rc.gm.checkbox_size, &rc.ch.TRI))
+	curr_height += rc.wm.padding + height;
+	if (GuiAddCheckbox("Triangle", xoff + rc.wm.padding, curr_height, &rc.ch.TRI))
 	{
 		apu_channel_set(&rc.nes->apu, CHANNEL_TRI, rc.ch.TRI);
 	}
+	curr_height += rc.wm.padding + rc.gm.checkbox_size;
+	rect.y = curr_height;
+	DrawWaveform(&rect, &rc.nes->apu.TRI_win, 200.0f, triangle_trigger);
 
-	if (GuiAddCheckbox("Noise", xoff + rc.wm.padding, yoff + 4 * rc.wm.padding + 3 * rc.gm.checkbox_size, &rc.ch.NOISE))
+	curr_height += rc.wm.padding + height;
+	if (GuiAddCheckbox("Noise", xoff + rc.wm.padding, curr_height, &rc.ch.NOISE))
 	{
 		apu_channel_set(&rc.nes->apu, CHANNEL_NOISE, rc.ch.NOISE);
 	}
+	curr_height += rc.wm.padding + rc.gm.checkbox_size;
+	rect.y = curr_height;
+	DrawWaveform(&rect, &rc.nes->apu.NOISE_win, 200.0f, no_trigger);
 
-	if (GuiAddCheckbox("DMC", xoff + rc.wm.padding, yoff + 5 * rc.wm.padding + 4 * rc.gm.checkbox_size, &rc.ch.DMC))
+	curr_height += rc.wm.padding + height;
+	if (GuiAddCheckbox("DMC", xoff + rc.wm.padding, curr_height, &rc.ch.DMC))
 	{
 		apu_channel_set(&rc.nes->apu, CHANNEL_DMC, rc.ch.DMC);
 	}
 
-	SetTextOrigin(xoff + rc.wm.padding, yoff + 6 * rc.wm.padding + 5 * rc.gm.checkbox_size);
-	char buf[256];
-	sprintf(buf, "tri period: %i, tri en: %i", rc.nes->apu.TRI_timer.period, rc.nes->apu.STATUS.flags.T);
-	RenderText(buf, white);
-	sprintf(buf, "$4008: %.2X; reload: %i", rc.nes->apu.TRI_LINEAR.reg, rc.nes->apu.TRI_linear_reload_flag);
-	RenderText(buf, white);
-	sprintf(buf, "c: %i (loadval %i, (%i)); lc: %i", rc.nes->apu.TRI_length_counter,
-		rc.nes->apu.TRI_HIGH.bits.l, rc.nes->apu.TRI_HIGH.bits.H, rc.nes->apu.TRI_linear_counter);
-	RenderText(buf, white);
 }
 
 void SetAPUChannels()
@@ -864,9 +948,9 @@ void RendererDraw()
 		rc.target = TARGET_NES_STATE;
 	}
 	span.x += width;
-	if (GuiAddButton("APU State", &span))
+	if (GuiAddButton("APU Waveform", &span))
 	{
-		rc.target = TARGET_APU_STATE;
+		rc.target = TARGET_APU_OSC;
 	}
 	span.x += width;
 	if (GuiAddButton("Memory", &span))
@@ -889,8 +973,8 @@ void RendererDraw()
 	case TARGET_NES_STATE:
 		DrawNESState();
 		break;
-	case TARGET_APU_STATE:
-		DrawAPUState(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
+	case TARGET_APU_OSC:
+		DrawAPUOsc(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
 		break;
 	case TARGET_MEMORY:
 		DrawMemoryView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
