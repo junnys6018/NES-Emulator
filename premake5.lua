@@ -21,8 +21,8 @@ kind "ConsoleApp"
 
 	links 
 	{
-		"vendor/SDL2",
-		"vendor/SDL2main",
+		"SDL2",
+		"SDL2main",
 	}
 
 	includedirs
@@ -44,6 +44,10 @@ kind "ConsoleApp"
 		files
 		{
 			"res/NES-Emulator.rc"
+		}
+		libdirs 
+		{
+			"vendor/SDL2-2.0.12/lib/x64"
 		}
 
 	filter {"system:windows", "configurations:Release"}
