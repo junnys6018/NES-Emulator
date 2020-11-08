@@ -54,33 +54,6 @@ uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 	return 0;
 }
 
-uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
-{
-	Mapper001* map001 = (Mapper001*)mapper;
-	switch (map001->control.bits.C)
-	{
-	case 0: // swtich 8KB at a time
-	{
-		uint32_t bank_select = map001->CHR_bank0_select & 0x1E;
-		uint32_t index = (bank_select << 12) | addr;
-		return map001->CHR[index];
-	}
-	case 1: // swtich 2x4KB banks independently
-		if (addr < 0x1000)
-		{
-			uint32_t index = ((uint32_t)map001->CHR_bank0_select << 12) | (addr & 0x0FFF);
-			return map001->CHR[index];
-		}
-		else
-		{
-			uint32_t index = ((uint32_t)map001->CHR_bank1_select << 12) | (addr & 0x0FFF);
-			return map001->CHR[index];
-		}
-	}
-	return 0;
-}
-
-
 void UpdateRendererPatternTable(Mapper001* mapper)
 {
 	if (mapper->control.bits.C)
@@ -132,17 +105,14 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 				break;
 			case 1:
 				update_pattern_table = true;
-				map001->CHR_bank0_select = map001->shift_register;
-				map001->CHR_bank0_select = map001->CHR_bank0_select % (2 * map001->CHR_banks);
+				map001->CHR_bank0_select = map001->shift_register % (2 * map001->CHR_banks);
 				break;
 			case 2:
 				update_pattern_table = map001->control.bits.C; // Only update if we are switching both banks
-				map001->CHR_bank1_select = map001->shift_register;
-				map001->CHR_bank1_select = map001->CHR_bank1_select % (2 * map001->CHR_banks);
+				map001->CHR_bank1_select = map001->shift_register % (2 * map001->CHR_banks);
 				break;
 			case 3:
-				map001->PRG_bank_select = map001->shift_register;
-				map001->PRG_bank_select = map001->PRG_bank_select % map001->PRG_ROM_banks;
+				map001->PRG_bank_select = map001->shift_register % map001->PRG_ROM_banks;
 				break;
 			}
 			map001->shift_register = 0b10000;
@@ -153,6 +123,32 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 			}
 		}
 	}
+}
+
+uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
+{
+	Mapper001* map001 = (Mapper001*)mapper;
+	switch (map001->control.bits.C)
+	{
+	case 0: // swtich 8KB at a time
+	{
+		uint32_t bank_select = map001->CHR_bank0_select & 0x1E;
+		uint32_t index = (bank_select << 12) | addr;
+		return map001->CHR[index];
+	}
+	case 1: // swtich 2x4KB banks independently
+		if (addr < 0x1000)
+		{
+			uint32_t index = ((uint32_t)map001->CHR_bank0_select << 12) | (addr & 0x0FFF);
+			return map001->CHR[index];
+		}
+		else
+		{
+			uint32_t index = ((uint32_t)map001->CHR_bank1_select << 12) | (addr & 0x0FFF);
+			return map001->CHR[index];
+		}
+	}
+	return 0;
 }
 
 void m001PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
@@ -245,11 +241,11 @@ void m001LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 
 	map->PRG_RAM = malloc(8 * 1024);
 	memset(map->PRG_RAM, 0, 8 * 1024);
-	map->PRG_ROM = malloc(((int)map->PRG_ROM_banks) * 16 * 1024);
-	map->CHR = malloc(((int)map->CHR_banks) * 8 * 1024);
+	map->PRG_ROM = malloc((size_t)map->PRG_ROM_banks * 16 * 1024);
+	map->CHR = malloc((size_t)map->CHR_banks * 8 * 1024);
 
-	fread(map->PRG_ROM, ((int)map->PRG_ROM_banks) * 16 * 1024, 1, file);
-	fread(map->CHR, ((int)map->CHR_banks) * 8 * 1024, 1, file);
+	fread(map->PRG_ROM, (size_t)map->PRG_ROM_banks * 16 * 1024, 1, file);
+	fread(map->CHR, (size_t)map->CHR_banks * 8 * 1024, 1, file);
 
 	// Set the mirror mode
 	map->control.bits.M = header->MirrorType == 1 ? VERTICAL : HORIZONTAL;

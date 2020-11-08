@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "../Cartridge.h"
+#include "MapperUtils.h"
 
 typedef struct
 {
@@ -11,9 +12,9 @@ typedef struct
 } MapperJUN;
 
 uint8_t mJUNCPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-uint8_t mJUNPPUReadCartridge(void* mapper, uint16_t addr);
-
 void mJUNCPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
+
+uint8_t mJUNPPUReadCartridge(void* mapper, uint16_t addr);
 void mJUNPPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
 
 NametableIndex mJUNPPUMirrorNametable(void* mapper, uint16_t addr);

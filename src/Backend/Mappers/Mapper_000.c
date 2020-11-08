@@ -23,12 +23,6 @@ uint8_t m000CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 	return 0;
 }
 
-uint8_t m000PPUReadCartridge(void* mapper, uint16_t addr)
-{
-	Mapper000* map000 = (Mapper000*)mapper;
-	return map000->CHR[addr];
-}
-
 void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
@@ -40,6 +34,12 @@ void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 		addr &= 0x1FFF;
 		map000->PRG_RAM[addr] = data;
 	}
+}
+
+uint8_t m000PPUReadCartridge(void* mapper, uint16_t addr)
+{
+	Mapper000* map000 = (Mapper000*)mapper;
+	return map000->CHR[addr];
 }
 
 void m000PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)

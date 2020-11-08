@@ -18,12 +18,13 @@ typedef struct
 	uint8_t CHR_bank_select;
 	uint16_t PRG_ROM_banks;
 	uint16_t CHR_banks;
+	bool chr_is_ram;
 } Mapper003;
 
 uint8_t m003CPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-uint8_t m003PPUReadCartridge(void* mapper, uint16_t addr);
-
 void m003CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
+
+uint8_t m003PPUReadCartridge(void* mapper, uint16_t addr);
 void m003PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
 
 NametableIndex m003PPUMirrorNametable(void* mapper, uint16_t addr);

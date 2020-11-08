@@ -42,9 +42,9 @@ typedef struct
 } Mapper001;
 
 uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr);
-
 void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
+
+uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr);
 void m001PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
 
 NametableIndex m001PPUMirrorNametable(void* mapper, uint16_t addr);
