@@ -30,8 +30,8 @@ Currently the following mappers have been implemented
  \#  | Name  | Some Games
 -----|-------|--------------------------------------------------
  000 | NROM  | Super Mario Bros. 1, Donkey Kong, Balloon Fight
- 002 | UxROM | Mega Man, Duck Tales, Castlevania
  001 | MMC1  | Legend of Zelda, Dr. Mario, Metroid
+ 002 | UxROM | Mega Man, Duck Tales, Castlevania
  003 | CNROM | Arkanoid, Cybernoid, Solomon's Key
  
 There are plans to implement mappers 4,7 and 9 in the future, which covers most of the games on the NES
