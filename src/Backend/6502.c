@@ -11,6 +11,7 @@
  * Illegal Opcodes
  * FIX ROL ASL ROR LSR (merge the matching functions)
  * Decimal Mode
+ * RMW double write behaviour
  */
 
 typedef struct

@@ -96,9 +96,6 @@ typedef struct
 	// Pointer to the PPU's palette data
 	uint8_t* palette;
 
-	// Cached copy of the first background palette to detect changes in palette data
-	uint8_t cached_bg_palette[4]; 
-
 	// Texture for PPU output
 	SDL_Texture* nes_screen;
 
@@ -322,28 +319,13 @@ void NewLine()
 //
 ///////////////////////////
 
-// Whenever the pattern tables have been modified, the backend code will call this function 
-// indicating the renderer should update the pattern table visualisation
-static bool update_pattern_table0 = false;
-static bool update_pattern_table1 = false;
-void RendererUpdatePatternTableTexture(int side)
-{
-	switch (side)
-	{
-	case 0:
-		update_pattern_table0 = true;
-		break;
-	case 1:
-		update_pattern_table1 = true;
-		break;
-	}
-}
-
 // This code does the actual work rasterizing the pattern table
 void RendererRasterizePatternTable(int side)
 {
 	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
 	uint8_t* table_data = (side == 0 ? rc.left_nt_data : rc.right_nt_data);
+	if (!table_data)
+		return;
 	uint8_t* pixels = malloc(128 * 128 * 3);
 	assert(pixels);
 
@@ -387,19 +369,12 @@ void RendererSetPatternTable(uint8_t* table_data, int side)
 	{
 		rc.right_nt_data = table_data;
 	}
-
-	RendererUpdatePatternTableTexture(side);
 }
 
 void RendererBindNES(Nes* nes)
 {
 	rc.nes = nes;
-
 	rc.palette = nes->ppu_bus.palette;
-	for (int i = 0; i < 4; i++)
-	{
-		rc.cached_bg_palette[i] = rc.palette[i];
-	}
 }
 
 // The PPU will call this function whenever a new frame is ready
@@ -642,29 +617,11 @@ void DrawNESState()
 	DrawCPUStatus(rc.wm.db_x + (int)roundf(0.6f * rc.wm.db_w), rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
 	DrawPPUStatus(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h + TextHeight(8) + rc.wm.padding, &rc.nes->ppu);
 
-	// Check if palette has changed
-	if (memcmp(rc.cached_bg_palette, rc.palette, 4) != 0)
-	{
-		memcpy(rc.cached_bg_palette, rc.palette, 4);
-		if (rc.left_nt_data)
-			RendererUpdatePatternTableTexture(0);
-		if (rc.right_nt_data)
-			RendererUpdatePatternTableTexture(1);
-	}
-
 	int x = rc.wm.padding + rc.wm.db_x;
 	int y = rc.wm.db_y + rc.wm.menu_button_h + TextHeight(18) + rc.wm.padding;
 
-	if (update_pattern_table0)
-	{
-		update_pattern_table0 = false;
-		RendererRasterizePatternTable(0);
-	}
-	if (update_pattern_table1)
-	{
-		update_pattern_table1 = false;
-		RendererRasterizePatternTable(1);
-	}
+	RendererRasterizePatternTable(0);
+	RendererRasterizePatternTable(1);
 
 	DrawPatternTable(x, y, 0);
 	DrawPatternTable(x + rc.wm.pattern_table_len + rc.wm.padding, y, 1);
