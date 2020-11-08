@@ -748,6 +748,20 @@ void DrawAPUOsc(int xoff, int yoff)
 		apu_channel_set(&rc.nes->apu, CHANNEL_DMC, rc.ch.DMC);
 	}
 
+#if 0
+	curr_height += rc.wm.padding + rc.gm.checkbox_size;
+	SetTextOrigin(xoff + rc.wm.padding, curr_height);
+	char buf[64];
+
+	sprintf(buf, "Period: %i Timer: %i", rc.nes->apu.DMC_timer.period, rc.nes->apu.DMC_timer.counter);
+	RenderText(buf, white);
+
+	sprintf(buf, "sample addr: $%.4X sample len: %i", 0xC000 | (rc.nes->apu.DMC_ADDR << 6), (rc.nes->apu.DMC_LENGTH << 4) + 1);
+	RenderText(buf, white);
+
+	sprintf(buf, "output: %i remaining: %i", rc.nes->apu.DMC_LOAD_COUNTER, rc.nes->apu.DMC_memory_reader.bytes_remaining);
+	RenderText(buf, white);
+#endif
 }
 
 void SetAPUChannels()

@@ -105,8 +105,8 @@ bool is_mute(State2A03* apu, int channel)
 
 void apu_restart_dmc_sample(State2A03* apu)
 {
-	apu->DMC_memory_reader.addr_counter = 0xC000 | (apu->DMC_ADDR << 6);
-	apu->DMC_memory_reader.bytes_remaining = (apu->DMC_LENGTH << 4) + 1;
+	apu->DMC_memory_reader.addr_counter = 0xC000 | ((uint16_t)apu->DMC_ADDR << 6);
+	apu->DMC_memory_reader.bytes_remaining = ((uint32_t)apu->DMC_LENGTH << 4) + 1;
 }
 
 void apu_dmc_read_byte(State2A03* apu)

@@ -259,7 +259,7 @@ typedef struct
 	struct
 	{
 		uint16_t addr_counter;
-		uint8_t bytes_remaining;
+		uint32_t bytes_remaining;
 	} DMC_memory_reader;
 
 	struct 
