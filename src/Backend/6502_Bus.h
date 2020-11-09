@@ -2,6 +2,7 @@
 #define _6502_BUS_H
 #include <stdint.h>
 
+#include "Cheatcodes/cheatcode.h"
 #include "Cartridge.h"
 #include "Gamepad.h"
 #include "2C02.h"
@@ -15,6 +16,8 @@ typedef struct
 	struct State6502* cpu;
 	State2A03* apu;
 	Gamepad* pad;
+
+	CheatCodeSystem cheats;
 } Bus6502;
 
 void cpu_bus_write(Bus6502* b, uint16_t addr, uint8_t data);

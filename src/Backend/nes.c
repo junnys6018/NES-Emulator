@@ -6,12 +6,12 @@
 
 int NESInit(Nes* nes, const char* filepath)
 {
+	memset(nes, 0, sizeof(Nes));
 	if (filepath)
 	{
 		if (load_cartridge_from_file(&nes->cart, filepath) != 0)
 		{
 			// Loading cart failed
-			memset(nes, 0, sizeof(Nes));
 			return 1;
 		}
 
@@ -64,7 +64,6 @@ void NESDestroy(Nes* nes)
 void NESReset(Nes* nes)
 {
 	nes->system_clock = 0;
-	nes->audio_time = 0.0f;
 
 	power_on_6502(&nes->cpu);
 	reset_6502(&nes->cpu);

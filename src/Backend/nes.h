@@ -20,7 +20,6 @@ typedef struct
 	Cartridge cart;
 	Gamepad pad;
 	uint64_t system_clock;
-	float audio_time;
 } Nes;
 
 // Passing NULL as filepath loads the nes into a "dummy state"

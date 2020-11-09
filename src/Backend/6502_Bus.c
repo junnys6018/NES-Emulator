@@ -54,34 +54,30 @@ uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 	bool read;
 	Cartridge* cart = bus->cartridge;
 	uint8_t ret = cart->CPUReadCartridge(cart->mapper, addr, &read);
-	if (read)
-	{
-		return ret;
-	}
-	else
+	if (!read)
 	{
 		// Read internal RAM
 		if (addr >= 0x0000 && addr < 0x2000)
 		{
 			addr &= 0x07FF;
-			return bus->memory[addr];
+			ret = bus->memory[addr];
 		}
 		// Read PPU registers
 		else if (addr >= 0x2000 && addr < 0x4000)
 		{
 			// Mirror every 8 bytes
 			addr = 0x2000 + (addr & 0x07);
-			return ppu_read(bus->ppu, addr);
+			ret = ppu_read(bus->ppu, addr);
 		}
 		// APU interrupt and length counter
 		else if (addr == 0x4015)
 		{
-			return apu_read(bus->apu, addr);
+			ret = apu_read(bus->apu, addr);
 		}
 		// I/O registers
 		else if (addr == 0x4016)
 		{
-			return gamepad_read(bus->pad);
+			ret = gamepad_read(bus->pad);
 		}
 		// APU and I/O functionality that is normally disabled
 		else if (addr >= 0x4018 && addr < 0x4020)
@@ -89,5 +85,10 @@ uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 
 		}
 	}
-	return 0;
+
+	uint8_t cheat_read_byte = CheatCodeReadSystem(&bus->cheats, addr, ret, &read);
+	if (read)
+		return cheat_read_byte;
+
+	return ret;
 }
