@@ -79,7 +79,7 @@ typedef struct
 } Cartridge;
 
 // Returns 0 on success; non zero on failure
-int load_cartridge_from_file(Cartridge* cart, const char* filepath);
+int load_cartridge_from_file(struct Nes* nes, const char* filepath);
 void free_cartridge(Cartridge* cart);
 
 

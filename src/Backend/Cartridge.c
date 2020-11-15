@@ -3,7 +3,9 @@
 #include "Mappers/Mapper_001.h"
 #include "Mappers/Mapper_002.h"
 #include "Mappers/Mapper_003.h"
+#include "Mappers/Mapper_004.h"
 #include "Mappers/Mapper_JUN.h"
+#include "nes.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,8 +14,9 @@
 
 // TODO: error handling for each mapper loading function
 
-int load_cartridge_from_file(Cartridge* cart, const char* filepath)
+int load_cartridge_from_file(Nes* nes, const char* filepath)
 {
+	Cartridge* cart = &nes->cart;
 	FILE* file = fopen(filepath, "rb");
 	
 	fread(&cart->header, sizeof(Header), 1, file);
@@ -38,6 +41,9 @@ int load_cartridge_from_file(Cartridge* cart, const char* filepath)
 			break;
 		case 3:
 			m003LoadFromFile(&header, cart, file);
+			break;
+		case 4:
+			m004LoadFromFile(&header, cart, file, &nes->cpu);
 			break;
 		default:
 			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);
@@ -76,6 +82,9 @@ void free_cartridge(Cartridge* cart)
 		break;
 	case 3:
 		m003Free(cart->mapper);
+		break;
+	case 4:
+		m004Free(cart->mapper);
 		break;
 	case 767:
 		free(cart->mapper);

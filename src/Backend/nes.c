@@ -9,7 +9,7 @@ int NESInit(Nes* nes, const char* filepath)
 	memset(nes, 0, sizeof(Nes));
 	if (filepath)
 	{
-		if (load_cartridge_from_file(&nes->cart, filepath) != 0)
+		if (load_cartridge_from_file(nes, filepath) != 0)
 		{
 			// Loading cart failed
 			return 1;

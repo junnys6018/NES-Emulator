@@ -12,6 +12,8 @@ uint8_t m003CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 		addr &= (map003->PRG_ROM_banks == 1 ? 0x3FFF : 0x7FFF);
 		return map003->PRG_ROM[addr];
 	}
+
+	return 0;
 }
 
 void m003CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)

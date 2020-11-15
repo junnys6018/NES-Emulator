@@ -1,5 +1,5 @@
 #include "2A03.h"
-#include "nes.h" // For sample rate
+#include "6502.h"
 #include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -35,7 +35,7 @@ float sinc(float x)
 void AudioPrecompute()
 {
 	// Low pass filter:	https://rjeschke.tumblr.com/post/8382596050/fir-filters-in-practice
-	const float cutoff_freq = 22050.0f;
+	const float cutoff_freq = SAMPLE_RATE / 2.0f;
 	const float sample_rate = SAMPLE_RATE;
 
 	const float cutoff = cutoff_freq / sample_rate;
@@ -429,14 +429,23 @@ void clock_2A03(State2A03* apu)
 		int pulse_index = 0;
 		if (apu->channel_enable & CHANNEL_SQ1)
 			pulse_index += apu->channel_out.pulse1;
+
 		if (apu->channel_enable & CHANNEL_SQ2)
 			pulse_index += apu->channel_out.pulse2;
 
 		int tnd_index = 0;
-		if (apu->channel_enable & CHANNEL_TRI)
+
+		// We also disable the triangle channel if the period of the timer is less than or equal to 1
+		// This is because at high frequencies, the low pass filter will filter out the channel
+		// even though I am using a low pass filter, it does not seem to mute the triangle channel on low periods, 
+		// so I am doing it manually. I should probably figure out why this is the case but im no DSP expert.
+		bool tri_en = ((apu->channel_enable & CHANNEL_TRI) > 0) && apu->TRI_timer.period > 1;
+		if (tri_en)
 			tnd_index += 3 * apu->channel_out.triangle;
+
 		if (apu->channel_enable & CHANNEL_NOISE)
 			tnd_index += 2 * apu->channel_out.noise;
+
 		if (apu->channel_enable & CHANNEL_DMC)
 			tnd_index += apu->DMC_LOAD_COUNTER;
 
@@ -451,7 +460,7 @@ void clock_2A03(State2A03* apu)
 
 			WindowAddSample(&apu->SQ1_win, apu->channel_enable & CHANNEL_SQ1 ? PULSE_LUT[apu->channel_out.pulse1] : 0.0f);
 			WindowAddSample(&apu->SQ2_win, apu->channel_enable & CHANNEL_SQ2 ? PULSE_LUT[apu->channel_out.pulse2] : 0.0f);
-			WindowAddSample(&apu->TRI_win, apu->channel_enable & CHANNEL_TRI ? TND_LUT[3 * apu->channel_out.triangle] : 0.0f);
+			WindowAddSample(&apu->TRI_win, tri_en ? TND_LUT[3 * apu->channel_out.triangle] : 0.0f);
 			WindowAddSample(&apu->NOISE_win, apu->channel_enable & CHANNEL_NOISE ? TND_LUT[2 * apu->channel_out.noise] : 0.0f);
 		}
 	}

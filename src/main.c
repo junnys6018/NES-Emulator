@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
 
 #include <SDL.h>
 
@@ -30,20 +31,17 @@ int main(int argc, char** argv)
 	RendererInit(&controller);
 	AudioPrecompute();
 	InitSDLAudio();
+
 	Nes nes;
 	NESInit(&nes, NULL);
-	RendererBindNES(&nes);
-
 	if (argc == 2 && strcmp(argv[1], "--test") == 0)
 	{
 		RunAll6502Tests();
 		RunAll2C02Tests();
-		RendererBindNES(&nes);
 	}
 	else if (argc == 2 && strcmp(argv[1], "--benchmark") == 0)
 	{
 		RunAllBenchmarks();
-		RendererBindNES(&nes);
 	}
 	else if (argc == 2)
 	{
@@ -58,6 +56,9 @@ int main(int argc, char** argv)
 			NESInit(&nes, NULL);
 		}
 	}
+
+	RendererBindNES(&nes);
+
 	int window = 10;
 	float total_time = 0.0f;
 	int curr_frame = 0;

@@ -422,23 +422,23 @@ void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 	}
 
 	// Draw PPU memory
-	SetTextOrigin(xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + TextHeight(15));
-	RenderText("PPU Memory", cyan);
-	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan);
-	for (int i = 0; i < 13; i++)
-	{
-		char line[128];
-		uint16_t addr = (i + ppu_addr_offset) * 16;
-		uint8_t m[16];
-		for (int i = 0; i < 16; i++)
-		{
-			m[i] = ppu_bus_read(&rc.nes->ppu_bus, addr + i);
-		}
-		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
-			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
+	//SetTextOrigin(xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + TextHeight(15));
+	//RenderText("PPU Memory", cyan);
+	//RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan);
+	//for (int i = 0; i < 13; i++)
+	//{
+	//	char line[128];
+	//	uint16_t addr = (i + ppu_addr_offset) * 16;
+	//	uint8_t m[16];
+	//	for (int i = 0; i < 16; i++)
+	//	{
+	//		m[i] = ppu_bus_read(&rc.nes->ppu_bus, addr + i);
+	//	}
+	//	sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
+	//		m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-		RenderText(line, white);
-	}
+	//	RenderText(line, white);
+	//}
 }
 
 void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
@@ -488,7 +488,7 @@ void DrawStackView(int xoff, int yoff, State6502* cpu)
 	for (int i = 0; i < stack_size; i++)
 	{
 		uint16_t addr = (cpu->SP + i + 1) | (1 << 8);
-		uint8_t val = cpu_bus_read(cpu->bus,addr);
+		uint8_t val = cpu_bus_read(cpu->bus, addr);
 		char line[32];
 		sprintf(line, "$%.4X %.2X", addr, val);
 
