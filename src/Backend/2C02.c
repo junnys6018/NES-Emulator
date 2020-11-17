@@ -254,6 +254,17 @@ void clock_2C02(State2C02* ppu)
 		{
 			if (ppu->cycles >= 1 && ppu->cycles < 257)
 			{
+				// For each sprite on the current scanline
+				for (int i = 0; i < 8; i++)
+				{
+					// Check if any sprite become active
+					if (ppu->sprite_xpos[i] == 0)
+					{
+						ppu->active_sprites |= (1 << i);
+					}
+					ppu->sprite_xpos[i]--;
+				}
+
 				int index = ppu->scanline * 256 + ppu->cycles - 1;
 				bool drawn = false;
 
@@ -311,18 +322,6 @@ void clock_2C02(State2C02* ppu)
 						}
 					}
 				}
-
-				// For each sprite on the current scanline
-				for (int i = 0; i < 8; i++)
-				{
-					// Check if any sprite become active
-					if (ppu->sprite_xpos[i] == 0)
-					{
-						ppu->active_sprites |= (1 << i);
-					}
-					ppu->sprite_xpos[i]--;
-				}
-
 			}
 			// Clear active sprites at the end of the visible scanline
 			else if (ppu->cycles == 257)
@@ -510,6 +509,11 @@ void clock_2C02(State2C02* ppu)
 
 					ppu->pt_sprite_low[i] = ppu_bus_read(ppu->bus, pattern_table_addr);
 					ppu->pt_sprite_high[i] = ppu_bus_read(ppu->bus, pattern_table_addr | (1 << 3));
+					if (i >= ppu->sprite_eval_state.secondary_oam_free_slot / 4)
+					{
+						ppu->pt_sprite_low[i] = 0;
+						ppu->pt_sprite_high[i] = 0;
+					}
 				}
 			}
 		}
