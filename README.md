@@ -34,8 +34,9 @@ Currently the following mappers have been implemented
  001 | MMC1  | Legend of Zelda, Dr. Mario, Metroid
  002 | UxROM | Mega Man, Duck Tales, Castlevania
  003 | CNROM | Arkanoid, Cybernoid, Solomon's Key
+ 004 | MMC3  | Super Mario Bros 2 and 3, Silver surfer  
  
-There are plans to implement mappers 4,7 and 9 in the future, which covers most of the games on the NES
+There are plans to implement mappers 7 and 9 in the future, which covers most of the games on the NES
 
 ## Controls
 Button | Key         
