@@ -11,10 +11,11 @@ Currently can be built for Linux and Windows, with plans for building to Web Ass
 - If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules
 - This project uses **premake** to build. For convenience, scripts are provided to generate visual studio project files for Windows and make files for Linux
 - Binarys are generated in the `bin` directory.
+- Make sure you build with optimisations turned on, otherwise the emulation will not run in real time on most computers. In visual studio, build in release. If your building with make, run `make config=release`
 
 ## Dependencies
 The only dependency this project has is SDL. On windows the library is prebuilt in the repo, so you dont have to download and install SDL yourself.  
-On linux run `apt-get install libsdl2-dev` (ubuntu)  
+On linux run `sudo apt-get install libsdl2-dev`
 
 ## Running 
 The emulator can be run from the command line with `NES-Emulator.exe [rom.nes]`  
