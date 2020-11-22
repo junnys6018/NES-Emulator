@@ -6,6 +6,12 @@ Currently can be built for Linux and Windows, with plans for building to Web Ass
 ## Screenshots
 ![Demo Gif](media/demo.gif)
 
+## Audio Waveform visualisation
+<img src="media/oscilloscope.png" alt="oscilloscope" width="400"/>
+
+This emulator has a real time waveform visualisation of each channel, (square 1 and 2, triangle and noise channel).
+Video demo can be found [here](https://youtu.be/fevGlhVMHI8)
+
 ## Installation 
 - Clone repo with `git clone --recursive https://github.com/junnys6018/NES-Emulator.git`
 - If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules
