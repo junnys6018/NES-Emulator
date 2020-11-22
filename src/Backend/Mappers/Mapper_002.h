@@ -23,14 +23,6 @@ typedef struct
 	bool chr_is_ram;
 } Mapper002;
 
-uint8_t m002CPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-void m002CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
-
-uint8_t m002PPUReadCartridge(void* mapper, uint16_t addr);
-void m002PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
-
-NametableIndex m002PPUMirrorNametable(void* mapper, uint16_t addr);
-
 void m002Free(Mapper002* mapper);
 void m002LoadFromFile(Header* header, Cartridge* cart, FILE* file);
 

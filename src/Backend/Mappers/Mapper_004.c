@@ -159,17 +159,9 @@ void m004CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 	}
 }
 
-uint8_t m004PPUReadCartridge(void* mapper, uint16_t addr)
+uint8_t m004PPUPeekCartridge(void* mapper, uint16_t addr)
 {
 	Mapper004* map = (Mapper004*)mapper;
-
-	// PPU A12 rising edge
-	bool PPU_A12 = (addr & 0x1000) > 0;
-	if (!map->old_PPU_A12 && PPU_A12)
-	{
-		clock_IRQ(map);
-	}
-	map->old_PPU_A12 = PPU_A12;
 
 	// CHR A12 invert
 	if (map->bank_select.bits.C)
@@ -180,7 +172,7 @@ uint8_t m004PPUReadCartridge(void* mapper, uint16_t addr)
 	uint32_t bank_index = 0;
 	if (addr >= 0x0000 && addr < 0x0400)
 	{
-		bank_index = map->CHR_bank0_select & 0xFE; // Clear bit 0 
+		bank_index = map->CHR_bank0_select & 0xFE; // Clear bit 0
 	}
 	else if (addr >= 0x0400 && addr < 0x0800)
 	{
@@ -212,6 +204,21 @@ uint8_t m004PPUReadCartridge(void* mapper, uint16_t addr)
 	}
 
 	return map->CHR_ROM[(bank_index << 10) | (addr & 0x03FF)];
+}
+
+uint8_t m004PPUReadCartridge(void* mapper, uint16_t addr)
+{
+	Mapper004* map = (Mapper004*)mapper;
+
+	// PPU A12 rising edge
+	bool PPU_A12 = (addr & 0x1000) > 0;
+	if (!map->old_PPU_A12 && PPU_A12)
+	{
+		clock_IRQ(map);
+	}
+	map->old_PPU_A12 = PPU_A12;
+
+	return m004PPUPeekCartridge(mapper, addr);
 }
 
 void m004PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
@@ -249,9 +256,10 @@ void m004LoadFromFile(Header* header, Cartridge* cart, FILE* file, State6502* cp
 	}
 
 	cart->CPUReadCartridge = m004CPUReadCartridge;
-	cart->PPUReadCartridge = m004PPUReadCartridge;
-
 	cart->CPUWriteCartridge = m004CPUWriteCartridge;
+
+	cart->PPUReadCartridge = m004PPUReadCartridge;
+	cart->PPUPeakCartridge = m004PPUPeekCartridge;
 	cart->PPUWriteCartridge = m004PPUWriteCartridge;
 
 	cart->PPUMirrorNametable = m004PPUMirrorNametable;

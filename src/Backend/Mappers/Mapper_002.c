@@ -71,9 +71,10 @@ void m002Free(Mapper002* mapper)
 void m002LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 {
 	cart->CPUReadCartridge = m002CPUReadCartridge;
-	cart->PPUReadCartridge = m002PPUReadCartridge;
-
 	cart->CPUWriteCartridge = m002CPUWriteCartridge;
+
+	cart->PPUReadCartridge = m002PPUReadCartridge;
+	cart->PPUPeakCartridge = m002PPUReadCartridge;
 	cart->PPUWriteCartridge = m002PPUWriteCartridge;
 
 	cart->PPUMirrorNametable = m002PPUMirrorNametable;

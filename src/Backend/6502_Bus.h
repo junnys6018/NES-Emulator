@@ -20,7 +20,7 @@ typedef struct
 	CheatCodeSystem cheats;
 } Bus6502;
 
-void cpu_bus_write(Bus6502* b, uint16_t addr, uint8_t data);
 uint8_t cpu_bus_read(Bus6502* b, uint16_t addr);
+void cpu_bus_write(Bus6502* b, uint16_t addr, uint8_t data);
 
 #endif

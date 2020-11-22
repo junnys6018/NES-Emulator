@@ -15,5 +15,7 @@ typedef struct
 } Bus2C02;
 
 uint8_t ppu_bus_read(Bus2C02* bus, uint16_t addr);
+uint8_t ppu_bus_peek(Bus2C02* bus, uint16_t addr);
+
 void ppu_bus_write(Bus2C02* bus, uint16_t addr, uint8_t data);
 #endif // !_2C02_BUS_H

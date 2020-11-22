@@ -319,44 +319,6 @@ void NewLine()
 //
 ///////////////////////////
 
-// This code does the actual work rasterizing the pattern table
-void RendererRasterizePatternTable(int side)
-{
-	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
-	uint8_t* table_data = (side == 0 ? rc.left_nt_data : rc.right_nt_data);
-	if (!table_data)
-		return;
-	uint8_t* pixels = malloc(128 * 128 * 3);
-	assert(pixels);
-
-	for (int y = 0; y < 128; y++)
-	{
-		for (int x = 0; x < 128; x++)
-		{
-			uint16_t fine_y = y % 8;
-			uint8_t fine_x = 7 - (x % 8); // Invert x
-			uint16_t tile_row = y / 8;
-			uint16_t tile_col = x / 8;
-
-			uint16_t table_addr = tile_row << 8 | tile_col << 4 | fine_y;
-
-			uint8_t bit_mask = 1 << fine_x;
-
-			uint8_t pal_low = (table_data[table_addr] & bit_mask) > 0;
-			uint8_t pal_high = (table_data[table_addr | 1 << 3] & bit_mask) > 0;
-			uint8_t palette_index = pal_low | (pal_high << 1);
-			color c = PALETTE_MAP[rc.palette[palette_index]];
-
-			pixels[3 * (y * 128 + x)] = c.r;
-			pixels[3 * (y * 128 + x) + 1] = c.g;
-			pixels[3 * (y * 128 + x) + 2] = c.b;
-		}
-	}
-	SDL_UpdateTexture(target, NULL, pixels, 3 * 128);
-
-	free(pixels);
-}
-
 // Whenever a pattern table has been bank switched, the pointer the renderer has to the pattern table
 // will be invalid, backend code will call this function to update that pointer to the new pattern table
 void RendererSetPatternTable(uint8_t* table_data, int side)
@@ -395,6 +357,44 @@ void SendPixelDataToScreen(color* pixels)
 //
 ///////////////////////////
 
+// This code does the actual work rasterizing the pattern table
+void RendererRasterizePatternTable(int side)
+{
+	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
+	uint8_t* table_data = (side == 0 ? rc.left_nt_data : rc.right_nt_data);
+	if (!table_data)
+		return;
+	uint8_t* pixels = malloc(128 * 128 * 3);
+	assert(pixels);
+
+	for (int y = 0; y < 128; y++)
+	{
+		for (int x = 0; x < 128; x++)
+		{
+			uint16_t fine_y = y % 8;
+			uint8_t fine_x = 7 - (x % 8); // Invert x
+			uint16_t tile_row = y / 8;
+			uint16_t tile_col = x / 8;
+
+			uint16_t table_addr = tile_row << 8 | tile_col << 4 | fine_y;
+
+			uint8_t bit_mask = 1 << fine_x;
+
+			uint8_t pal_low = (table_data[table_addr] & bit_mask) > 0;
+			uint8_t pal_high = (table_data[table_addr | 1 << 3] & bit_mask) > 0;
+			uint8_t palette_index = pal_low | (pal_high << 1);
+			color c = PALETTE_MAP[rc.palette[palette_index]];
+
+			pixels[3 * (y * 128 + x)] = c.r;
+			pixels[3 * (y * 128 + x) + 1] = c.g;
+			pixels[3 * (y * 128 + x) + 2] = c.b;
+		}
+	}
+	SDL_UpdateTexture(target, NULL, pixels, 3 * 128);
+
+	free(pixels);
+}
+
 void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 {
 	static int cpu_addr_offset = 0;
@@ -422,23 +422,23 @@ void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 	}
 
 	// Draw PPU memory
-	//SetTextOrigin(xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + TextHeight(15));
-	//RenderText("PPU Memory", cyan);
-	//RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan);
-	//for (int i = 0; i < 13; i++)
-	//{
-	//	char line[128];
-	//	uint16_t addr = (i + ppu_addr_offset) * 16;
-	//	uint8_t m[16];
-	//	for (int i = 0; i < 16; i++)
-	//	{
-	//		m[i] = ppu_bus_read(&rc.nes->ppu_bus, addr + i);
-	//	}
-	//	sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
-	//		m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
+	SetTextOrigin(xoff + rc.wm.padding, yoff + 2 * rc.wm.padding + TextHeight(15));
+	RenderText("PPU Memory", cyan);
+	RenderText("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F", cyan);
+	for (int i = 0; i < 13; i++)
+	{
+		char line[128];
+		uint16_t addr = (i + ppu_addr_offset) * 16;
+		uint8_t m[16];
+		for (int i = 0; i < 16; i++)
+		{
+			m[i] = ppu_bus_peek(&rc.nes->ppu_bus, addr + i);
+		}
+		sprintf(line, "$%.4X  %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X %.2X", addr,
+			m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], m[9], m[10], m[11], m[12], m[13], m[14], m[15]);
 
-	//	RenderText(line, white);
-	//}
+		RenderText(line, white);
+	}
 }
 
 void DrawCPUStatus(int xoff, int yoff, State6502* cpu)

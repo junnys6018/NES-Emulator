@@ -41,16 +41,7 @@ typedef struct
 	uint16_t CHR_banks;
 } Mapper001;
 
-uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
-
-uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr);
-void m001PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
-
-NametableIndex m001PPUMirrorNametable(void* mapper, uint16_t addr);
-
 void m001Free(Mapper001* mapper);
 void m001LoadFromFile(Header* header, Cartridge* cart, FILE* file);
-
 
 #endif // !MAPPER_001_H

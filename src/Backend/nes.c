@@ -22,9 +22,10 @@ int NESInit(Nes* nes, const char* filepath)
 		nes->cart.mapperID = 767;
 
 		nes->cart.CPUReadCartridge = mJUNCPUReadCartridge;
-		nes->cart.PPUReadCartridge = mJUNPPUReadCartridge;
-
 		nes->cart.CPUWriteCartridge = mJUNCPUWriteCartridge;
+
+		nes->cart.PPUReadCartridge = mJUNPPUReadCartridge;
+		nes->cart.PPUPeakCartridge = mJUNPPUReadCartridge;
 		nes->cart.PPUWriteCartridge = mJUNPPUWriteCartridge;
 
 		nes->cart.PPUMirrorNametable = mJUNPPUMirrorNametable;

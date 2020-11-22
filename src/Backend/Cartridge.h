@@ -68,9 +68,10 @@ typedef struct
 
 	uint16_t mapperID;
 	CPU_READ_BYTE CPUReadCartridge;
-	PPU_READ_BYTE PPUReadCartridge;
-
 	CPU_WRITE_BYTE CPUWriteCartridge;
+
+	PPU_READ_BYTE PPUReadCartridge;
+	PPU_READ_BYTE PPUPeakCartridge;
 	PPU_WRITE_BYTE PPUWriteCartridge;
 
 	NAMETABLE_MIRROR PPUMirrorNametable;

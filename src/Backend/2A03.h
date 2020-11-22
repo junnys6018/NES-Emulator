@@ -31,6 +31,7 @@ typedef struct
 bool clock_divider(divider* div);
 void reload_divider(divider* div);
 
+// Represents a snapshot of the audio buffer, used by the renderer to visualise each audio channel as a waveform
 typedef struct
 {
 	float buffer[2048];
@@ -327,6 +328,8 @@ typedef struct
 
 	// Stores audio samples at a down sampled rate for our PC's audio driver to play
 	float audio_buffer[4096];
+	uint32_t audio_pos;
+	float real_time;
 
 	// Stores audio samples for each channel, to visualise the waveform
 	AudioWindow SQ1_win;
@@ -334,9 +337,7 @@ typedef struct
 	AudioWindow TRI_win;
 	AudioWindow NOISE_win;
 
-	uint32_t audio_pos;
-	float real_time;
-
+	// Reference to cpu, since the apu can send interrupts
 	struct State6502* cpu;
 } State2A03;
 

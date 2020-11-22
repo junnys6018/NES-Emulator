@@ -21,16 +21,7 @@ typedef struct
 	uint16_t PRG_ROM_Banks;
 } Mapper000;
 
-uint8_t m000CPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-void m000CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
-
-uint8_t m000PPUReadCartridge(void* mapper, uint16_t addr);
-void m000PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
-
-NametableIndex m000PPUMirrorNametable(void* mapper, uint16_t addr);
-
 void m000Free(Mapper000* mapper);
 void m000LoadFromFile(Header* header, Cartridge* cart, FILE* file);
-
 
 #endif // !MAPPER_000_H

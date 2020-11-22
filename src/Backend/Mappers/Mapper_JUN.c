@@ -41,9 +41,10 @@ void mJUNLoadFromFile(Cartridge* cart, FILE* file)
 	cart->mapperID = 767; // Assign mapperID 767 to my format
 
 	cart->CPUReadCartridge = mJUNCPUReadCartridge;
-	cart->PPUReadCartridge = mJUNPPUReadCartridge;
-
 	cart->CPUWriteCartridge = mJUNCPUWriteCartridge;
+
+	cart->PPUReadCartridge = mJUNPPUReadCartridge;
+	cart->PPUPeakCartridge = mJUNPPUReadCartridge;
 	cart->PPUWriteCartridge = mJUNPPUWriteCartridge;
 
 	cart->PPUMirrorNametable = mJUNPPUMirrorNametable;

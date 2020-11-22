@@ -90,14 +90,6 @@ typedef struct
 	uint8_t right_pt[4096];
 } Mapper004;
 
-uint8_t m004CPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-void m004CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
-
-uint8_t m004PPUReadCartridge(void* mapper, uint16_t addr);
-void m004PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
-
-NametableIndex m004PPUMirrorNametable(void* mapper, uint16_t addr);
-
 void m004Free(Mapper004* mapper);
 void m004LoadFromFile(Header* header, Cartridge* cart, FILE* file, State6502* cpu);
 

@@ -29,6 +29,19 @@ uint8_t ppu_bus_read(Bus2C02* bus, uint16_t addr)
 	return 0;
 }
 
+uint8_t ppu_bus_peek(Bus2C02* bus, uint16_t addr)
+{
+	addr &= 0x3FFF;
+	if (addr >= 0x0000 && addr < 0x2000)
+	{
+		return bus->cartridge->PPUPeakCartridge(bus->cartridge->mapper, addr);
+	}
+	else
+	{
+		return ppu_bus_read(bus, addr);
+	}
+}
+
 void ppu_bus_write(Bus2C02* bus, uint16_t addr, uint8_t data)
 {
 	addr &= 0x3FFF; // Just in case given address is outside the PPU's addressable range
