@@ -628,11 +628,16 @@ void DrawNESState()
 	DrawPaletteData(x + 2 * rc.wm.pattern_table_len + 2 * rc.wm.padding, y);
 }
 
+// A trigger function takes an audio buffer and returns an offset into that buffer
+// when drawing a wave in DrawWaveform(), we start drawing from this offset.
+// we do this to track the wave, otherwise the waveform will be jump around in the visualisation
+// The pulse and triangle channels each require a different triggering algortihm, so we use a function pointer.
 typedef int (*TRIGGER_FUNC)(AudioWindow* win);
 
+// Find a rising edge
 int pulse_trigger(AudioWindow* win)
 {
-	float max_slope = -100.0f;
+	float max_slope = -100000.0f;
 	int max_x = 0;
 	for (int x = 0; x < 1024; x++)
 	{
@@ -647,10 +652,11 @@ int pulse_trigger(AudioWindow* win)
 	return max_x;
 }
 
+// Find when the waveform crosses the x-axis from below
 int triangle_trigger(AudioWindow* win)
 {
 	int zero_x = 0;
-	float zero_sample = 100.0f;
+	float zero_sample = 100000.0f;
 	for (int x = 0; x < 1024; x++)
 	{
 		float slope = win->buffer[(win->write_pos + 500 + x) % 2048] - win->buffer[(win->write_pos + 524 + x) % 2048];
@@ -671,13 +677,16 @@ int no_trigger(AudioWindow* win)
 	return 0;
 }
 
+// Visualise audio buffer as a waveform 
 void DrawWaveform(SDL_Rect* rect, AudioWindow* win, float vertical_scale, TRIGGER_FUNC trigger)
 {
-	static SDL_Color waveform_colour = {247, 226, 64};
+	static SDL_Color waveform_colour = {247, 226, 64}; // yellow
 
+	// Clear the part of the screen where we are drawing the waveform
 	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
 	SDL_RenderFillRect(rc.rend, rect);
 
+	// Draw x and y axis
 	SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
 	int mid_y = rect->y + rect->h / 2;
 	int mid_x = rect->x + rect->w / 2;
@@ -686,13 +695,22 @@ void DrawWaveform(SDL_Rect* rect, AudioWindow* win, float vertical_scale, TRIGGE
 
 	SDL_SetRenderDrawColor(rc.rend, waveform_colour.r, waveform_colour.g, waveform_colour.b, 255);
 
+	// Find the offset into the audio buffer to start drawing from
 	int trigger_x = trigger(win);
 
+	// Allocate an array of points for each pixel on the x-axis
 	SDL_Point* points = malloc(rect->w * sizeof(SDL_Point));
 
+	// The audio buffer is a ring buffer, win->write_pos is the starting index into the ring buffer. The ring buffer contains 2048 samples
 	int start_index = (win->write_pos + trigger_x) % 2048;
 	float curr_index = 0.0f;
+
+	// We want to visualise 1024 audio samples over rect->w pixels, so for each pixel we
+	// increment by index_inc amount into the audio buffer. We are effectivly using a 
+	// nearest neighbour filter to filter 1024 samples into rect->w samples
 	float index_inc = 1024.0f / (float)rect->w;
+
+	// For each pixel
 	for (int i = 0; i < rect->w; i++)
 	{
 		points[i].x = rect->x + i;
@@ -803,7 +821,7 @@ void ClearScreen()
 
 void DrawSettings(int xoff, int yoff)
 {
-	SDL_Rect span = { xoff + rc.wm.padding, yoff + rc.wm.padding,40 * rc.wm.window_scale,rc.wm.button_h };
+	SDL_Rect span = {xoff + rc.wm.padding, yoff + rc.wm.padding, 40 * rc.wm.window_scale, rc.wm.button_h};
 
 	if (GuiAddButton("Load ROM...", &span))
 	{

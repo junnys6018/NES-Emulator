@@ -8,6 +8,10 @@ Resources
 *.bak
 *.exe
 /roms
-Makefile
+/Makefile
 *.make
 *.out
+
+blockoban/blockoban.nes
+blockoban/blockoban.o
+blockoban/levels.bin
