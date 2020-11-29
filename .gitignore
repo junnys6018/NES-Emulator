@@ -13,5 +13,5 @@ Resources
 *.out
 
 blockoban/blockoban.nes
-blockoban/blockoban.o
+blockoban/**.o
 blockoban/levels.bin
