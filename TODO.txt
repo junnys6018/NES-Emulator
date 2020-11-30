@@ -7,3 +7,13 @@ APU testing
 more mappers
 scanline post processing effect
 CI
+
+color emphasis
+bg and sprites on leftmost 8 pixels flag
+illegal opcodes
+RMW double write behaviour
+cpu_bus_peek function
+FIX ROL ASL ROR LSR (merge the matching functions)
+clean up duplicate code on apu
+mapper error handling
+four screen mirroring on mapper 4
