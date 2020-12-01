@@ -11,7 +11,7 @@ nmi_count:      .res 1 ; is incremented every NMI
 count_rollover: .res 1 ; set to 1 whenever nmi_count overflows
 nmi_ready:      .res 1 ; 0: not ready to push a frame; 1: push a PPU frame update; 2: disable rendering in next NMI
 nmt_update_len: .res 1 ; number of bytes in nmt_update buffer
-temp:           .res 1 ; temp variable
+temp:           .res 3 ; temp variables
 
 ; buffering for nmi 
 .segment "BSS"
@@ -78,14 +78,23 @@ nmi:
 	bcs @scroll ; branch if X >= nmt_update_len
 	@nmt_update_loop:
 		lda nmt_update, X
-		sta PPUADDR
-		inx
-		lda nmt_update, X
-		sta PPUADDR
-		inx
-		lda nmt_update, X
-		sta PPUDATA
-		inx
+		and #%11000000
+		cmp #0
+		bne :+
+			lda nmt_update, X
+			sta PPUADDR
+			inx
+			lda nmt_update, X
+			sta PPUADDR
+			inx
+			lda nmt_update, X
+			sta PPUDATA
+			inx
+		:
+		cmp #%01000000
+		bne :+
+			jsr draw_block
+		:
 		cpx nmt_update_len
 		bcc @nmt_update_loop ; branch if X < nmt_update_len
 	lda #0
@@ -120,6 +129,74 @@ nmi:
 	pla
 	
 	rti
+	
+draw_block:
+	lda nmt_update, X
+	inx
+	asl
+	asl
+	sta temp
+	lda nmt_update, X
+	inx
+	sta temp+1
+	
+	lsr
+	lsr
+	lsr
+	lsr
+	lsr
+	lsr
+	ora #$20 ; high 2 bits + $20
+	sta PPUADDR
+	
+	lda temp+1
+	and #$0F
+	asl
+	sta temp+2
+	lda temp+1
+	and #$F0
+	asl
+	asl
+	ora temp+2
+	
+	sta PPUADDR
+	
+	ldy temp
+	sty PPUDATA
+	iny
+	sty PPUDATA
+	iny
+	sty temp
+	
+	lda temp+1
+	
+	lsr
+	lsr
+	lsr
+	lsr
+	lsr
+	lsr
+	ora #$20 ; high 2 bits + $20
+	sta PPUADDR
+	
+	lda temp+1
+	and #$0F
+	asl
+	ora #%00100000
+	sta temp+2
+	lda temp+1
+	and #$F0
+	asl
+	asl
+	ora temp+2
+	
+	sta PPUADDR
+	
+	ldy temp
+	sty PPUDATA
+	iny
+	sty PPUDATA	
+	rts
 	
 ;
 ; drawing utilities
@@ -159,14 +236,6 @@ ppu_off:
 ;   Y = 64- 95 nametable $2800
 ;   Y = 96-127 nametable $2C00
 ppu_update_tile:
-	sta temp ;
-	pha ;
-	tya ;
-	pha ;
-	txa ;
-	pha ;
-	lda temp ;
-	
 	pha ; temporarily store A on stack
 	txa
 	pha ; temporarily store X on stack
@@ -194,10 +263,18 @@ ppu_update_tile:
 	inx
 	stx nmt_update_len
 	
-	pla ;
-	tax ;
-	pla ;
-	tay ;
-	pla ;
+	rts
+
+; ppu_update_block: used with rendering on. Sets the metatile (16x16 tile) at position X to metatile with index A
+ppu_update_block:
+	ldy nmt_update_len
+	ora #%01000000
 	
+	sta nmt_update, Y
+	iny
+	
+	txa
+	sta nmt_update, Y
+	iny
+	sty nmt_update_len
 	rts

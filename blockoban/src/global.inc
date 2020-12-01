@@ -12,7 +12,10 @@
 .global gamepad_poll
 
 ; nmi.asm
-.globalzp temp, count_rollover, nmi_count
-.global oam, palette, nmi, ppu_update, ppu_off, ppu_skip, ppu_update_tile
+.globalzp temp, count_rollover
+.global oam, palette, nmi, ppu_update, ppu_off, ppu_skip, ppu_update_tile, ppu_update_block
+
+; util.asm
+.global bin_to_dec
 
 .endif

@@ -203,7 +203,7 @@ NUM_LEVELS = 100
 		
 
 .segment "ZEROPAGE"
-fill_addr: .res 2
+fill_addr: .res 2 ; used as a temp variable for indirect addressing
 
 .segment "CODE"
 ; set X/Y to the starting address of the nametable, X low byte, Y high byte
@@ -250,7 +250,7 @@ load_level:
 		bne :-
 		
 	; place starting player position at the flag
-	lda level_data+$F0 ; flag pos
+	lda level_data+$F0 ; flag positon at offset $F0
 	and #$0F
 	sta pos_x
 	
@@ -300,7 +300,7 @@ draw_level:
 				lda #$30
 				jmp @tile_a
 			:
-			cmp #$20 ; block tile
+			cmp #$20 ; crate tile
 			bne :+
 				lda #$34
 				jmp @tile_a 
@@ -361,7 +361,7 @@ draw_player:
 	asl
 	asl
 	sec
-	sbc #1 ; subtact 1 because sprite rendering is delayed by one scanline
+	sbc #1 ; subtract 1 because sprite rendering is delayed by one scanline
 	
 	sta oam+(0*4)+0
 	sta oam+(1*4)+0
@@ -409,35 +409,21 @@ level_increment:       .res 1
 player_new_position:   .res 1
 bg_tile_replace:       .res 1
 
+.segment "RODATA"
+direction_lut: .byte %11110000, $10, $FF, 1 ; -32, 32, -1, 1
+
+; move_player: attempts to move the player in a given direction 
+; modifying the level and rendering any changes if the player successfully moved
 ; set A to the direction the player moved
 ; 0: no move; 1: up; 2: down; 3: left; 4: right
 .segment "CODE"
 move_player:
 	cmp #0
 	bne :+
-		rts
+		rts ; no move, immediately return
 	:
-	cmp #1
-	bne :+
-		lda #%11110000 ; -32 in 2's complement
-		jmp @done
-	:
-	cmp #2
-	bne :+
-		lda #$10
-		jmp @done
-	:
-	cmp #3
-	bne :+
-		lda #$FF
-		jmp @done
-	:
-	cmp #4
-	bne :+
-		lda #1
-		jmp @done
-	:
-@done:
+	tax
+	lda direction_lut-1, X
 	sta level_increment
 	
 	lda pos_y
@@ -445,10 +431,10 @@ move_player:
 	asl
 	asl
 	asl
-	ora pos_x
+	ora pos_x ; A = players position as an index into the level 
 
 	clc
-	adc level_increment
+	adc level_increment ; A = index player wants to move to
 	sta temp
 	sta player_new_position
 	
@@ -457,115 +443,64 @@ move_player:
 	and #$F0
 	
 	cmp #$10
-	bne :+ ; wall
+	bne :+ ; player wants to move into a wall, return
 		rts
 	:
 	cmp #$20
-	beq :+
-		jmp @update_position
-	:
-@begin_crate_test:
+	bne @update_position ; branch if player is not moving into a crate
+	@begin_crate_test: 
+	; if player wants to move into a crate, we need to check if there is an air space for the crate to move
 		lda temp
 		clc
 		adc level_increment
-		sta temp
+		sta temp ; temp = index adjacent to the crate
 		tax
 		lda level_data, X
 		and #$F0
 		
 		cmp #$00
-		bne :++ ; air
+		bne @done_air ; next tile is air, so we can move
+		
+			; set air tile to a crate
 			lda level_data, X
 			ora #$20
 			sta level_data, X
 			
+			; set the original crate tile into an air tile
 			ldx player_new_position
 			lda level_data, X
 			and #$0F
 			sta level_data, X
 			sta bg_tile_replace ; remember the background tile for drawing
 			
-			lda temp
-			and #$0F
-			asl
-			tax
-
-			lda temp
-			and #$F0
-			lsr
-			lsr
-			lsr
-			tay
+			; send draw commands
 			
-			lda #$34
-			jsr ppu_update_tile
+			; draw crate
+			ldx temp
+			lda #($34 >> 2)
+			jsr ppu_update_block
 			
-			inx
-			lda #$35
-			jsr ppu_update_tile
-			
-			iny
-			lda #$37
-			jsr ppu_update_tile
-			
-			dex
-			lda #$36
-			jsr ppu_update_tile
-			
-			lda player_new_position
-			and #$0F
-			asl
-			tax
-			lda player_new_position
-			and #$F0
-			lsr
-			lsr
-			lsr
-			tay
-			
+			ldx player_new_position
 			lda bg_tile_replace
 			cmp #1
-			bne :+
-				lda #$3C
-				jsr ppu_update_tile
-				
-				inx
-				lda #$3D
-				jsr ppu_update_tile
-				
-				iny
-				lda #$3F
-				jsr ppu_update_tile
-				
-				dex
-				lda #$3E
-				jsr ppu_update_tile
-				
-				
-			
-				jmp @update_position
+			bne :+ 
+				lda #($3C >> 2) ; draw button
+				jmp :++
+			: 
+				lda #($FC >> 2) ; draw air
 			:
 			
-			lda #$FF
-			jsr ppu_update_tile
-			
-			inx
-			jsr ppu_update_tile
-			
-			iny
-			jsr ppu_update_tile
-			
-			dex
-			jsr ppu_update_tile
+			jsr ppu_update_block
 		
-			jmp @update_position
-		:
+			jmp @update_position ; player successfully moved
+		@done_air:
 		cmp #$20
-		bne :+ ; crate
+		bne :+ ; next tile is a crate, so we repeat the test
 			jmp @begin_crate_test
 		:
-		rts ; else other fg tile, cant move
-@update_position:
+		rts ; else, next tile is a wall or flag, we cant move
+		
+@update_position: ; if we got here, it means the player was able to move, so we update its positon
 	lda player_new_position
 	and #$0F
 	sta pos_x
@@ -577,19 +512,4 @@ move_player:
 	lsr
 	sta pos_y
 
-	rts
-	
-; converts a binary number in the range 0..99 into decimal digits
-; number to convert is stored in A register
-; stores tens place in X register, ones place in Y register
-bin_to_dec:
-	ldx #0
-	:
-	cmp #10
-	bcc @tens_done
-	inx
-	sbc #10
-	jmp :-
-@tens_done:
-	tay	
 	rts
