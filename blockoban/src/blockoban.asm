@@ -68,7 +68,7 @@ main:
 	lda #4
 	sta delay_short
 	
-NUM_LEVELS = 100
+NUM_LEVELS = 4
 	
 @loop_level_select:
 	lda gamepad_trigger
@@ -178,6 +178,45 @@ NUM_LEVELS = 100
 	lda #0
 @done:
 	jsr move_player 
+	
+	lda buttons_pressed
+	ldy #3
+	ldx #3
+	jsr ppu_update_tile
+	
+	cmp level_data+$F1 ; compare with number of buttons in the level
+	bne @end_next_level
+		lda level_data+$F0
+		cmp player_pos
+		bne @end_next_level
+			; clear any draw commands move_player might have sent
+			lda #0
+			sta nmt_update_len
+			
+			; load next level
+			jsr ppu_off
+			inc curr_level
+			lda curr_level
+			cmp #NUM_LEVELS
+			bne :++
+				lda #0
+				sta count_rollover
+				sta nmi_count
+				
+				lda #$FF
+				ldx #0
+				:
+					sta oam, X
+					inx
+					cpx #$10
+					bne :-
+				jmp main
+			:
+			
+			jsr load_level
+			jsr draw_level
+			jmp @play_level
+	@end_next_level:
 
 	jsr draw_player
 	jsr ppu_update

@@ -127,11 +127,8 @@ draw_level:
 	rts
 	
 draw_player:
-	lda pos_y
-	asl
-	asl
-	asl
-	asl
+	lda player_pos
+	and #$F0
 	sec
 	sbc #1 ; subtract 1 because sprite rendering is delayed by one scanline
 	
@@ -143,7 +140,7 @@ draw_player:
 	sta oam+(2*4)+0
 	sta oam+(3*4)+0
 	
-	lda pos_x
+	lda player_pos
 	asl
 	asl
 	asl
@@ -152,6 +149,7 @@ draw_player:
 	sta oam+(0*4)+3
 	sta oam+(2*4)+3
 	
+	clc
 	adc #8
 	sta oam+(1*4)+3
 	sta oam+(3*4)+3

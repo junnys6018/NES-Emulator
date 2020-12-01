@@ -48,15 +48,11 @@ load_level:
 		
 	; place starting player position at the flag
 	lda level_data+$F0 ; flag positon at offset $F0
-	and #$0F
-	sta pos_x
+	sta player_pos
 	
-	lda level_data+$F0
-	lsr
-	lsr
-	lsr
-	lsr
-	sta pos_y
+	; reset numbers of buttons pressed
+	lda #0
+	sta buttons_pressed
 	
 	rts
 	
@@ -83,12 +79,7 @@ move_player:
 	lda direction_lut-1, X
 	sta level_increment
 	
-	lda pos_y
-	asl
-	asl
-	asl
-	asl
-	ora pos_x ; A = players position as an index into the level 
+	lda player_pos
 
 	clc
 	adc level_increment ; A = index player wants to move to
@@ -118,8 +109,14 @@ move_player:
 		cmp #$00
 		bne @done_air ; next tile is air, so we can move
 		
-			; set air tile to a crate
 			lda level_data, X
+			cmp #1
+			bne :+
+				; check if crate was pushed onto button
+				inc buttons_pressed
+			:
+			
+			; set air tile to a crate
 			ora #$20
 			sta level_data, X
 			
@@ -142,6 +139,7 @@ move_player:
 			cmp #1
 			bne :+ 
 				lda #(TILE_BUTTON >> 2) ; draw button
+				dec buttons_pressed
 				jmp :++
 			: 
 				lda #(TILE_AIR >> 2) ; draw air
@@ -159,14 +157,6 @@ move_player:
 		
 @update_position: ; if we got here, it means the player was able to move, so we update its positon
 	lda player_new_position
-	and #$0F
-	sta pos_x
-	
-	lda player_new_position
-	lsr
-	lsr
-	lsr
-	lsr
-	sta pos_y
+	sta player_pos
 
 	rts

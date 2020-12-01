@@ -1,5 +1,5 @@
 foreground = {'0': 0, '#': 1, 'B': 2, 'F': 3}
-background = {'0': 0, 'B': 1, 'I': 2}
+background = {'0': 0, 'B': 1}
 
 content = open('levels.txt').read().splitlines()
 
@@ -18,17 +18,24 @@ bg_elems = content[1::2]
 # serialize and write to file
 output = bytearray()
 for (fg_elem, bg_elem) in zip(fg_elems, bg_elems):
+	num_buttons = 0
 	flag_pos = 0
 	flag_found = False
 	for (fg, bg) in zip(fg_elem, bg_elem):
 		output.append(foreground[fg] << 4 | background[bg])
+
+		if (bg == 'B'):
+			num_buttons += 1
 		if (fg == 'F'):
 			flag_found = True
 		if (not flag_found):
 			flag_pos += 1
+		if (bg == 'B' and (fg != '0')):
+			print("[WARN] Button is below non air tile")
 	output.append(flag_pos)
+	output.append(num_buttons)
 	# pad until level is 256 bytes
-	for _ in range(15):
+	for _ in range(14):
 		output.append(0)
 
 open('levels.bin', 'wb').write(output)
