@@ -1,5 +1,5 @@
 ;
-; reset routine
+; reset.asm
 ;
 
 .include "nes.inc"

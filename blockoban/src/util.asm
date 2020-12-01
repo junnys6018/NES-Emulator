@@ -1,5 +1,5 @@
 ;
-; utility
+; util.asm
 ;
 
 .include "global.inc"

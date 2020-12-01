@@ -1,22 +1,25 @@
 ;
-; gamepad
+; gamepad.asm
 ;
 .include "nes.inc"
 .include "global.inc"
 
 .segment "ZEROPAGE"
-gamepad_new:     .res 1
-gamepad_old:     .res 1
-gamepad_trigger: .res 1
+gamepad_new:     .res 1 ; gamepad state in current frame
+gamepad_old:     .res 1 ; gamepad state in last frame
+gamepad_trigger: .res 1 ; triggered on rising edge
 
+; gamepad_press: gives a "keyboard" effect when holding a key
 gamepad_press:   .res 1
 curr_press:      .res 1
-timeout:         .res 1
+timeout:         .res 1 ; number of frames before another key press
 delay_long:      .res 1
 delay_short:     .res 1
 
 .segment "CODE"
+; gamepad_poll: called once every nmi
 gamepad_poll:
+	; update gamepad_old
 	lda gamepad_new
 	sta gamepad_old
 	
@@ -37,12 +40,12 @@ gamepad_poll:
 	lda gamepad_old
 	eor #$FF ; invert bits
 	and gamepad_new
-	sta gamepad_trigger
+	sta gamepad_trigger ; gamepad_trigger = ~gamepad_old & gamepad_new
 	
 	; calculate gamepad_press
 	lda curr_press
 	bne @on_press ; branch if we are "tracking" a button press
-		; else, check if a button has been pressed for us to start tracking
+		; if we are net tracking a button, check if a button has been pressed for us to start tracking
 		lda gamepad_new
 		bne :+ ; no button press, rts
 			rts
@@ -60,10 +63,10 @@ gamepad_poll:
 			bcs @done
 			lsr curr_press
 			jmp :-
-@done:
-	lda curr_press
-	sta gamepad_press
-	rts
+	@done:
+		lda curr_press
+		sta gamepad_press
+		rts
 @on_press:
 	lda gamepad_new
 	and curr_press
@@ -72,7 +75,7 @@ gamepad_poll:
 		lda #0
 		sta curr_press
 		sta gamepad_press
-		jmp @done
+		rts
 	:
 	dec timeout
 	bne :+ ; wait for timeout before setting gamepad_press again

@@ -1,5 +1,5 @@
 ;
-; nmi routine
+; nmi.asm
 ;
 
 .include "nes.inc"
@@ -11,9 +11,58 @@ nmi_count:      .res 1 ; is incremented every NMI
 count_rollover: .res 1 ; set to 1 whenever nmi_count overflows
 nmi_ready:      .res 1 ; 0: not ready to push a frame; 1: push a PPU frame update; 2: disable rendering in next NMI
 nmt_update_len: .res 1 ; number of bytes in nmt_update buffer
-temp:           .res 3 ; temp variables
 
-; buffering for nmi 
+; nmt_update documentation
+;
+; The main loop can send drawing instructions for the nmi handle to process.
+; the instructions are stored in a 256 byte buffer in a bytecode format. Below is a specification of the bytecode
+; 
+; Byte 0
+; 7--- ---0
+; BBXX XXXX
+; |||| ||||
+; ||++-++++- useage depends on bits 6 and 7, see below
+; ++-------- opcode of the instruction. 00: update 8x8 tile; 01: update 16x16 metatile. Note: we have room for 2 more opcodes if needed
+; 
+; opcode 00: update 8x8 tile
+;
+; Byte 0
+; 7--- ---0
+; BBHH HHHH
+;   || ||||
+;   ++-++++- High byte of PPU address
+
+; Byte 1
+; 7--- ---0
+; LLLL LLLL
+; |||| ||||
+; ++++-++++- Low byte of PPU address
+
+; Byte 2
+; 7--- ---0
+; DDDD DDDD
+; |||| ||||
+; ++++-++++- Data to write at given address
+;
+; opcode 01: update 16x16 metatile
+;
+; The nes screen is 256x240 pixels, or 16x15 metatiles, this instruction draws a grid aligned metatile onto the screen
+; metatiles are stored in the pattern table as 4 consecutive 8x8 tiles, with the metatile starting index aligned every 4 bytes.
+; ie. metatiles can be stored at indices $00, $04, $08, ... , $F8, $FC
+; 
+; Byte 0
+; 7--- ---0
+; BBII IIII
+;   || ||||
+;   ++-++++- High bytes of the index into pattern table of the metatile to draw
+;
+; Byte 1
+; 7--- ---0
+; YYYY XXXX
+; |||| ||||
+; |||| ++++- X position of metatile
+; ++++------ Y position of metatile
+
 .segment "BSS"
 nmt_update: .res 256 ; nametable update buffer for PPU update
 palette:    .res 32  ; palette buffer for PPU update
@@ -93,7 +142,7 @@ nmi:
 		:
 		cmp #%01000000
 		bne :+
-			jsr draw_block
+			jsr draw_metatile
 		:
 		cpx nmt_update_len
 		bcc @nmt_update_loop ; branch if X < nmt_update_len
@@ -129,8 +178,11 @@ nmi:
 	pla
 	
 	rti
-	
-draw_block:
+
+.segment "CODE"
+
+; draw_metatile: draw a 16x16 metatile
+draw_metatile:
 	lda nmt_update, X
 	inx
 	asl
@@ -140,12 +192,12 @@ draw_block:
 	inx
 	sta temp+1
 	
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr
+	and #%11000000
+	clc
+	rol
+	rol
+	rol
+
 	ora #$20 ; high 2 bits + $20
 	sta PPUADDR
 	
@@ -170,12 +222,12 @@ draw_block:
 	
 	lda temp+1
 	
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr
-	lsr
+	and #%11000000
+	clc
+	rol
+	rol
+	rol
+	
 	ora #$20 ; high 2 bits + $20
 	sta PPUADDR
 	
@@ -265,8 +317,8 @@ ppu_update_tile:
 	
 	rts
 
-; ppu_update_block: used with rendering on. Sets the metatile (16x16 tile) at position X to metatile with index A
-ppu_update_block:
+; ppu_update_metatile: used with rendering on. Sets the metatile (16x16 tile) at position X to metatile with index A
+ppu_update_metatile:
 	ldy nmt_update_len
 	ora #%01000000
 	

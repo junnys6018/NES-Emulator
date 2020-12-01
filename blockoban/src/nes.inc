@@ -26,3 +26,11 @@ PAD_START      = $10
 PAD_SELECT     = $20
 PAD_B          = $40
 PAD_A          = $80
+
+; Define metatile indices
+
+TILE_WALL      = $30
+TILE_CRATE     = $34
+TILE_FLAG      = $38
+TILE_BUTTON    = $3C
+TILE_AIR       = $FC
