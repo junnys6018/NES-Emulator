@@ -11,6 +11,7 @@ nmi_count:      .res 1 ; is incremented every NMI
 count_rollover: .res 1 ; set to 1 whenever nmi_count overflows
 nmi_ready:      .res 1 ; 0: not ready to push a frame; 1: push a PPU frame update; 2: disable rendering in next NMI
 nmt_update_len: .res 1 ; number of bytes in nmt_update buffer
+scroll_nmt:     .res 1 ; nametable select (0-3 = $2000,$2400,$2800,$2C00)
 
 ; nmt_update documentation
 ;
@@ -22,8 +23,8 @@ nmt_update_len: .res 1 ; number of bytes in nmt_update buffer
 ; BBXX XXXX
 ; |||| ||||
 ; ||++-++++- useage depends on bits 6 and 7, see below
-; ++-------- opcode of the instruction. 00: update 8x8 tile; 01: update 16x16 metatile. Note: we have room for 2 more opcodes if needed
-; 
+; ++-------- opcode of the instruction. 00: update 8x8 tile; 01: update 16x16 metatile;
+;                                       10: draw a string; Note: we have room for 1 more opcode if needed
 ; opcode 00: update 8x8 tile
 ;
 ; Byte 0
@@ -62,6 +63,32 @@ nmt_update_len: .res 1 ; number of bytes in nmt_update buffer
 ; |||| ||||
 ; |||| ++++- X position of metatile
 ; ++++------ Y position of metatile
+;
+; opcode 10: draw a string
+;
+; Byte 0
+; 7--- ---0
+; BBLL LLLL
+;   || ||||
+;   ++-++++- Length of the string to draw
+;
+; Byte 1
+; 7--- ---0
+; ..HH HHHH
+;   || ||||
+;   ++-++++- High byte of PPU address
+
+; Byte 2
+; 7--- ---0
+; LLLL LLLL
+; |||| ||||
+; ++++-++++- Low byte of PPU address
+;
+; Next LLLLLL bytes
+; 7--- ---0
+; IIII IIII
+; |||| ||||
+; ++++-++++- character to draw as an index into pattern table
 
 .segment "BSS"
 nmt_update: .res 256 ; nametable update buffer for PPU update
@@ -128,7 +155,7 @@ nmi:
 	@nmt_update_loop:
 		lda nmt_update, X
 		and #%11000000
-		cmp #0
+		cmp #%00000000
 		bne :+
 			lda nmt_update, X
 			sta PPUADDR
@@ -144,14 +171,19 @@ nmi:
 		bne :+
 			jsr draw_metatile
 		:
+		cmp #%10000000
+		bne :+
+			jsr draw_string
+		:
 		cpx nmt_update_len
 		bcc @nmt_update_loop ; branch if X < nmt_update_len
 	lda #0
 	sta nmt_update_len
 	
 @scroll:
-	; fix scroll to top left corner of first nt
-	lda #%10001000
+	lda scroll_nmt
+	and #%00000011 ; keep only lowest 2 bits to prevent error
+	ora #%10001000
 	sta PPUCTRL
 	
 	lda #$00
@@ -167,7 +199,6 @@ nmi:
 	
 @ppu_update_end:
 	; sound engine code goes here
-	jsr gamepad_poll
 	
 @nmi_end:
 	; restore registers and return
@@ -250,6 +281,27 @@ draw_metatile:
 	sty PPUDATA	
 	rts
 	
+draw_string:
+	lda nmt_update, X
+	inx
+	and #%00111111
+	tay
+	lda nmt_update, X
+	inx
+	sta PPUADDR
+	lda nmt_update, X
+	inx
+	sta PPUADDR
+	
+	:
+		lda nmt_update, X
+		inx
+		sta PPUDATA
+		dey
+		bne :-
+	
+	rts
+	
 ;
 ; drawing utilities
 ;
@@ -329,4 +381,35 @@ ppu_update_metatile:
 	sta nmt_update, Y
 	iny
 	sty nmt_update_len
+	rts
+
+; ppu_update_string: used with rendering on. copies a draw string command from address X/Y into the buffer
+; set X/Y to the starting address of the command, X low byte, Y high byte	
+ppu_update_string:
+	stx fill_addr
+	sty fill_addr+1
+	
+	ldy #0
+	ldx nmt_update_len
+	
+	lda (fill_addr), Y
+	iny
+	sta nmt_update, X
+	inx
+	
+	and #%00111111
+	clc
+	adc #3 ; length of instruction is 3 bytes longer than length of string
+	sta temp
+	
+	:
+		lda (fill_addr), Y
+		iny
+		sta nmt_update, X
+		inx
+		cpy temp
+		bne :-
+	
+	stx nmt_update_len
+	
 	rts

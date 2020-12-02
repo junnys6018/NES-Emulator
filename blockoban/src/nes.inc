@@ -34,3 +34,52 @@ TILE_CRATE     = $34
 TILE_FLAG      = $38
 TILE_BUTTON    = $3C
 TILE_AIR       = $FC
+
+NUM_LEVELS = 4
+
+; character mapping
+.charmap '0', 0
+.charmap '1', 1
+.charmap '2', 2
+.charmap '3', 3
+.charmap '4', 4
+.charmap '5', 5
+.charmap '6', 6
+.charmap '7', 7
+.charmap '8', 8
+.charmap '9', 9
+.charmap 'A', 10
+.charmap 'B', 11
+.charmap 'C', 12
+.charmap 'D', 13
+.charmap 'E', 14
+.charmap 'F', 15
+.charmap 'G', 16
+.charmap 'H', 17
+.charmap 'I', 18
+.charmap 'J', 19
+.charmap 'K', 20
+.charmap 'L', 21
+.charmap 'M', 22
+.charmap 'N', 23
+.charmap 'O', 24
+.charmap 'P', 25
+.charmap 'Q', 26
+.charmap 'R', 27
+.charmap 'S', 28
+.charmap 'T', 29
+.charmap 'U', 30
+.charmap 'V', 31
+.charmap 'W', 32
+.charmap 'X', 33
+.charmap 'Y', 34
+.charmap 'Z', 35
+.charmap ' ', 255
+
+; some macros
+
+.macro addr_jsr addr, routine
+	ldx #<addr
+	ldy #>addr
+	jsr routine
+.endmacro

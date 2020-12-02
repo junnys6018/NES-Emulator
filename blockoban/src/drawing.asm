@@ -6,7 +6,7 @@
 .include "global.inc"
 
 .segment "CODE"
-; draw_background: used with rendering turned off fills first nametable with data
+; draw_background: used with rendering turned off, fills first nametable with data
 ; set X/Y to the starting address of the nametable, X low byte, Y high byte
 draw_background:
 	stx fill_addr
@@ -172,6 +172,26 @@ draw_player:
 	lda #3
 	sta oam+(3*4)+1
 	
+	rts
+
+.segment "RODATA"
+option_map: .byte 95, 103, 111, 119 ; maps the option we selected in the pause screen to the y coordinate of the selector sprite
+
+; only y pos changes, but we still write xpos, attributes and tileindex every time
+.segment "CODE"
+draw_pause_selector:
+	ldx pause_option
+	lda option_map, X
+	sta oam+(4*4)+0
+	
+	lda #4
+	sta oam+(4*4)+1
+	
+	lda #0
+	sta oam+(4*4)+2
+	
+	lda #96
+	sta oam+(4*4)+3
 	rts
 
 

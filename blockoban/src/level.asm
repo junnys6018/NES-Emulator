@@ -50,13 +50,13 @@ load_level:
 	lda level_data+$F0 ; flag positon at offset $F0
 	sta player_pos
 	
-	; reset numbers of buttons pressed
+	; reset number of buttons pressed
 	lda #0
 	sta buttons_pressed
 	
 	rts
 	
-; move_player: attempts to move the player in a given direction 
+; move_player: attempts to move the player in a given direction,
 ; modifying the level and rendering any changes if the player successfully moved
 ; set A to the direction the player moved
 ; 0: no move; 1: up; 2: down; 3: left; 4: right	
