@@ -90,6 +90,9 @@ typedef struct
 		bool DMC;
 	} ch;
 
+	// draw a grid over the nes screen if this is true
+	bool draw_grid;
+
 	// Pointer to the nes the renderer is drawing
 	Nes* nes;
 
@@ -870,8 +873,11 @@ void DrawSettings(int xoff, int yoff)
 	{
 
 	}
+	span.y += rc.wm.padding + rc.wm.button_h;
+	GuiAddCheckbox("Draw Grid", span.x,span.y, &rc.draw_grid);
+	span.y += rc.wm.padding + rc.gm.checkbox_size;
 
-	SetTextOrigin(xoff + rc.wm.padding, span.y + rc.wm.button_h + rc.wm.padding);
+	SetTextOrigin(xoff + rc.wm.padding, span.y);
 	RenderText("ROM Infomation", cyan);
 	Header header = rc.nes->cart.header;
 	char buf[64];
@@ -911,20 +917,32 @@ void RendererDraw()
 	SDL_Rect r_NesView = { rc.wm.padding,rc.wm.padding,rc.wm.nes_w,rc.wm.nes_h };
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
 	
-#if 0
 	// Draw 8x8 grid over nes screen for debugging
-	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
-	for (int i = 0; i < 32; i++)
+	if (rc.draw_grid)
 	{
-		int x = rc.wm.padding + 8 * rc.wm.window_scale * i;
-		SDL_RenderDrawLine(rc.rend, x, rc.wm.padding, x, rc.wm.padding + rc.wm.nes_h);
+		for (int i = 0; i <= 32; i++)
+		{
+			if (i == 16)
+				SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
+			else if (i % 2 == 0)
+				SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
+			else
+				SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
+			int x = rc.wm.padding + 8 * rc.wm.window_scale * i;
+			SDL_RenderDrawLine(rc.rend, x, rc.wm.padding, x, rc.wm.padding + rc.wm.nes_h);
+		}
+		for (int i = 0; i <= 30; i++)
+		{
+			if (i == 15)
+				SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
+			else if (i % 2 == 0)
+				SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
+			else
+				SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
+			int y = rc.wm.padding + 8 * rc.wm.window_scale * i;
+			SDL_RenderDrawLine(rc.rend, rc.wm.padding, y, rc.wm.padding + rc.wm.nes_w, y);
+		}
 	}
-	for (int i = 0; i < 30; i++)
-	{
-		int y = rc.wm.padding + 8 * rc.wm.window_scale * i;
-		SDL_RenderDrawLine(rc.rend, rc.wm.padding, y, rc.wm.padding + rc.wm.nes_w, y);
-	}
-#endif
 
 	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
 	SDL_Rect r_DebugView = { .x = rc.wm.db_x,.y = rc.wm.db_y,.w = rc.wm.db_w,.h = rc.wm.db_h };
