@@ -105,7 +105,7 @@ bool GuiAddButton(const char* label, SDL_Rect* span)
 	SDL_RenderFillRect(gc.rend, span);
 
 	int len = TextBounds(label).w;
-	SetTextOrigin(span->x + (span->w - len) / 2, span->y + (span->h - gc.metrics.font_size) / 2);
+	SetTextOrigin(span->x + (span->w - len) / 2, span->y + (span->h - gc.metrics.font_size + 1) / 2);
 	RenderText(label, white);
 
 	return hover && gc.mouse_released;
@@ -140,7 +140,7 @@ bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v)
 
 	if (label)
 	{
-		SetTextOrigin(xoff + gc.metrics.checkbox_size + gc.metrics.padding, yoff + (gc.metrics.checkbox_size - gc.metrics.font_size) / 2);
+		SetTextOrigin(xoff + gc.metrics.checkbox_size + gc.metrics.padding, yoff + (gc.metrics.checkbox_size - gc.metrics.font_size + 1) / 2);
 		RenderText(label, white);
 	}
 

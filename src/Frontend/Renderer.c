@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "timer.h"
 #include "Gui.h"
@@ -39,19 +40,27 @@ typedef enum
 
 typedef struct
 {
-	int window_scale;
 	int padding;
 
 	int width, height; // width and height of window
 	int db_x, db_y; // x and y offset of debug screen
 	int db_w, db_h; // width and height of debug screen
+	int nes_x, nes_y; // x and y offset of nes screen
 	int nes_w, nes_h; // width and heigh of nes sceen
 
-	int menu_button_w, menu_button_h; // width and height of menu buttons
-	int button_h; // width and height of normal buttons
+	// width and height of menu buttons
+	float menu_button_w;
+	int menu_button_h;
+
+	int button_h; // height of normal buttons
 
 	// width and height of pattern table visualisation
 	int pattern_table_len;
+
+	// length of each palette visualisation "box"
+	int palette_visual_len;
+
+	int apu_osc_height;
 } WindowMetrics;
 
 typedef struct
@@ -73,6 +82,8 @@ typedef struct
 	// Window size metrics
 	WindowMetrics wm;
 	GuiMetrics gm;
+
+	bool draw_debug_view;
 
 	// Textures representing the pattern tables currently accessible on the PPU
 	SDL_Texture* left_nametable;
@@ -127,29 +138,99 @@ void TTF_Emit_Error(const char* message)
 	printf("[FONT ERROR]: %s\n", message);
 }
 
+void CalculateWindowMetrics(int w, int h)
+{
+	rc.draw_debug_view = true;
+
+	rc.wm.width = w;
+	rc.wm.height = h;
+
+	rc.wm.padding = lroundf(0.0045f * (w + h));
+
+	if ((float)w / h >= 256.0f / 240.0f)
+	{
+		rc.wm.nes_x = rc.wm.padding;
+		rc.wm.nes_y = rc.wm.padding;
+
+		rc.wm.nes_h = h - 2 * rc.wm.padding;
+		rc.wm.nes_w = lroundf(rc.wm.nes_h * 256.0f / 240.0f); // maintain aspect ratio
+	}
+	else
+	{
+		rc.wm.nes_w = w - 2 * rc.wm.padding;
+		rc.wm.nes_h = lroundf(rc.wm.nes_w * 240.0f / 256.0f);
+
+		rc.wm.nes_x = rc.wm.padding;
+		rc.wm.nes_y = (h - rc.wm.nes_h) / 2;
+		rc.draw_debug_view = false;
+	}
+
+	rc.wm.db_x = 2 * rc.wm.padding + rc.wm.nes_w;
+	rc.wm.db_y = rc.wm.padding;
+
+
+	rc.wm.db_w = w - 3 * rc.wm.padding - rc.wm.nes_w;
+	rc.wm.db_h = h - 2 * rc.wm.padding;
+
+	const int min_db_w = 200, min_db_h = 400;
+	if (rc.wm.db_w < min_db_w || rc.wm.db_h < min_db_h)
+	{
+		rc.draw_debug_view = false;
+
+		// Center the nes screen to take up the space cleared from not drawing debug screen
+		rc.wm.nes_x = (w - rc.wm.nes_w) / 2;
+		rc.wm.nes_y = (h - rc.wm.nes_h) / 2;
+	}
+
+	rc.wm.button_h = lroundf(0.03f * h);
+	rc.wm.pattern_table_len = lroundf(0.096f * (w + h));
+
+	rc.wm.menu_button_w = (float)rc.wm.db_w / 5.0f;
+	rc.wm.menu_button_h = lroundf(0.0406f * h);
+
+	rc.wm.palette_visual_len = lroundf(0.004f * (w + h));
+
+	rc.wm.apu_osc_height = lroundf(0.1355f * h);
+}
+
+void ClearTexture(SDL_Texture* tex)
+{
+	uint32_t fmt;
+	int access, width, height;
+	SDL_QueryTexture(tex, &fmt, &access, &width, &height);
+
+	int pixel_size;
+	if (fmt == SDL_PIXELFORMAT_RGB24)
+	{
+		pixel_size = 3;
+	}
+	else if (fmt == SDL_PIXELFORMAT_RGBA32)
+	{
+		pixel_size = 4;
+	}
+	else
+	{
+		assert(false);
+	}
+
+	void* clear_data = malloc(width * height * pixel_size);
+
+	memset(clear_data, 0, width * height * pixel_size);
+	SDL_UpdateTexture(tex, NULL, clear_data, width * pixel_size);
+
+	free(clear_data);
+}
+
+
 void RendererInit(Controller* cont)
 {
-	// Set this parameter and all other window metrics will be calculated to this scale
-	rc.wm.window_scale = 3;
-
-	rc.wm.padding = 3 * rc.wm.window_scale;
-	rc.wm.width = 3 * rc.wm.padding + (256 + 170) * rc.wm.window_scale;
-	rc.wm.height = 2 * rc.wm.padding + 240 * rc.wm.window_scale;
-	rc.wm.db_x = 2 * rc.wm.padding + 256 * rc.wm.window_scale;
-	rc.wm.db_y = rc.wm.padding;
-	rc.wm.db_w = 170 * rc.wm.window_scale;
-	rc.wm.db_h = 240 * rc.wm.window_scale;
-	rc.wm.nes_w = 256 * rc.wm.window_scale;
-	rc.wm.nes_h = 240 * rc.wm.window_scale;
-	rc.wm.menu_button_w = 34 * rc.wm.window_scale;
-	rc.wm.menu_button_h = 10 * rc.wm.window_scale;
-	rc.wm.button_h = 7 * rc.wm.window_scale;
-	rc.wm.pattern_table_len = (int)roundf(128 * 0.5f * rc.wm.window_scale);
+	const int starting_w = 1305, starting_h = 738;
+	CalculateWindowMetrics(starting_w, starting_h);
 
 	rc.controller = cont;
 
 	// Create a window
-	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, rc.wm.width, rc.wm.height, 0);
+	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, SDL_WINDOW_RESIZABLE);
 	if (!rc.win)
 	{
 		SDL_Emit_Error("Could not create window");
@@ -180,7 +261,7 @@ void RendererInit(Controller* cont)
 		TTF_Emit_Error("Could not init font");
 	}
 
-	rc.font_size = 5 * rc.wm.window_scale; // distance from highest ascender to the lowest descender in pixels
+	rc.font_size = 15; // distance from highest ascender to the lowest descender in pixels
 	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, (float)rc.font_size);
 
 	stbtt_pack_context spc;
@@ -208,17 +289,21 @@ void RendererInit(Controller* cont)
 
 	// Get font metrics
 	stbtt_GetFontVMetrics(&rc.info, &rc.ascent, &rc.descent, &rc.line_gap);
-	rc.y_advance = (int)roundf(rc.scale * (rc.ascent - rc.descent + rc.line_gap));
-	rc.ascent = (int)roundf(rc.scale * rc.ascent);
-	rc.descent = (int)roundf(rc.scale * rc.descent);
-	rc.line_gap = (int)roundf(rc.scale * rc.line_gap);
+	rc.y_advance = lroundf(rc.scale * (rc.ascent - rc.descent + rc.line_gap));
+	rc.ascent = lroundf(rc.scale * rc.ascent);
+	rc.descent = lroundf(rc.scale * rc.descent);
+	rc.line_gap = lroundf(rc.scale * rc.line_gap);
 
 	// Create nametable textures
 	rc.left_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
+	ClearTexture(rc.left_nametable);
+
 	rc.right_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
+	ClearTexture(rc.right_nametable);
 
 	// And main screen 
 	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+	ClearTexture(rc.nes_screen);
 
 	// Enable sound channels
 	rc.ch.SQ1 = true;
@@ -228,8 +313,8 @@ void RendererInit(Controller* cont)
 	rc.ch.DMC = true;
 
 	// GUI
-	rc.gm.scroll_bar_width = 6 * rc.wm.window_scale;
-	rc.gm.checkbox_size = 6 * rc.wm.window_scale;
+	rc.gm.scroll_bar_width = 18;
+	rc.gm.checkbox_size = 18;
 	rc.gm.font_size = rc.font_size;
 	rc.gm.padding = rc.wm.padding;
 	GuiInit(rc.rend, &rc.gm);
@@ -259,14 +344,14 @@ void RenderChar(char glyph, SDL_Color c)
 	stbtt_packedchar* info = &rc.chardata[glyph - 32];
 	SDL_Rect src_rect = { info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0 };
 
-	const int yoff = rc.text_y + rc.ascent + (int)roundf(info->yoff);
-	const int xoff = rc.text_x + (int)roundf(info->xoff);
+	const int yoff = rc.text_y + rc.ascent + lroundf(info->yoff);
+	const int xoff = rc.text_x + lroundf(info->xoff);
 	SDL_Rect dst_rect = { xoff, yoff, info->x1 - info->x0, info->y1 - info->y0 };
 
 	SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
 	SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
 
-	rc.text_x += (int)roundf(info->xadvance);
+	rc.text_x += lroundf(info->xadvance);
 }
 
 void RenderText(const char* text, SDL_Color c)
@@ -285,7 +370,7 @@ Bounds TextBounds(const char* text)
 	int sum = 0;
 	while (*text)
 	{
-		sum += (int)roundf(rc.chardata[*text - 32].xadvance);
+		sum += lroundf(rc.chardata[*text - 32].xadvance);
 		text++;
 	}
 
@@ -404,7 +489,12 @@ void DrawMemoryView(int xoff, int yoff, State6502* cpu)
 	static int ppu_addr_offset = 0;
 
 	// Scrollbars
-	SDL_Rect span = { xoff + rc.wm.padding / 2, yoff + rc.wm.padding + TextHeight(2), TextBounds("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F").w + rc.wm.padding + 6 * rc.wm.window_scale, TextHeight(13) + 2 };
+	SDL_Rect span;
+	span.x = xoff + rc.wm.padding / 2;
+	span.y = yoff + rc.wm.padding + TextHeight(2);
+	span.w = TextBounds("$ADDR  00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F").w + rc.wm.padding + rc.gm.scroll_bar_width;
+	span.h = TextHeight(13) + 2;
+
 	GuiAddScrollBar("cpu memory", &span, &cpu_addr_offset, 0x80 - 13, 5);
 	span.y = yoff + 2 * rc.wm.padding + TextHeight(15) + TextHeight(2);
 	GuiAddScrollBar("test2", &span, &ppu_addr_offset, 0x400 - 13, 5);
@@ -493,7 +583,7 @@ void DrawStackView(int xoff, int yoff, State6502* cpu)
 		uint16_t addr = (cpu->SP + i + 1) | (1 << 8);
 		uint8_t val = cpu_bus_read(cpu->bus, addr);
 		char line[32];
-		sprintf(line, "$%.4X %.2X", addr, val);
+		sprintf(line, "$%.4X: $%.2X", addr, val);
 
 		RenderText(line, white);
 	}
@@ -568,7 +658,7 @@ void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 	sprintf(line, "OAMDMA    ($4014): $%.2X", rc.nes->cpu.OAMDMA);
 	RenderText(line, white);
 	
-	SetTextOrigin(xoff + TextBounds("PPUMASK($2001) : BGRsbMmG     ").w, yoff + rc.wm.padding);
+	SetTextOrigin(xoff + TextBounds("PPUMASK   ($2001): BGRsbMmG").w + 2 * rc.wm.padding, yoff + rc.wm.padding);
 	RenderText("Internal Registers", cyan);
 
 	sprintf(line, "v: $%.4X; t: $%.4X", ppu->v, ppu->t);
@@ -597,7 +687,7 @@ void DrawPatternTable(int xoff, int yoff, int side)
 
 void DrawPaletteData(int xoff, int yoff)
 {
-	const int len = (int)roundf(2.66f * rc.wm.window_scale);
+	int len = rc.wm.palette_visual_len;
 	SDL_Rect rect = { .x = xoff,.y = yoff,.w = len,.h = len };
 	for (int y = 0; y < 8; y++)
 	{
@@ -609,15 +699,19 @@ void DrawPaletteData(int xoff, int yoff)
 			SDL_RenderFillRect(rc.rend, &rect);
 			rect.x += len;
 		}
-		rect.y += len + 2 * rc.wm.window_scale;
+		rect.y += len + rc.wm.padding;
 	}
 }
 
 void DrawNESState()
 {
-	DrawProgramView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
-	DrawStackView(rc.wm.db_x + rc.wm.db_w / 3, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
-	DrawCPUStatus(rc.wm.db_x + (int)roundf(0.6f * rc.wm.db_w), rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
+	int yoff = rc.wm.db_y + rc.wm.menu_button_h;
+	int xoff = rc.wm.db_x;
+	DrawProgramView(xoff, yoff, &rc.nes->cpu);
+	xoff += TextBounds("$0000: ORA ($00,X)").w + rc.wm.padding;
+	DrawStackView(xoff, yoff, &rc.nes->cpu);
+	xoff += TextBounds("$0000: $00 ").w + rc.wm.padding;
+	DrawCPUStatus(xoff, yoff, &rc.nes->cpu);
 	DrawPPUStatus(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h + TextHeight(8) + rc.wm.padding, &rc.nes->ppu);
 
 	int x = rc.wm.padding + rc.wm.db_x;
@@ -717,7 +811,7 @@ void DrawWaveform(SDL_Rect* rect, AudioWindow* win, float vertical_scale, TRIGGE
 	for (int i = 0; i < rect->w; i++)
 	{
 		points[i].x = rect->x + i;
-		points[i].y = win->buffer[(int)roundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
+		points[i].y = win->buffer[lroundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
 		curr_index += index_inc;
 	}
 	SDL_RenderDrawLines(rc.rend, points, rect->w);
@@ -731,7 +825,7 @@ void DrawAPUOsc(int xoff, int yoff)
 	{
 		apu_channel_set(&rc.nes->apu, CHANNEL_SQ1, rc.ch.SQ1);
 	}
-	int height = 33 * rc.wm.window_scale;
+	const int height = rc.wm.apu_osc_height;
 
 	SDL_Rect rect = {.x = xoff + rc.wm.padding, .y = yoff + 2 * rc.wm.padding + rc.gm.checkbox_size, .w = rc.wm.db_w - 2 * rc.wm.padding, .h = height};
 	DrawWaveform(&rect, &rc.nes->apu.SQ1_win, 350.0f, pulse_trigger);
@@ -824,7 +918,7 @@ void ClearScreen()
 
 void DrawSettings(int xoff, int yoff)
 {
-	SDL_Rect span = {xoff + rc.wm.padding, yoff + rc.wm.padding, 40 * rc.wm.window_scale, rc.wm.button_h};
+	SDL_Rect span = {xoff + rc.wm.padding, yoff + rc.wm.padding, 0.09195f * rc.wm.width, rc.wm.button_h};
 
 	if (GuiAddButton("Load ROM...", &span))
 	{
@@ -850,13 +944,14 @@ void DrawSettings(int xoff, int yoff)
 		ClearScreen();
 	}
 	span.y = yoff + 2 * rc.wm.padding + rc.wm.button_h;
-	span.w = 65 * rc.wm.window_scale;
+	span.w = 0.1494f * rc.wm.width;
 	if (GuiAddButton(rc.controller->mode == MODE_PLAY ? "Step Through Emulation" : "Run Emulation", &span) && rc.controller->mode != MODE_NOT_RUNNING)
 	{
 		// Toggle between Step Through and Playing 
 		rc.controller->mode = 1 - rc.controller->mode;
 	}
-	span.y += rc.wm.padding + rc.wm.button_h; span.w = 40 * rc.wm.window_scale;
+	span.y += rc.wm.padding + rc.wm.button_h;
+	span.w = 0.09195f * rc.wm.width;
 	if (GuiAddButton("Reset", &span))
 	{
 		ClearScreen();
@@ -874,7 +969,15 @@ void DrawSettings(int xoff, int yoff)
 
 	}
 	span.y += rc.wm.padding + rc.wm.button_h;
-	GuiAddCheckbox("Draw Grid", span.x,span.y, &rc.draw_grid);
+
+	GuiAddCheckbox("Draw Grid", span.x, span.y, &rc.draw_grid);
+	span.y += rc.wm.padding + rc.gm.checkbox_size;
+	
+	static bool fullscreen = false;
+	if (GuiAddCheckbox("Fullscreen", span.x, span.y, &fullscreen))
+	{
+		SDL_SetWindowFullscreen(rc.win, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+	}
 	span.y += rc.wm.padding + rc.gm.checkbox_size;
 
 	SetTextOrigin(xoff + rc.wm.padding, span.y);
@@ -910,11 +1013,18 @@ void RendererDraw()
 {
 	assert(rc.nes); // Nes must be bound for rendering
 
+	int w, h;
+	SDL_GetWindowSize(rc.win, &w, &h);
+	if (w != rc.wm.width || h != rc.wm.height)
+	{
+		CalculateWindowMetrics(w, h);
+	}
+
 	// Clear screen to black
 	SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
 	SDL_RenderClear(rc.rend);
 
-	SDL_Rect r_NesView = { rc.wm.padding,rc.wm.padding,rc.wm.nes_w,rc.wm.nes_h };
+	SDL_Rect r_NesView = {rc.wm.nes_x, rc.wm.nes_y, rc.wm.nes_w, rc.wm.nes_h};
 	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
 	
 	// Draw 8x8 grid over nes screen for debugging
@@ -928,8 +1038,8 @@ void RendererDraw()
 				SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
 			else
 				SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
-			int x = rc.wm.padding + 8 * rc.wm.window_scale * i;
-			SDL_RenderDrawLine(rc.rend, x, rc.wm.padding, x, rc.wm.padding + rc.wm.nes_h);
+			int x = rc.wm.nes_x + rc.wm.nes_w * i / 32;
+			SDL_RenderDrawLine(rc.rend, x, rc.wm.nes_y, x, rc.wm.nes_y + rc.wm.nes_h);
 		}
 		for (int i = 0; i <= 30; i++)
 		{
@@ -939,66 +1049,67 @@ void RendererDraw()
 				SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
 			else
 				SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
-			int y = rc.wm.padding + 8 * rc.wm.window_scale * i;
-			SDL_RenderDrawLine(rc.rend, rc.wm.padding, y, rc.wm.padding + rc.wm.nes_w, y);
+			int y = rc.wm.nes_y + rc.wm.nes_w * i / 32;
+			SDL_RenderDrawLine(rc.rend, rc.wm.nes_x, y, rc.wm.nes_x + rc.wm.nes_w, y);
 		}
 	}
 
-	SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
-	SDL_Rect r_DebugView = { .x = rc.wm.db_x,.y = rc.wm.db_y,.w = rc.wm.db_w,.h = rc.wm.db_h };
-	SDL_RenderFillRect(rc.rend, &r_DebugView);
+	if (rc.draw_debug_view)
+	{
+		SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
+		SDL_Rect r_DebugView = {.x = rc.wm.db_x, .y = rc.wm.db_y, .w = rc.wm.db_w, .h = rc.wm.db_h};
+		SDL_RenderFillRect(rc.rend, &r_DebugView);
 
-	int width = rc.wm.menu_button_w;
-	SDL_Rect span = { .x = rc.wm.db_x,.y = rc.wm.db_y,.w = width,.h = rc.wm.menu_button_h };
-	if (GuiAddButton("NES State", &span))
-	{
-		rc.target = TARGET_NES_STATE;
-	}
-	span.x += width;
-	if (GuiAddButton("APU Waveform", &span))
-	{
-		rc.target = TARGET_APU_OSC;
-	}
-	span.x += width;
-	if (GuiAddButton("Memory", &span))
-	{
-		rc.target = TARGET_MEMORY;
-	}
-	span.x += width;
-	if (GuiAddButton("About", &span))
-	{
-		rc.target = TARGET_ABOUT;
-	}
-	span.x += width;
-	if (GuiAddButton("Settings", &span))
-	{
-		rc.target = TARGET_SETTINGS;
-	}
+		char* button_names[] = {"NES State", "APU Wave", "Memory", "About", "Settings"};
+		DrawTarget targets[] = {TARGET_NES_STATE, TARGET_APU_OSC, TARGET_MEMORY, TARGET_ABOUT, TARGET_SETTINGS};
+		int button_positions[6];
 
-	switch (rc.target)
-	{
-	case TARGET_NES_STATE:
-		DrawNESState();
-		break;
-	case TARGET_APU_OSC:
-		DrawAPUOsc(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
-		break;
-	case TARGET_MEMORY:
-		DrawMemoryView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
-		break;
-	case TARGET_ABOUT:
-		DrawAbout(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
-		break;
-	case TARGET_SETTINGS:
-		DrawSettings(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
-		break;
-	}
+		button_positions[0] = rc.wm.db_x;
+		button_positions[5] = rc.wm.db_x + rc.wm.db_w;
+		for (int i = 1; i <= 4; i++)
+		{
+			button_positions[i] = lroundf(rc.wm.db_x + i * rc.wm.menu_button_w);
+		}
 
-	// Draw FPS
-	SetTextOrigin(rc.wm.db_x + rc.wm.padding, rc.wm.db_y + rc.wm.db_h - rc.font_size - rc.wm.padding);
-	char buf[64];
-	sprintf(buf, "%.3f ms/frame", rc.controller->ms_per_frame);
-	RenderText(buf, white);
+		for (int i = 0; i < 5; i++)
+		{
+			SDL_Rect span;
+			span.y = rc.wm.padding;
+			span.h = rc.wm.menu_button_h;
+			span.x = button_positions[i];
+			span.w = button_positions[i + 1] - span.x;
+
+			if (GuiAddButton(button_names[i], &span))
+			{
+				rc.target = targets[i];
+			}
+		}
+
+		switch (rc.target)
+		{
+		case TARGET_NES_STATE:
+			DrawNESState();
+			break;
+		case TARGET_APU_OSC:
+			DrawAPUOsc(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
+			break;
+		case TARGET_MEMORY:
+			DrawMemoryView(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h, &rc.nes->cpu);
+			break;
+		case TARGET_ABOUT:
+			DrawAbout(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
+			break;
+		case TARGET_SETTINGS:
+			DrawSettings(rc.wm.db_x, rc.wm.db_y + rc.wm.menu_button_h);
+			break;
+		}
+
+		// Draw FPS
+		SetTextOrigin(rc.wm.db_x + rc.wm.padding, rc.wm.db_y + rc.wm.db_h - rc.font_size - rc.wm.padding);
+		char buf[64];
+		sprintf(buf, "%.3f ms/frame", rc.controller->ms_per_frame);
+		RenderText(buf, white);
+	}
 
 	GuiEndFrame();
 
