@@ -26,7 +26,7 @@ typedef struct
 // Each successful call to NESInit() must be paired with a NESDestroy() to free resources
 // If NESInit() fails (returns non zero) then NESDestroy() should NOT be called
 // Returns 0 on success; non zero on failure
-int NESInit(Nes* nes, const char* filepath);
+int InitNES(Nes* nes, const char* filepath);
 void NESDestroy(Nes* nes);
 
 // Reset button on the NES

@@ -17,6 +17,7 @@ kind "ConsoleApp"
 		"src/**.c",
 		"tests/**.c",
 		"tests/**.h",
+		"vendor/cJSON/cJSON.c"
 	}
 
 	links 
@@ -27,10 +28,11 @@ kind "ConsoleApp"
 
 	includedirs
 	{
-		"vendor/SDL2-2.0.12/include",
 		"src",
 		"tests",
+		"vendor/SDL2-2.0.12/include",
 		"vendor/stb",
+		"vendor/cJSON"
 	}
 	
 	filter "configurations:Debug"

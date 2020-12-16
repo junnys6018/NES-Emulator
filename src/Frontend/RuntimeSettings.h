@@ -1,0 +1,30 @@
+#ifndef RUNTIME_SETTINGS_H
+#define RUNTIME_SETTINGS_H
+
+#include <stdbool.h>
+
+#include <SDL.h>
+
+typedef struct
+{
+	SDL_Scancode key_A;
+	SDL_Scancode key_B;
+	SDL_Scancode key_start;
+	SDL_Scancode key_select;
+	SDL_Scancode key_up;
+	SDL_Scancode key_down;
+	SDL_Scancode key_left;
+	SDL_Scancode key_right;
+
+	bool fullscreen_on_startup;
+
+	int startup_width, startup_height;
+
+	int font_size;
+	char font_style[256];
+} RuntimeSettings;
+
+RuntimeSettings* GetRuntimeSettings();
+void InitRuntimeSettings();
+
+#endif

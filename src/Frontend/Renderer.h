@@ -11,7 +11,7 @@ extern SDL_Color green;
 extern SDL_Color blue;
 extern SDL_Color light_blue;
 
-void RendererInit(Controller* cont);
+void InitRenderer(Controller* cont);
 void RendererShutdown();
 void RendererDraw();
 

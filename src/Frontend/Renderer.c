@@ -15,6 +15,7 @@
 #include "timer.h"
 #include "Gui.h"
 #include "FileDialog.h"
+#include "RuntimeSettings.h"
 
 SDL_Color white = { 255,255,255 };
 SDL_Color cyan = { 78,201,176 };
@@ -118,6 +119,9 @@ typedef struct
 
 	// Pointer to controller data
 	Controller* controller;
+
+	// Is the window fullscreen
+	bool fullscreen;
 } RendererContext;
 
 static RendererContext rc;
@@ -222,15 +226,24 @@ void ClearTexture(SDL_Texture* tex)
 }
 
 
-void RendererInit(Controller* cont)
+void InitRenderer(Controller* cont)
 {
-	const int starting_w = 1305, starting_h = 738;
+	RuntimeSettings* rts = GetRuntimeSettings();
+
+	const int starting_w = rts->startup_width, starting_h = rts->startup_height;
 	CalculateWindowMetrics(starting_w, starting_h);
 
 	rc.controller = cont;
 
 	// Create a window
-	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, SDL_WINDOW_RESIZABLE);
+	Uint32 flags = SDL_WINDOW_RESIZABLE;
+	rc.fullscreen = rts->fullscreen_on_startup;
+	if (rts->fullscreen_on_startup)
+	{
+		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	}
+	
+	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, flags);
 	if (!rc.win)
 	{
 		SDL_Emit_Error("Could not create window");
@@ -244,7 +257,7 @@ void RendererInit(Controller* cont)
 	}
 
 	// Load the font
-	FILE* file = fopen("Consola.ttf", "rb");
+	FILE* file = fopen(rts->font_style, "rb");
 	fseek(file, 0, SEEK_END);
 	long size = ftell(file);
 	fseek(file, 0, SEEK_SET);
@@ -261,7 +274,7 @@ void RendererInit(Controller* cont)
 		TTF_Emit_Error("Could not init font");
 	}
 
-	rc.font_size = 15; // distance from highest ascender to the lowest descender in pixels
+	rc.font_size = rts->font_size; // distance from highest ascender to the lowest descender in pixels
 	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, (float)rc.font_size);
 
 	stbtt_pack_context spc;
@@ -898,11 +911,34 @@ void DrawAbout(int xoff, int yoff)
 	RenderText("f     - Emulate one frame", white);
 	RenderText("p     - Emulate one master clock cycle", white);
 	RenderText("While Running Emulation", cyan);
-	RenderText("Z     - B button", white);
-	RenderText("X     - A button", white);
-	RenderText("Enter - Start", white);
-	RenderText("Tab   - Select", white);
-	RenderText("Arrow Keys for D-pad", white);
+
+	char buf[128];
+	RuntimeSettings* rts = GetRuntimeSettings();
+	const int pad = -10;
+
+	sprintf(buf, "%*s - A button", pad, SDL_GetScancodeName(rts->key_A));
+	RenderText(buf, white);
+
+	sprintf(buf, "%*s - B button", pad, SDL_GetScancodeName(rts->key_B));
+	RenderText(buf, white);
+
+	sprintf(buf, "%*s - Start", pad, SDL_GetScancodeName(rts->key_start));
+	RenderText(buf, white);
+
+	sprintf(buf, "%*s - Select", pad, SDL_GetScancodeName(rts->key_select));
+	RenderText(buf, white);
+
+	sprintf(buf, "%*s - Up", pad, SDL_GetScancodeName(rts->key_up));
+	RenderText(buf, white);
+
+	sprintf(buf, "%*s - Down", pad, SDL_GetScancodeName(rts->key_down));
+	RenderText(buf, white);
+
+	sprintf(buf, "%*s - Left", pad, SDL_GetScancodeName(rts->key_left));
+	RenderText(buf, white);
+
+	sprintf(buf, "%*s - Right", pad, SDL_GetScancodeName(rts->key_right));
+	RenderText(buf, white);
 }
 
 void ClearScreen()
@@ -926,13 +962,13 @@ void DrawSettings(int xoff, int yoff)
 		if (OpenFileDialog(file, 256) == 0)
 		{
 			NESDestroy(rc.nes);
-			if (NESInit(rc.nes, file) != 0)
+			if (InitNES(rc.nes, file) != 0)
 			{
 				// Failed to load rom
 				rc.controller->mode = MODE_NOT_RUNNING;
 
 				// ...so load a dummy one
-				NESInit(rc.nes, NULL);
+				InitNES(rc.nes, NULL);
 			}
 			// Successfully loaded rom
 			else if (rc.controller->mode == MODE_NOT_RUNNING)
@@ -973,10 +1009,9 @@ void DrawSettings(int xoff, int yoff)
 	GuiAddCheckbox("Draw Grid", span.x, span.y, &rc.draw_grid);
 	span.y += rc.wm.padding + rc.gm.checkbox_size;
 	
-	static bool fullscreen = false;
-	if (GuiAddCheckbox("Fullscreen", span.x, span.y, &fullscreen))
+	if (GuiAddCheckbox("Fullscreen", span.x, span.y, &rc.fullscreen))
 	{
-		SDL_SetWindowFullscreen(rc.win, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+		SDL_SetWindowFullscreen(rc.win, rc.fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 	}
 	span.y += rc.wm.padding + rc.gm.checkbox_size;
 

@@ -86,7 +86,7 @@ void EmulateUntilHalt(Nes* nes, int instructions_per_frame)
 int TestBlarggRom(const char* name, uint16_t result_addr)
 {
 	Nes nes;
-	NESInit(&nes, name);
+	InitNES(&nes, name);
 
 	RendererBindNES(&nes);
 

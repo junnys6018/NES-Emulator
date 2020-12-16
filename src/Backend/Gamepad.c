@@ -1,4 +1,6 @@
 #include "Gamepad.h"
+#include "Frontend/RuntimeSettings.h"
+
 #include <SDL.h>
 
 // TODO: open bus behaviour
@@ -31,12 +33,14 @@ void poll_keys(Gamepad* pad)
 		state = SDL_GetKeyboardState(NULL);
 	}
 	
-	pad->current_input.keys.A = state[SDL_SCANCODE_X];
-	pad->current_input.keys.B = state[SDL_SCANCODE_Z];
-	pad->current_input.keys.Start = state[SDL_SCANCODE_RETURN]; // Enter key
-	pad->current_input.keys.Select = state[SDL_SCANCODE_TAB];
-	pad->current_input.keys.Up = state[SDL_SCANCODE_UP];
-	pad->current_input.keys.Down = state[SDL_SCANCODE_DOWN];
-	pad->current_input.keys.Left = state[SDL_SCANCODE_LEFT];
-	pad->current_input.keys.Right = state[SDL_SCANCODE_RIGHT];
+	RuntimeSettings* rts = GetRuntimeSettings();
+
+	pad->current_input.keys.A = state[rts->key_A];
+	pad->current_input.keys.B = state[rts->key_B];
+	pad->current_input.keys.Start = state[rts->key_start]; // Enter key
+	pad->current_input.keys.Select = state[rts->key_select];
+	pad->current_input.keys.Up = state[rts->key_up];
+	pad->current_input.keys.Down = state[rts->key_down];
+	pad->current_input.keys.Left = state[rts->key_left];
+	pad->current_input.keys.Right = state[rts->key_right];
 }

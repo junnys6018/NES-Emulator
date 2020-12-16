@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-int NESInit(Nes* nes, const char* filepath)
+int InitNES(Nes* nes, const char* filepath)
 {
 	memset(nes, 0, sizeof(Nes));
 	if (filepath)

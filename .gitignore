@@ -12,6 +12,8 @@ Resources
 *.make
 *.out
 
+settings.json
+
 blockoban/blockoban.nes
 blockoban/**.o
 blockoban/levels.bin

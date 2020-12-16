@@ -2,6 +2,7 @@
 #include "Frontend/Gui.h"
 #include "Frontend/Controller.h"
 #include "Frontend/Audio.h"
+#include "Frontend/RuntimeSettings.h"
 
 #include "Backend/nes.h"
 
@@ -27,13 +28,14 @@ int main(int argc, char** argv)
 	}
 
 	// Initialize all the things
-	Controller controller = { .mode = MODE_NOT_RUNNING };
-	RendererInit(&controller);
+	InitRuntimeSettings();
 	AudioPrecompute();
+	Controller controller = { .mode = MODE_NOT_RUNNING };
+	InitRenderer(&controller);
 	InitSDLAudio();
 
 	Nes nes;
-	NESInit(&nes, NULL);
+	InitNES(&nes, NULL);
 	if (argc == 2 && strcmp(argv[1], "--test") == 0)
 	{
 		RunAll6502Tests();
@@ -46,14 +48,14 @@ int main(int argc, char** argv)
 	else if (argc == 2)
 	{
 		NESDestroy(&nes);
-		if (NESInit(&nes, argv[1]) == 0)
+		if (InitNES(&nes, argv[1]) == 0)
 		{
 			controller.mode = MODE_PLAY;
 		}
 		else
 		{
 			printf("[ERROR] Failed to load %s as an ines rom\n", argv[1]);
-			NESInit(&nes, NULL);
+			InitNES(&nes, NULL);
 		}
 	}
 

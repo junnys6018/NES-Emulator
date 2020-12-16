@@ -91,7 +91,7 @@ void GuiEndFrame()
 
 bool RectIntersectMouse(SDL_Rect* rect)
 {
-	return gc.mouse_x >= rect->x && gc.mouse_x <= rect->x + rect->w && gc.mouse_y >= rect->y && gc.mouse_y <= rect->y + rect->h;
+	return gc.mouse_x >= rect->x && gc.mouse_x < rect->x + rect->w && gc.mouse_y >= rect->y && gc.mouse_y < rect->y + rect->h;
 }
 
 bool GuiAddButton(const char* label, SDL_Rect* span)
@@ -153,8 +153,9 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 
 	// Is there an active grab?
 	static bool is_active = false;
-	// If so, whats the id of the active grab
+	// If so, this is the id of the active grab
 	static unsigned long active_grab = 0;
+	// y offset of the grab relative to the span of the scroll bar
 	static int yoff = 0;
 
 	bool activated = false;
@@ -164,7 +165,7 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 		*v += scale * gc.wheel;
 		if (*v < 0)
 		{
-			* v = 0;
+			*v = 0;
 		}
 		else if (*v > max)
 		{
@@ -200,7 +201,7 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 		activated = old_v != *v;
 		int y = *v * (span->h - height) / max + span->y;
 
-		SDL_Rect grab = { x,y,gc.metrics.scroll_bar_width,height };
+		SDL_Rect grab = {x, y, gc.metrics.scroll_bar_width, height};
 		SDL_SetRenderDrawColor(gc.rend, s->scroll_grab_high.r, s->scroll_grab_high.g, s->scroll_grab_high.b, 255);
 		SDL_RenderFillRect(gc.rend, &grab);
 		if (gc.mouse_released)
@@ -211,7 +212,7 @@ bool GuiAddScrollBar(const char* label, SDL_Rect* span, int* v, int max, int sca
 	else
 	{
 		int y = *v * (span->h - height) / max + span->y;
-		SDL_Rect grab = { x,y,gc.metrics.scroll_bar_width,height };
+		SDL_Rect grab = {x, y, gc.metrics.scroll_bar_width, height};
 		SDL_Color c = RectIntersectMouse(&grab) ? s->scroll_grab_high : s->scroll_grab_low;
 		SDL_SetRenderDrawColor(gc.rend, c.r, c.g, c.b, 255);
 		SDL_RenderFillRect(gc.rend, &grab);
