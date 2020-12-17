@@ -116,11 +116,16 @@ draw_level:
 	ldx #$10
 	ldy #OAM_FLAG
 	jsr draw_metatile_sprite
+	
+	lda #1
+	jsr set_metatile_sprite_palette ; set to red
+	
 		
-	; set all attributes to 1
-	lda #%01010101
+	; set all attributes to 0
+	lda #0
 	ldx #64 ; 64 bytes
 	:
+		sta attribute_table-1 ,X
 		sta PPUDATA
 		dex
 		bne :-
@@ -177,6 +182,32 @@ draw_metatile_sprite:
 
 	sta oam+(3*4)+1, Y
 	
+	rts
+	
+; Y oam index; lower 2 bits of A: palette
+set_metatile_sprite_palette:
+	and #%00000011 ; just in case
+	sta temp
+
+	lda oam+(0*4)+2, Y
+	and #%11111100
+	ora temp
+	sta oam+(0*4)+2, Y
+	
+	lda oam+(1*4)+2, Y
+	and #%11111100
+	ora temp
+	sta oam+(1*4)+2, Y
+	
+	lda oam+(2*4)+2, Y
+	and #%11111100
+	ora temp
+	sta oam+(2*4)+2, Y
+	
+	lda oam+(3*4)+2, Y
+	and #%11111100
+	ora temp
+	sta oam+(3*4)+2, Y
 	rts
 
 .segment "RODATA"

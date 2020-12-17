@@ -229,6 +229,7 @@ loop_play_level:
 @done:
 	jsr move_player 
 	
+	lda buttons_pressed
 	cmp level_data+$F1 ; compare with number of buttons in the level
 	bne @end_next_level
 		lda level_data+$F0
@@ -269,6 +270,7 @@ loop_play_level:
 	jsr draw_metatile_sprite
 	
 	jsr animate_flag
+	jsr set_flag_color
 	
 	jsr ppu_update
 	jmp loop_play_level
@@ -313,6 +315,9 @@ loop_pause_level:
 		ldx #$10
 		ldy #OAM_FLAG
 		jsr draw_metatile_sprite
+		
+		jsr set_flag_color
+		
 		lda pause_option
 		cmp #0
 		bne :+ ; resume				
@@ -348,4 +353,18 @@ loop_pause_level:
 	
 	jsr ppu_update
 	jmp loop_pause_level
+	
+; sets the flag to green if all buttons are pushed, else sets the flag to red
+set_flag_color:
+	lda buttons_pressed
+	cmp level_data+$F1 ; compare with number of buttons in the level
+	bne :+
+		lda #0
+		jmp :++
+	:
+		lda #1
+	:
+	ldy #OAM_FLAG
+	jsr set_metatile_sprite_palette
+	rts
 	

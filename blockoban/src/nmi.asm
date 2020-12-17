@@ -91,8 +91,9 @@ scroll_nmt:     .res 1 ; nametable select (0-3 = $2000,$2400,$2800,$2C00)
 ; ++++-++++- character to draw as an index into pattern table
 
 .segment "BSS"
-nmt_update: .res 256 ; nametable update buffer for PPU update
-palette:    .res 32  ; palette buffer for PPU update
+nmt_update:      .res 256 ; nametable update buffer for PPU update
+palette:         .res 32  ; palette buffer for PPU update
+attribute_table: .res 64  ; local copy of attribute table for nametable 0
 
 .segment "OAM"
 oam: .res 256        ; sprite OAM data to be uploaded by DMA
@@ -411,5 +412,89 @@ ppu_update_string:
 		bne :-
 	
 	stx nmt_update_len
+	
+	rts
+	
+.segment "RODATA"
+palette_bitmask_lut: .byte %11111100, %11110011, %11001111, %00111111
+
+.segment "ZEROPAGE"
+tile_location:    .res 1
+palette_quadrant: .res 1
+attribute_index:  .res 1
+palette_update:   .res 1
+
+.segment "CODE"	
+; ppu_update_palette: used with rendering on. Updates 16x16 metatile at location A. with palette specified by lower 2 bits of Y
+; preserves X register
+ppu_update_palette:
+	sta tile_location
+	txa
+	pha
+	lda tile_location
+	
+	and #$0F
+	lsr
+	sta attribute_index
+	
+	lda tile_location
+	and #%11100000
+	lsr
+	lsr
+	ora attribute_index
+	sta attribute_index ; attribute_index = (A & %11100000) >> 2 | (A & $0F) >> 1
+	
+	lda tile_location
+	and #1
+	sta palette_quadrant
+	lda tile_location
+	and #%00010000
+	lsr
+	lsr
+	lsr
+	ora palette_quadrant; A = (A & %00010000) >> 3 | (A $ 1)
+	sta palette_quadrant
+	
+	ldx attribute_index
+	lda attribute_table, X
+	ldx palette_quadrant
+	and palette_bitmask_lut, X
+	
+	sta palette_update
+	tya
+	
+	ldx palette_quadrant ; load again to set zero flag
+	
+	:
+		beq :+
+		asl 
+		asl
+		dex
+		jmp :-
+	:
+	ora palette_update
+	sta palette_update
+	ldx attribute_index
+	sta attribute_table, X
+	
+	ldy nmt_update_len
+	lda #$23
+	sta nmt_update, Y
+	iny
+	
+	lda #$C0
+	clc
+	adc attribute_index
+	sta nmt_update, Y ; palettes start at PPUADDR=$23C0
+	iny
+	
+	lda palette_update
+	sta nmt_update, Y
+	iny
+	
+	sty nmt_update_len
+	
+	pla
+	tax ; restore X
 	
 	rts

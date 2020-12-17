@@ -114,6 +114,12 @@ move_player:
 			bne :+
 				; check if crate was pushed onto button
 				inc buttons_pressed
+				
+				; change the color of the crate to indicate it is on a button
+				txa
+				ldy #1
+				jsr ppu_update_palette
+				lda level_data, X
 			:
 			
 			; set air tile to a crate
@@ -134,17 +140,23 @@ move_player:
 			lda #(TILE_CRATE >> 2)
 			jsr ppu_update_metatile
 			
-			ldx player_new_position
 			lda bg_tile_replace
 			cmp #1
 			bne :+ 
+				; player pushed crate off a button, restore palette
+				ldy #0
+				lda player_new_position
+				jsr ppu_update_palette
+				
 				lda #(TILE_BUTTON >> 2) ; draw button
 				dec buttons_pressed
+				
 				jmp :++
 			: 
 				lda #(TILE_AIR >> 2) ; draw air
 			:
 			
+			ldx player_new_position
 			jsr ppu_update_metatile
 		
 			jmp @update_position ; player successfully moved
