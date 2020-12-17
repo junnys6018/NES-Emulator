@@ -31,11 +31,16 @@ PAD_A          = $80
 
 TILE_WALL      = $30
 TILE_CRATE     = $34
-TILE_FLAG      = $38
-TILE_BUTTON    = $3C
+TILE_BUTTON    = $38
 TILE_AIR       = $FC
 
-NUM_LEVELS = 4
+NUM_LEVELS     = 4
+
+; sprite oam indices
+
+OAM_PLAYER = 0
+OAM_FLAG = $10
+OAM_PAUSE_SELECT = $20
 
 ; character mapping
 .charmap '0', 0

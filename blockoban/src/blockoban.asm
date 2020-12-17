@@ -21,7 +21,7 @@ sprite_palette:
 .byte $0F,$18,$28,$38 ; sp0 yellow
 .byte $0F,$14,$24,$34 ; sp1 purple
 .byte $0F,$1B,$2B,$3B ; sp2 teal
-.byte $0F,$12,$22,$32 ; sp3 marine
+.byte $0F,$19,$2A,$27 ; sp3 marine
 opening_screen:    .incbin "opening_screen.nam"
 select_screen:     .incbin "level_select.nam"
 all_levels:        .incbin "levels.bin"
@@ -187,13 +187,13 @@ loop_play_level:
 		lda #2
 		sta scroll_nmt
 		
-		; clear player sprite
+		; clear player sprite and flag
 		lda #$FF
 			ldx #0
 			:
 				sta oam, X
 				inx
-				cpx #$10
+				cpx #$20
 				bne :-
 		
 		lda #0
@@ -229,11 +229,6 @@ loop_play_level:
 @done:
 	jsr move_player 
 	
-	lda buttons_pressed
-	ldy #3
-	ldx #3
-	jsr ppu_update_tile
-	
 	cmp level_data+$F1 ; compare with number of buttons in the level
 	bne @end_next_level
 		lda level_data+$F0
@@ -258,7 +253,7 @@ loop_play_level:
 				:
 					sta oam, X
 					inx
-					cpx #$10
+					cpx #$20
 					bne :-
 				jmp main
 			:
@@ -268,7 +263,13 @@ loop_play_level:
 			jmp loop_play_level
 	@end_next_level:
 
-	jsr draw_player
+	lda player_pos
+	ldx #0
+	ldy #OAM_PLAYER
+	jsr draw_metatile_sprite
+	
+	jsr animate_flag
+	
 	jsr ppu_update
 	jmp loop_play_level
 
@@ -284,25 +285,12 @@ loop_pause_level:
 			
 		; clear pause selector sprite
 		lda #$FF
-		sta oam+(4*4)+0
-		sta oam+(4*4)+1
-		sta oam+(4*4)+2
-		sta oam+(4*4)+3
+		sta oam+OAM_PAUSE_SELECT+0
+		sta oam+OAM_PAUSE_SELECT+1
+		sta oam+OAM_PAUSE_SELECT+2
+		sta oam+OAM_PAUSE_SELECT+3
 		
 		lda pause_option
-		cmp #0
-		bne :+ ; resume				
-			jmp loop_play_level
-		:
-		cmp #1 
-		bne :+ ; restart
-			jsr ppu_off
-			lda curr_level
-			jsr load_level
-			jsr draw_level
-
-			jmp loop_play_level ; user has selected a level
-		:
 		cmp #2 
 		bne :++ ; exit
 			jsr ppu_off
@@ -319,6 +307,25 @@ loop_pause_level:
 				cpx #$10
 				bne :-
 			jmp main
+		:
+		; redraw the flag
+		lda level_data+$F0
+		ldx #$10
+		ldy #OAM_FLAG
+		jsr draw_metatile_sprite
+		lda pause_option
+		cmp #0
+		bne :+ ; resume				
+			jmp loop_play_level
+		:
+		cmp #1 
+		bne :+ ; restart
+			jsr ppu_off
+			lda curr_level
+			jsr load_level
+			jsr draw_level
+
+			jmp loop_play_level ; user has selected a level
 		:
 	@end:
 	lda gamepad_trigger

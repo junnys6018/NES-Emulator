@@ -32,10 +32,11 @@ for (fg_elem, bg_elem) in zip(fg_elems, bg_elems):
 			flag_pos += 1
 		if (bg == 'B' and (fg != '0')):
 			print("[WARN] Button is below non air tile")
-	output.append(flag_pos)
-	output.append(num_buttons)
-	# pad until level is 256 bytes
-	for _ in range(14):
-		output.append(0)
+
+	footer = bytearray([0] * 16)
+	footer[0] = flag_pos
+	footer[1] = num_buttons
+	
+	output = output + footer
 
 open('levels.bin', 'wb').write(output)

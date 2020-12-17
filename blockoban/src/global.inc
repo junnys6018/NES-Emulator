@@ -22,7 +22,7 @@
 .globalzp  temp, fill_addr, player_pos, curr_level, buttons_pressed, pause_option
 
 ; drawing.asm
-.global draw_background, draw_level, draw_player, draw_pause_selector
+.global draw_background, draw_level, draw_metatile_sprite, draw_pause_selector, animate_flag
 
 ; level.asm
 .global level_data, load_level, move_player

@@ -77,11 +77,6 @@ draw_level:
 				lda #TILE_CRATE
 				jmp @tile_a 
 			:
-			cmp #$30 ; flag
-			bne :+
-				lda #TILE_FLAG
-				jmp @tile_a
-			:
 			; check bg tiles
 			lda temp
 			and #$0F
@@ -115,6 +110,12 @@ draw_level:
 		iny
 		cpy #30
 		bne @outer
+	
+	; draw the flag
+	lda level_data+$F0
+	ldx #$10
+	ldy #OAM_FLAG
+	jsr draw_metatile_sprite
 		
 	; set all attributes to 1
 	lda #%01010101
@@ -125,52 +126,56 @@ draw_level:
 		bne :-
 		
 	rts
-	
-draw_player:
-	lda player_pos
+
+; A: sprite position; X: metatile index; Y: oam index
+draw_metatile_sprite:
+	sta temp
 	and #$F0
 	sec
 	sbc #1 ; subtract 1 because sprite rendering is delayed by one scanline
 	
-	sta oam+(0*4)+0
-	sta oam+(1*4)+0
+	sta oam+(0*4)+0, Y
+	sta oam+(1*4)+0, Y
 	
 	clc
 	adc #8
-	sta oam+(2*4)+0
-	sta oam+(3*4)+0
+	sta oam+(2*4)+0, Y
+	sta oam+(3*4)+0, Y
 	
-	lda player_pos
+	lda temp
 	asl
 	asl
 	asl
 	asl
 
-	sta oam+(0*4)+3
-	sta oam+(2*4)+3
+	sta oam+(0*4)+3, Y
+	sta oam+(2*4)+3, Y
 	
 	clc
 	adc #8
-	sta oam+(1*4)+3
-	sta oam+(3*4)+3
+	sta oam+(1*4)+3, Y
+	sta oam+(3*4)+3, Y
 	
 	
 	lda #0
-	sta oam+(0*4)+2
-	sta oam+(1*4)+2
-	sta oam+(2*4)+2
-	sta oam+(3*4)+2
+	sta oam+(0*4)+2, Y
+	sta oam+(1*4)+2, Y
+	sta oam+(2*4)+2, Y
+	sta oam+(3*4)+2, Y
 	
-	sta oam+(0*4)+1
+	txa
+	clc
 	
-	lda #1
-	sta oam+(1*4)+1
-	
-	lda #2
-	sta oam+(2*4)+1
-	
-	lda #3
-	sta oam+(3*4)+1
+	sta oam+(0*4)+1, Y
+	adc #1
+
+	sta oam+(1*4)+1, Y
+	adc #1
+
+	sta oam+(2*4)+1, Y
+	adc #1
+
+	sta oam+(3*4)+1, Y
 	
 	rts
 
@@ -182,16 +187,39 @@ option_map: .byte 95, 103, 111, 119 ; maps the option we selected in the pause s
 draw_pause_selector:
 	ldx pause_option
 	lda option_map, X
-	sta oam+(4*4)+0
+	sta oam+OAM_PAUSE_SELECT+0
 	
 	lda #4
-	sta oam+(4*4)+1
+	sta oam+OAM_PAUSE_SELECT+1
 	
 	lda #0
-	sta oam+(4*4)+2
+	sta oam+OAM_PAUSE_SELECT+2
 	
 	lda #96
-	sta oam+(4*4)+3
+	sta oam+OAM_PAUSE_SELECT+3
+	rts
+	
+.segment "RODATA"
+flag_animation_lut: .byte $10, $14, $18, $1C
+	
+.segment "CODE"
+animate_flag:
+	lda nmi_count
+	and #%00110000
+	lsr
+	lsr
+	lsr
+	lsr
+	tay
+	ldx flag_animation_lut, Y
+	
+	stx oam+OAM_FLAG+(0*4)+1
+	inx
+	stx oam+OAM_FLAG+(1*4)+1
+	inx
+	stx oam+OAM_FLAG+(2*4)+1
+	inx
+	stx oam+OAM_FLAG+(3*4)+1
 	rts
 
 
