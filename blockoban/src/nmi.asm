@@ -8,7 +8,6 @@
 ; variables used in nmi handle
 .segment "ZEROPAGE"
 nmi_count:      .res 1 ; is incremented every NMI
-count_rollover: .res 1 ; set to 1 whenever nmi_count overflows
 nmi_ready:      .res 1 ; 0: not ready to push a frame; 1: push a PPU frame update; 2: disable rendering in next NMI
 nmt_update_len: .res 1 ; number of bytes in nmt_update buffer
 scroll_nmt:     .res 1 ; nametable select (0-3 = $2000,$2400,$2800,$2C00)
@@ -109,10 +108,6 @@ nmi:
 	
 	; increment frame counter
 	inc nmi_count
-	bne :+
-		lda #1
-		sta count_rollover
-	:
 	
 	lda nmi_ready
 	bne :+ ; nmi_ready == 0 not ready to update PPU

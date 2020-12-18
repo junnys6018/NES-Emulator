@@ -1,7 +1,7 @@
 SRC_DIR = src/
 INCLUDES = $(SRC_DIR)nes.inc $(SRC_DIR)global.inc
-BINARIES = background.chr sprites.chr opening_screen.nam level_select.nam palette.pal levels.bin
-OBJ_FILES = blockoban.o nmi.o irq.o gamepad.o reset.o util.o drawing.o vars.o level.o
+BINARIES = background.chr sprites.chr opening_screen.nam end_screen.nam level_select.nam palette.pal levels.bin
+OBJ_FILES = blockoban.o nmi.o irq.o gamepad.o reset.o util.o drawing.o vars.o level.o end_screen.o
 
 all: blockoban.nes
 

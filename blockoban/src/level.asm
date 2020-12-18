@@ -172,3 +172,18 @@ move_player:
 	sta player_pos
 
 	rts
+	
+; sets the flag to green if all buttons are pushed, else sets the flag to red
+set_flag_color:
+	lda buttons_pressed
+	cmp level_data+$F1 ; compare with number of buttons in the level
+	bne :+
+		lda #0
+		jmp :++
+	:
+		lda #1
+	:
+	ldy #OAM_FLAG
+	jsr set_metatile_sprite_palette
+	rts
+	

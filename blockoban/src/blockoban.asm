@@ -23,6 +23,7 @@ sprite_palette:
 .byte $0F,$1B,$2B,$3B ; sp2 teal
 .byte $0F,$19,$2A,$27 ; sp3 marine
 opening_screen:    .incbin "opening_screen.nam"
+end_screen:        .incbin "end_screen.nam"
 select_screen:     .incbin "level_select.nam"
 all_levels:        .incbin "levels.bin"
 
@@ -67,6 +68,7 @@ main:
 		cpx #30
 		bne :--
 		
+	; draw pause screen
 	addr_jsr draw_str_pause, ppu_update_string
 	addr_jsr draw_str_resume, ppu_update_string
 	addr_jsr draw_str_restart, ppu_update_string
@@ -74,17 +76,8 @@ main:
 	
 	jsr ppu_update
 	
-	; wait for frame count to rollover or until user presses start to show level select screen
-	:
-		jsr gamepad_poll
-		lda gamepad_trigger
-		and #PAD_START
-		ora count_rollover
-		beq :-
-	
-	; reset rollover
-	lda #0
-	sta count_rollover
+	; wait for nmi_count to reach $FF or until user presses start to show level select screen
+	jsr wait_for_enter
 	
 	; draw level select screen
 	jsr ppu_off
@@ -166,13 +159,13 @@ loop_level_select:
 	pha
 	
 	txa 
-	ldx #13
-	ldy #8
+	ldx #15
+	ldy #14
 	
 	jsr ppu_update_tile
 	
 	pla
-	ldx #14
+	ldx #16
 	jsr ppu_update_tile
 		
 	jsr ppu_update
@@ -245,10 +238,9 @@ loop_play_level:
 			lda curr_level
 			cmp #NUM_LEVELS
 			bne :++
-				lda #0
-				sta count_rollover
-				sta nmi_count
+				; last level played, go to end screen
 				
+				; clear sprites
 				lda #$FF
 				ldx #0
 				:
@@ -256,7 +248,7 @@ loop_play_level:
 					inx
 					cpx #$20
 					bne :-
-				jmp main
+				jmp setup_end_screen
 			:
 			
 			jsr load_level
@@ -298,7 +290,6 @@ loop_pause_level:
 			jsr ppu_off
 			
 			lda #0
-			sta count_rollover
 			sta nmi_count
 			
 			lda #$FF
@@ -353,18 +344,3 @@ loop_pause_level:
 	
 	jsr ppu_update
 	jmp loop_pause_level
-	
-; sets the flag to green if all buttons are pushed, else sets the flag to red
-set_flag_color:
-	lda buttons_pressed
-	cmp level_data+$F1 ; compare with number of buttons in the level
-	bne :+
-		lda #0
-		jmp :++
-	:
-		lda #1
-	:
-	ldy #OAM_FLAG
-	jsr set_metatile_sprite_palette
-	rts
-	
