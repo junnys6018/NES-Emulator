@@ -83,7 +83,6 @@ move_player:
 
 	clc
 	adc level_increment ; A = index player wants to move to
-	sta temp
 	sta player_new_position
 	
 	tax
@@ -98,7 +97,7 @@ move_player:
 	bne @update_position ; branch if player is not moving into a crate
 	@begin_crate_test: 
 	; if player wants to move into a crate, we need to check if there is an air space for the crate to move
-		lda temp
+		lda player_new_position
 		clc
 		adc level_increment
 		sta temp ; temp = index adjacent to the crate
@@ -161,11 +160,7 @@ move_player:
 		
 			jmp @update_position ; player successfully moved
 		@done_air:
-		cmp #$20
-		bne :+ ; next tile is a crate, so we repeat the test
-			jmp @begin_crate_test
-		:
-		rts ; else, next tile is a wall or flag, we cant move
+		rts ; else, we cant move
 		
 @update_position: ; if we got here, it means the player was able to move, so we update its positon
 	lda player_new_position

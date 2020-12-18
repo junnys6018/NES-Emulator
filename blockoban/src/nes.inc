@@ -34,7 +34,7 @@ TILE_CRATE     = $34
 TILE_BUTTON    = $38
 TILE_AIR       = $FC
 
-NUM_LEVELS     = 5
+NUM_LEVELS     = 8
 
 ; sprite oam indices
 

@@ -1,4 +1,4 @@
-tilemap = {'0': 0, 'B': 1, '#': 1 << 4, 'C': 2 << 4, 'F': 3 << 4}
+tilemap = {' ': 0, '0': 0, 'B': 1, '#': 1 << 4, 'C': 2 << 4, 'F': 3 << 4}
 
 levels = open('levels.txt').read().splitlines()
 
