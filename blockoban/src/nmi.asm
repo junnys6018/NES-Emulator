@@ -4,6 +4,7 @@
 
 .include "nes.inc"
 .include "global.inc"
+.include "famitone2.inc"
 
 ; variables used in nmi handle
 .segment "ZEROPAGE"
@@ -194,7 +195,7 @@ nmi:
 	sta nmi_ready
 	
 @ppu_update_end:
-	; sound engine code goes here
+	jsr FamiToneUpdate
 	
 @nmi_end:
 	; restore registers and return

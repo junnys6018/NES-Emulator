@@ -141,7 +141,7 @@ FT_SFX_ADR_L		= FT_VARS+23
 FT_SFX_ADR_H		= FT_VARS+24
 FT_SFX_BASE_ADR		= FT_VARS+25
 
-FT_SFX_STRUCT_SIZE	= 15
+; FT_SFX_STRUCT_SIZE	= 15
 FT_SFX_REPEAT		= FT_SFX_BASE_ADR+0
 FT_SFX_PTR_L		= FT_SFX_BASE_ADR+1
 FT_SFX_PTR_H		= FT_SFX_BASE_ADR+2
@@ -152,10 +152,10 @@ FT_BASE_SIZE 		= FT_SFX_BUF+11-FT_BASE_ADR
 
 ;aliases for sound effect channels to use in user calls
 
-FT_SFX_CH0			= FT_SFX_STRUCT_SIZE*0
-FT_SFX_CH1			= FT_SFX_STRUCT_SIZE*1
-FT_SFX_CH2			= FT_SFX_STRUCT_SIZE*2
-FT_SFX_CH3			= FT_SFX_STRUCT_SIZE*3
+; FT_SFX_CH0			= FT_SFX_STRUCT_SIZE*0
+; FT_SFX_CH1			= FT_SFX_STRUCT_SIZE*1
+; FT_SFX_CH2			= FT_SFX_STRUCT_SIZE*2
+; FT_SFX_CH3			= FT_SFX_STRUCT_SIZE*3
 
 
 ;aliases for the APU registers
@@ -216,7 +216,7 @@ FT_MR_NOISE_F		= FT_OUT_BUF+10
 ; in: A   0 for PAL, not 0 for NTSC
 ;     X,Y pointer to music data
 ;------------------------------------------------------------------------------
-
+.segment "CODE"
 FamiToneInit:
 
 	stx FT_SONG_LIST_L		;store music data pointer for further use

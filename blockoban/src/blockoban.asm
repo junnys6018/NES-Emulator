@@ -8,6 +8,7 @@
 	
 .include "nes.inc"
 .include "global.inc"
+.include "famitone2.inc"
 	
 ;
 ; main
@@ -25,7 +26,7 @@ sprite_palette:
 opening_screen:    .incbin "res/opening_screen.nam"
 end_screen:        .incbin "res/end_screen.nam"
 select_screen:     .incbin "res/level_select.nam"
-all_levels:        .incbin "bin/levels.bin"
+all_levels:        .incbin "int/levels.bin"
 
 ; draw string commands
 draw_str_pause:   .byte %10000110, $29, $4D, "PAUSED"
@@ -36,6 +37,14 @@ draw_str_exit:    .byte %10000100, $29, $CD, "EXIT"
 
 .segment "CODE"
 main:
+	; init famitone2
+	lda #1
+	jsr FamiToneInit
+	
+	ldx #<sounds
+	ldy #>sounds
+	jsr FamiToneSfxInit
+
 	; load palette
 	ldx #0
 	:
@@ -97,7 +106,7 @@ main:
 ;
 	
 loop_level_select:
-	jsr gamepad_poll
+	jsr gamepad_poll	
 	lda gamepad_trigger
 	and #PAD_START
 	beq :+		
@@ -108,6 +117,10 @@ loop_level_select:
 		
 		jmp loop_play_level ; user has selected a level
 	:
+	
+	lda curr_level
+	sta temp
+	
 	lda gamepad_press
 	and #PAD_U
 	beq :+
@@ -121,7 +134,7 @@ loop_level_select:
 	beq :++
 		lda curr_level
 		cmp #5
-		bcc :+
+		bcc :+ ; curr_level >= 5
 		sec
 		sbc #5
 		sta curr_level
@@ -132,7 +145,7 @@ loop_level_select:
 	:
 	lda gamepad_press
 	and #PAD_L
-	beq :+
+	beq :+		
 		lda curr_level
 		beq :+
 		dec curr_level
@@ -148,6 +161,14 @@ loop_level_select:
 	bcc :+
 		lda #NUM_LEVELS-1
 		sta curr_level
+	:
+	
+	ldx temp
+	cpx curr_level
+	beq :+
+		lda #PLAY_DING
+		ldx #FT_SFX_CH0
+		jsr FamiToneSfxPlay
 	:
 	
 	; update screen

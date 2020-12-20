@@ -4,6 +4,7 @@
 
 .include "nes.inc"
 .include "global.inc"
+.include "famitone2.inc"
 
 ; level data documentation
 ; each level is 256 bytes, a level is made up of a 16x15 grid of tiles. Each tile takes up one byte. 
@@ -97,6 +98,9 @@ move_player:
 	bne @update_position ; branch if player is not moving into a crate
 	@begin_crate_test: 
 	; if player wants to move into a crate, we need to check if there is an air space for the crate to move
+		lda #$FF
+		sta temp+1 ; temp+1 = sound effect to play, FF means dont play a sound
+	
 		lda player_new_position
 		clc
 		adc level_increment
@@ -107,11 +111,10 @@ move_player:
 		
 		cmp #$00
 		bne @done_air ; next tile is air, so we can move
-		
+			; check if crate was pushed onto button
 			lda level_data, X
 			cmp #1
 			bne :+
-				; check if crate was pushed onto button
 				inc buttons_pressed
 				
 				; change the color of the crate to indicate it is on a button
@@ -119,7 +122,13 @@ move_player:
 				ldy #1
 				jsr ppu_update_palette
 				lda level_data, X
+				
+				ldy #PLAY_CLICK
+				jmp :++
 			:
+				ldy #PLAY_CRASH
+			:
+			sty temp+1
 			
 			; set air tile to a crate
 			ora #$20
@@ -157,6 +166,13 @@ move_player:
 			
 			ldx player_new_position
 			jsr ppu_update_metatile
+			
+			lda temp+1
+			cmp #$FF
+			beq :+
+				ldx #FT_SFX_CH0
+				jsr FamiToneSfxPlay
+			:
 		
 			jmp @update_position ; player successfully moved
 		@done_air:
