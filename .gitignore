@@ -14,6 +14,4 @@ Resources
 
 settings.json
 
-blockoban/blockoban.nes
-blockoban/**.o
-blockoban/levels.bin
+blockoban/bin

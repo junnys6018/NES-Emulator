@@ -27,4 +27,4 @@ for level in levels:
 
     output = output + footer
 
-open('levels.bin', 'wb').write(output)
+open('bin/levels.bin', 'wb').write(output)

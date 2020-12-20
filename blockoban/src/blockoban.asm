@@ -1,6 +1,6 @@
 .segment "CHR"
-	.incbin "background.chr"
-	.incbin "sprites.chr"
+	.incbin "res/background.chr"
+	.incbin "res/sprites.chr"
 .segment "HEADER"
     .byte "NES", $1A, 2, 1 ; 32K PRG, 8K CHR
 .segment "VECTORS"
@@ -16,16 +16,16 @@
 ; include read only game data (nametable, palettes, levels)
 .segment "RODATA"
 example_palette:
-.incbin "palette.pal"
+.incbin "res/palette.pal"
 sprite_palette:
 .byte $0F,$18,$28,$38 ; sp0 yellow
 .byte $0F,$14,$24,$34 ; sp1 purple
 .byte $0F,$1B,$2B,$3B ; sp2 teal
 .byte $0F,$19,$2A,$27 ; sp3 marine
-opening_screen:    .incbin "opening_screen.nam"
-end_screen:        .incbin "end_screen.nam"
-select_screen:     .incbin "level_select.nam"
-all_levels:        .incbin "levels.bin"
+opening_screen:    .incbin "res/opening_screen.nam"
+end_screen:        .incbin "res/end_screen.nam"
+select_screen:     .incbin "res/level_select.nam"
+all_levels:        .incbin "bin/levels.bin"
 
 ; draw string commands
 draw_str_pause:   .byte %10000110, $29, $4D, "PAUSED"
