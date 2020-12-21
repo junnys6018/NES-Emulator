@@ -288,7 +288,6 @@ loop_play_level:
 	jsr ppu_update
 	jmp loop_play_level
 
-.segment "CODE"	
 loop_pause_level:
 	jsr gamepad_poll
 	lda gamepad_trigger
@@ -345,12 +344,15 @@ loop_pause_level:
 			jmp loop_play_level ; user has selected a level
 		:
 	@end:
+	
+	ldy #0 ; set Y=0 if pause selector hasnt moved, else set Y=1
 	lda gamepad_trigger
 	and #PAD_U
 	beq :+
 		lda pause_option
 		beq :+
 		dec pause_option
+		ldy #1
 	:
 	lda gamepad_trigger
 	and #PAD_D
@@ -359,6 +361,13 @@ loop_pause_level:
 		cmp #2
 		beq :+
 		inc pause_option
+		ldy #1
+	:
+	cpy #1
+	bne :+
+		lda #PLAY_DING
+		ldx #FT_SFX_CH0
+		jsr FamiToneSfxPlay
 	:
 	
 	jsr draw_pause_selector

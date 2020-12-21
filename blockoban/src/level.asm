@@ -24,6 +24,7 @@
 ; -------+-------------------------------
 ; 0      | index of the flag
 ; 1      | number of buttons in the level
+; 2-15   | unused
 
 .segment "LEVEL"
 level_data: .res 256
@@ -97,10 +98,10 @@ move_player:
 	cmp #$20
 	bne @update_position ; branch if player is not moving into a crate
 	@begin_crate_test: 
-	; if player wants to move into a crate, we need to check if there is an air space for the crate to move
-		lda #$FF
-		sta temp+1 ; temp+1 = sound effect to play, FF means dont play a sound
-	
+		lda buttons_pressed
+		sta temp+1 ; store original number of buttons pressed in temp+1
+		
+		; if player wants to move into a crate, we need to check if there is an air space for the crate to move
 		lda player_new_position
 		clc
 		adc level_increment
@@ -122,13 +123,7 @@ move_player:
 				ldy #1
 				jsr ppu_update_palette
 				lda level_data, X
-				
-				ldy #PLAY_CLICK
-				jmp :++
 			:
-				ldy #PLAY_CRASH
-			:
-			sty temp+1
 			
 			; set air tile to a crate
 			ora #$20
@@ -167,13 +162,22 @@ move_player:
 			ldx player_new_position
 			jsr ppu_update_metatile
 			
-			lda temp+1
-			cmp #$FF
-			beq :+
-				ldx #FT_SFX_CH0
-				jsr FamiToneSfxPlay
+			lda buttons_pressed
+			cmp level_data+$F1
+			bne :+
+				lda temp+1
+				cmp level_data+$F1
+				beq :+
+					lda #PLAY_JINGLE
+					ldx #FT_SFX_CH0
+					jmp :++
 			:
-		
+				lda #PLAY_THUD
+				ldx #FT_SFX_CH1
+			:
+			
+			jsr FamiToneSfxPlay
+
 			jmp @update_position ; player successfully moved
 		@done_air:
 		rts ; else, we cant move
