@@ -29,7 +29,8 @@ select_screen:     .incbin "res/level_select.nam"
 all_levels:        .incbin "int/levels.bin"
 
 ; draw string commands
-draw_str_pause:   .byte %10000110, $29, $4D, "PAUSED"
+draw_str_pause:   .byte %10000110, $29, $2D, "PAUSED"
+draw_str_level:   .byte %10000110, $29, $4D, "LEVEL"
 draw_str_resume:  .byte %10000110, $29, $8D, "RESUME"
 draw_str_restart: .byte %10000111, $29, $AD, "RESTART"
 draw_str_exit:    .byte %10000100, $29, $CD, "EXIT"
@@ -87,6 +88,7 @@ main:
 		
 	; draw pause screen
 	addr_jsr draw_str_pause, ppu_update_string
+	addr_jsr draw_str_level, ppu_update_string
 	addr_jsr draw_str_resume, ppu_update_string
 	addr_jsr draw_str_restart, ppu_update_string
 	addr_jsr draw_str_exit, ppu_update_string
@@ -388,6 +390,24 @@ loop_pause_level:
 		ldx #FT_SFX_CH0
 		jsr FamiToneSfxPlay
 	:
+	
+	; update level indicator (dosnt need to be done every frame, but dosnt effect performance) 
+	lda curr_level
+	jsr bin_to_dec
+	
+	; push y to stack
+	tya
+	pha
+	
+	txa 
+	ldx #19
+	ldy #74
+	
+	jsr ppu_update_tile
+	
+	pla
+	ldx #20
+	jsr ppu_update_tile
 	
 	jsr draw_pause_selector
 	
