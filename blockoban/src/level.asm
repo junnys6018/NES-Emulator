@@ -170,13 +170,8 @@ move_player:
 				beq :+
 					lda #PLAY_JINGLE
 					ldx #FT_SFX_CH0
-					jmp :++
+					jsr FamiToneSfxPlay
 			:
-				lda #PLAY_THUD
-				ldx #FT_SFX_CH1
-			:
-			
-			jsr FamiToneSfxPlay
 
 			jmp @update_position ; player successfully moved
 		@done_air:

@@ -26,7 +26,6 @@ FT_SFX_CH3			= FT_SFX_STRUCT_SIZE*3
 
 PLAY_JINGLE = 0
 PLAY_DING   = 1
-PLAY_THUD   = 2
 
 
 .global FamiToneInit

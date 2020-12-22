@@ -28,7 +28,7 @@ OBJ_FILES += $(INT_DIR)end_screen.o
 OBJ_FILES += $(INT_DIR)sound_data.o
 OBJ_FILES += $(INT_DIR)famitone2.o
 
-SOUND_FILES = $(INT_DIR)effects.s
+SOUND_FILES = $(INT_DIR)effects.s $(INT_DIR)song.s
 
 FAMITRACKER = /d/dev/sdk/FamiTracker-v0.4.6/FamiTracker.exe # set this to the location of famitracker
 
@@ -52,10 +52,16 @@ $(INT_DIR)famitone2.o: $(FAMITONE_DIR)famitone2.s $(SRC_DIR)famitone2.inc | $(IN
 $(INT_DIR)sound_data.o: $(SRC_DIR)sound_data.asm $(INCLUDES) $(SOUND_FILES) | $(INT_DIR)
 	ca65 $< -o $@
 	
-$(INT_DIR)%.s: $(INT_DIR)%.nsf | $(INT_DIR)
+$(INT_DIR)effects.s: $(INT_DIR)effects.nsf | $(INT_DIR)
 	$(FAMITONE_DIR)tools/nsf2data.exe $< -ca65 -ntsc
 	
-$(INT_DIR)%.nsf: $(RES_DIR)%.ftm | $(INT_DIR)
+$(INT_DIR)effects.nsf: $(RES_DIR)effects.ftm | $(INT_DIR)
+	$(FAMITRACKER) $< -export $@
+	
+$(INT_DIR)song.s: $(INT_DIR)song.txt | $(INT_DIR)
+	$(FAMITONE_DIR)tools/text2data.exe $< -ca65 -ntsc
+	
+$(INT_DIR)song.txt: $(RES_DIR)song.ftm | $(INT_DIR)
 	$(FAMITRACKER) $< -export $@
 	
 $(INT_DIR):

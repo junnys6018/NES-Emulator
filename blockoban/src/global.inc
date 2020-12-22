@@ -35,6 +35,6 @@
 .global setup_end_screen
 
 ; sound_data.asm
-.global sounds
+.global sounds, song_music_data
 
 .endif

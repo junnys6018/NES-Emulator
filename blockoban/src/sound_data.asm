@@ -2,3 +2,5 @@
 
 .segment "RODATA"
 .include "../int/effects.s"
+
+.include "../int/song.s"

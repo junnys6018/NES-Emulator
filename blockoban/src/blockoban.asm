@@ -39,11 +39,19 @@ draw_str_exit:    .byte %10000100, $29, $CD, "EXIT"
 main:
 	; init famitone2
 	lda #1
+	ldx #<song_music_data
+	ldy #>song_music_data
 	jsr FamiToneInit
 	
 	ldx #<sounds
 	ldy #>sounds
 	jsr FamiToneSfxInit
+	
+	lda #0
+	jsr FamiToneMusicPlay
+	
+	lda #1
+	jsr FamiToneMusicPause
 
 	; load palette
 	ldx #0
@@ -114,6 +122,9 @@ loop_level_select:
 		lda curr_level
 		jsr load_level
 		jsr draw_level
+		
+		lda #0
+		jsr FamiToneMusicPause ; start playing music
 		
 		jmp loop_play_level ; user has selected a level
 	:
@@ -212,6 +223,10 @@ loop_play_level:
 		
 		lda #0
 		sta pause_option
+		
+		; pause music
+		lda #1
+		jsr FamiToneMusicPause
 
 		jmp loop_pause_level
 	:
@@ -328,6 +343,10 @@ loop_pause_level:
 		jsr draw_metatile_sprite
 		
 		jsr set_flag_color
+		
+		; resume music
+		lda #0
+		jsr FamiToneMusicPause
 		
 		lda pause_option
 		cmp #0
