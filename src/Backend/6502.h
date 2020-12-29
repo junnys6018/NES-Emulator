@@ -80,7 +80,7 @@ void NMI(State6502* cpu);
 void IRQ_Set(State6502* cpu, int index);
 void IRQ_Clear(State6502* cpu, int index);
 
-char* dissassemble(State6502* cpu, uint16_t addr, int* size);
+void dissassemble(State6502* cpu, uint16_t addr, int* size, char line[128]);
 
 #endif
 

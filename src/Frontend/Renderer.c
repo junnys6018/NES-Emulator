@@ -607,14 +607,12 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu)
 	SetTextOrigin(xoff + rc.wm.padding, yoff + rc.wm.padding);
 	uint16_t PC = cpu->PC;
 	int size;
+	char line[128];
 	for (int i = 0; i < 8; i++)
 	{
-		char* line = dissassemble(cpu, PC, &size);
+		dissassemble(cpu, PC, &size, line);
 		PC += size;
-
 		RenderText(line, i == 0 ? cyan : white);
-
-		free(line);
 	}
 }
 

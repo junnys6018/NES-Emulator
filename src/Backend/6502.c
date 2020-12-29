@@ -1073,11 +1073,9 @@ static Instruction opcodes[256] = {
 	{"BEQ", BEQ,REL,2}, {"SBC", SBC,IZY,5}, {"???", XXX,IMP,2}, {"???", XXX,IMP,8}, {"???", NOP,IMP,4}, {"SBC", SBC,ZPX,4}, {"INC", INC,ZPX,6}, {"???", XXX,IMP,6}, {"SED", SED,IMP,2}, {"SBC", SBC,ABY,4}, {"NOP", NOP,IMP,2}, {"???", XXX,IMP,7}, {"???", NOP,IMP,4}, {"SBC", SBC,ABX,4}, {"INC", INC,ABX,7}, {"???", XXX,IMP,7},
 };
 
-// Sets size to the number of bytes the instruction takes. Note the caller has to free the returned string
-char* dissassemble(State6502* cpu, uint16_t addr, int* size)
+// Sets size to the number of bytes the instruction takes.
+void dissassemble(State6502* cpu, uint16_t addr, int* size, char line[128])
 {
-	char* line = malloc(128);
-
 	// calling cpu_bus_read can potentially modify the state of the nes. For example, if the address we are reading
 	// from is memory mapped to an apu or ppu register. TODO: write a cpu_bus_peek function that will not modify any state 
 	uint8_t opcode = cpu_bus_read(cpu->bus, addr);
@@ -1165,6 +1163,4 @@ char* dissassemble(State6502* cpu, uint16_t addr, int* size)
 		if (size)
 			* size = 3;
 	}
-
-	return line;
 }
