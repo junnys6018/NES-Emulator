@@ -45,7 +45,7 @@ void interrupt_sequence(State6502* cpu, uint16_t interrupt_vector)
 	cpu_bus_write(cpu->bus, (uint16_t)0x0100 | (uint16_t)cpu->SP, (cpu->status.reg | 1 << 5) & ~(1 << 4));
 	cpu->SP--;
 
-	// Set PC to NMI vector 0xFFFA/B
+	// Set PC to interrupt vector
 	cpu->PC = cpu_bus_read(cpu->bus, interrupt_vector + 1); // High byte
 	cpu->PC = cpu->PC << 8;
 	cpu->PC |= cpu_bus_read(cpu->bus, interrupt_vector); // Low byte
@@ -94,6 +94,7 @@ int clock_6502(State6502* cpu)
 			interrupt_sequence(cpu, 0xFFFE);
 		}
 	}
+	// Execute the next instruction
 	else if (cpu->remaining == 0)
 	{
 		uint8_t opcode = cpu_bus_read(cpu->bus, cpu->PC++);
