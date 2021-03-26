@@ -1,7 +1,15 @@
+# SET THIS TO THE LOCATION OF FAMITRACKER
+FAMITRACKER = /d/dev/NES-Emulator/Resources/FamiTracker-v0.4.6/FamiTracker.exe
+
+# SET THIS TO THE LOCATION OF ld65 AND ca65
+ld65 = /d/dev/NES-Emulator/Resources/cc65-snapshot-win32/bin/ld65.exe
+ca65 = /d/dev/NES-Emulator/Resources/cc65-snapshot-win32/bin/ca65.exe
+
+FAMITONE_DIR = vendor/famitone2/
+
 SRC_DIR = src/
 INT_DIR = int/
 RES_DIR = res/
-FAMITONE_DIR = vendor/famitone2/
 
 INCLUDES  = $(SRC_DIR)nes.inc
 INCLUDES += $(SRC_DIR)global.inc
@@ -30,27 +38,26 @@ OBJ_FILES += $(INT_DIR)famitone2.o
 
 SOUND_FILES = $(INT_DIR)effects.s $(INT_DIR)song.s
 
-FAMITRACKER = /d/dev/sdk/FamiTracker-v0.4.6/FamiTracker.exe # set this to the location of famitracker
 
 all: blockoban.nes
 
 blockoban.nes: $(OBJ_FILES) $(SRC_DIR)blockoban.cfg | $(INT_DIR)
-	ld65 -C $(SRC_DIR)blockoban.cfg -o blockoban.nes $(OBJ_FILES)
+	$(ld65) -C $(SRC_DIR)blockoban.cfg -o blockoban.nes $(OBJ_FILES)
 	
 $(INT_DIR)%.o: $(SRC_DIR)%.asm $(INCLUDES) | $(INT_DIR)
-	ca65 $< -o $@
+	$(ca65) $< -o $@
 	
 $(INT_DIR)levels.bin: levels.txt compile_levels.py | $(INT_DIR)
 	python compile_levels.py
 	
 $(INT_DIR)blockoban.o: $(SRC_DIR)blockoban.asm $(BINARIES) $(INCLUDES) | $(INT_DIR)
-	ca65 $< -o $@
+	$(ca65) $< -o $@
 	
 $(INT_DIR)famitone2.o: $(FAMITONE_DIR)famitone2.s $(SRC_DIR)famitone2.inc | $(INT_DIR)
-	ca65 $< -o $@
+	$(ca65) $< -o $@
 	
 $(INT_DIR)sound_data.o: $(SRC_DIR)sound_data.asm $(INCLUDES) $(SOUND_FILES) | $(INT_DIR)
-	ca65 $< -o $@
+	$(ca65) $< -o $@
 	
 $(INT_DIR)effects.s: $(INT_DIR)effects.nsf | $(INT_DIR)
 	$(FAMITONE_DIR)tools/nsf2data.exe $< -ca65 -ntsc
