@@ -31,6 +31,63 @@ typedef struct
 bool clock_divider(divider* div);
 void reload_divider(divider* div);
 
+typedef struct
+{
+	union
+	{
+		struct
+		{
+			uint8_t EV : 4; // Envelope period/volume
+			uint8_t C : 1;	// Constant volume
+			uint8_t L : 1;	// Loop envelope/disable length counter
+			uint8_t D : 2;	// Duty cycle
+		} bits;
+		uint8_t reg;
+	} vol;
+
+	union
+	{
+		struct
+		{
+			uint8_t S : 3; // Shift count
+			uint8_t N : 1; // Negative
+			uint8_t P : 3; // Period
+			uint8_t E : 1; // Enable
+		} bits;
+		uint8_t reg;
+	} sweep_register;
+
+	uint8_t low;
+
+	union
+	{
+		struct
+		{
+			uint8_t H : 3; // Timer high
+			uint8_t L : 5; // Length counter load
+		} bits;
+		uint8_t reg;
+	} high;
+
+	divider timer;
+	uint8_t sequencer;
+	uint8_t sequence_sel;
+	uint8_t length_counter;
+	struct
+	{
+		divider div;
+		uint8_t decay;
+		bool start_flag;
+	} envelope;
+
+	struct
+	{
+		divider div;
+		bool reload_flag;
+		uint32_t target;
+	} sweep;
+} SquareChannel;
+
 // Represents a snapshot of the audio buffer, used by the renderer to visualise each audio channel as a waveform
 typedef struct
 {
@@ -49,116 +106,10 @@ void WindowAddSample(AudioWindow* win, float sample);
 typedef struct
 {
 	// Pulse 1 registers, write only, accessed from $4000-$4003
-
-	union
-	{
-		struct
-		{
-			uint8_t EV : 4; // Envelope period/volume
-			uint8_t C  : 1; // Constant volume
-			uint8_t L  : 1; // Loop envelope/disable length counter
-			uint8_t D  : 2; // Duty cycle
-		} bits;
-		uint8_t reg;
-	} SQ1_VOL; // $4000
-
-	union
-	{
-		struct
-		{
-			uint8_t S : 3; // Shift count
-			uint8_t N : 1; // Negative
-			uint8_t P : 3; // Period
-			uint8_t E : 1; // Enable
-		} bits;
-		uint8_t reg;
-	} SQ1_SWEEP; // $4001
-
-	uint8_t SQ1_LO; // $4002
-
-	union
-	{
-		struct
-		{
-			uint8_t H : 3; // Timer high
-			uint8_t L : 5; // Length counter load
-		} bits;
-		uint8_t reg;
-	} SQ1_HI; // $4003
-
-	divider SQ1_timer;
-	uint8_t SQ1_sequencer;
-	uint8_t SQ1_sequence_sel;
-	uint8_t SQ1_length_counter;
-	struct
-	{
-		divider div;
-		uint8_t decay;
-		bool start_flag;
-	} SQ1_envelope;
-
-	struct
-	{
-		divider div;
-		bool reload_flag;
-		uint32_t target;
-	} SQ1_sweep;
+	SquareChannel SQ1;
 
 	// Pulse 2 registers, write only, accessed from $4004-$4007
-
-	union
-	{
-		struct
-		{
-			uint8_t EV : 4; // Envelope period/volume
-			uint8_t C : 1; // Constant volume
-			uint8_t L : 1; // Loop envelope/disable length counter
-			uint8_t D : 2; // Duty cycle
-		} bits;
-		uint8_t reg;
-	} SQ2_VOL; // $4004
-
-	union
-	{
-		struct
-		{
-			uint8_t S : 3; // Shift count
-			uint8_t N : 1; // Negative
-			uint8_t P : 3; // Period
-			uint8_t E : 1; // Enable
-		} bits;
-		uint8_t reg;
-	} SQ2_SWEEP; // $4005
-
-	uint8_t SQ2_LO; // $4006
-
-	union
-	{
-		struct
-		{
-			uint8_t H : 3; // Timer high
-			uint8_t L : 5; // Length counter load
-		} bits;
-		uint8_t reg;
-	} SQ2_HI; // $4007
-
-	divider SQ2_timer;
-	uint8_t SQ2_sequencer;
-	uint8_t SQ2_sequence_sel;
-	uint8_t SQ2_length_counter;
-	struct
-	{
-		divider div;
-		uint8_t decay;
-		bool start_flag;
-	} SQ2_envelope;
-
-	struct
-	{
-		divider div;
-		bool reload_flag;
-		uint32_t target;
-	} SQ2_sweep;
+	SquareChannel SQ2;
 
 	// Triangle channel registers, write only, accessed from $4008-$400B
 

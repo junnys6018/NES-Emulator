@@ -70,39 +70,81 @@ float apu_filtered_sample(State2A03* apu)
 	return ret;
 }
 
-bool is_mute(State2A03* apu, int channel)
+// SQUARE CHANNEL IMPLEMENTATION
+bool sq_is_mute(SquareChannel* ch) 
 {
-	if (channel == SQ1)
+	int16_t delta_p = ch->timer.period >> ch->sweep_register.bits.S;
+	if (ch->sweep_register.bits.N)
 	{
-		int16_t delta_p = apu->SQ1_timer.period >> apu->SQ1_SWEEP.bits.S;
-		if (apu->SQ1_SWEEP.bits.N)
-		{
-			delta_p = -delta_p;
-		}
-		apu->SQ1_sweep.target = (int32_t)apu->SQ1_timer.period + delta_p;
-
-		if (apu->SQ1_sweep.target > 0x07FF || apu->SQ1_timer.period < 8)
-		{
-			return true;
-		}
+		delta_p = -delta_p;
 	}
-	else if (channel == SQ2)
-	{
-		int16_t delta_p = apu->SQ2_timer.period >> apu->SQ2_SWEEP.bits.S;
-		if (apu->SQ2_SWEEP.bits.N)
-		{
-			delta_p = -delta_p;
-		}
-		apu->SQ2_sweep.target = (int32_t)apu->SQ2_timer.period + delta_p;
+	ch->sweep.target = (int32_t)ch->timer.period + delta_p;
 
-		if (apu->SQ2_sweep.target > 0x07FF || apu->SQ2_timer.period < 8)
-		{
-			return true;
-		}
+	if (ch->sweep.target > 0x07FF || ch->timer.period < 8)
+	{
+		return true;
 	}
 	return false;
 }
 
+void sq_quarter_frame(SquareChannel* ch)
+{
+	if (ch->envelope.start_flag)
+	{
+		ch->envelope.start_flag = false;
+		ch->envelope.decay = 0x0F;
+		reload_divider(&ch->envelope.div);
+	}
+	else if (clock_divider(&ch->envelope.div))
+	{
+		if (ch->envelope.decay > 0)
+		{
+			ch->envelope.decay--;
+		}
+		else if (ch->vol.bits.L)
+		{
+			ch->envelope.decay = 0x0F;
+		}
+	}
+}
+
+void sq_half_frame(SquareChannel* ch)
+{
+	if (ch->length_counter > 0 && !ch->vol.bits.L)
+	{
+		ch->length_counter--;
+	}
+
+	if (clock_divider(&ch->sweep.div) && !sq_is_mute(ch) && ch->sweep_register.bits.E)
+	{
+		ch->timer.period = ch->sweep.target;
+	}
+	if (ch->sweep.reload_flag)
+	{
+		ch->sweep.reload_flag = false;
+		reload_divider(&ch->sweep.div);
+	}
+}
+
+void sq_clock(SquareChannel* ch, uint8_t* output)
+{
+	if (clock_divider(&ch->timer))
+	{
+		bool seq_out = (ch->sequencer & ch->sequence_sel) > 0;
+		ch->sequence_sel = (ch->sequence_sel >> 7) | (ch->sequence_sel << 1); // Rotate left
+
+		if (seq_out && ch->length_counter != 0 && !sq_is_mute(ch))
+		{
+			*output = ch->vol.bits.C ? ch->vol.bits.EV : ch->envelope.decay;
+		}
+		else
+		{
+			*output = 0;
+		}
+	}
+}
+
+// APU IMPLEMENTATION
 void apu_restart_dmc_sample(State2A03* apu)
 {
 	apu->DMC_memory_reader.addr_counter = 0xC000 | ((uint16_t)apu->DMC_ADDR << 6);
@@ -154,42 +196,10 @@ void apu_dmc_read_byte(State2A03* apu)
 void quarter_frame(State2A03* apu)
 {
 	// Pulse 1
-	if (apu->SQ1_envelope.start_flag)
-	{
-		apu->SQ1_envelope.start_flag = false;
-		apu->SQ1_envelope.decay = 0x0F;
-		reload_divider(&apu->SQ1_envelope.div);
-	}
-	else if (clock_divider(&apu->SQ1_envelope.div))
-	{
-		if (apu->SQ1_envelope.decay > 0)
-		{
-			apu->SQ1_envelope.decay--;
-		}
-		else if (apu->SQ1_VOL.bits.L)
-		{
-			apu->SQ1_envelope.decay = 0x0F;
-		}
-	}
+	sq_quarter_frame(&apu->SQ1);
 
 	// Pulse 2
-	if (apu->SQ2_envelope.start_flag)
-	{
-		apu->SQ2_envelope.start_flag = false;
-		apu->SQ2_envelope.decay = 0x0F;
-		reload_divider(&apu->SQ2_envelope.div);
-	}
-	else if (clock_divider(&apu->SQ2_envelope.div))
-	{
-		if (apu->SQ2_envelope.decay > 0)
-		{
-			apu->SQ2_envelope.decay--;
-		}
-		else if (apu->SQ2_VOL.bits.L)
-		{
-			apu->SQ2_envelope.decay = 0x0F;
-		}
-	}
+	sq_quarter_frame(&apu->SQ2);
 
 	// Triangle
 	if (apu->TRI_linear_reload_flag)
@@ -229,36 +239,10 @@ void quarter_frame(State2A03* apu)
 void half_frame(State2A03* apu)
 {
 	// Pulse 1
-	if (apu->SQ1_length_counter > 0 && !apu->SQ1_VOL.bits.L)
-	{
-		apu->SQ1_length_counter--;
-	}
-
-	if (clock_divider(&apu->SQ1_sweep.div) && !is_mute(apu, SQ1) && apu->SQ1_SWEEP.bits.E)
-	{
-		apu->SQ1_timer.period = apu->SQ1_sweep.target;
-	}
-	if (apu->SQ1_sweep.reload_flag)
-	{
-		apu->SQ1_sweep.reload_flag = false;
-		reload_divider(&apu->SQ1_sweep.div);
-	}
+	sq_half_frame(&apu->SQ1);
 
 	// Pulse 2
-	if (apu->SQ2_length_counter > 0 && !apu->SQ2_VOL.bits.L)
-	{
-		apu->SQ2_length_counter--;
-	}
-
-	if (clock_divider(&apu->SQ2_sweep.div) && !is_mute(apu, SQ2) && apu->SQ2_SWEEP.bits.E)
-	{
-		apu->SQ2_timer.period = apu->SQ2_sweep.target;
-	}
-	if (apu->SQ2_sweep.reload_flag)
-	{
-		apu->SQ2_sweep.reload_flag = false;
-		reload_divider(&apu->SQ2_sweep.div);
-	}
+	sq_half_frame(&apu->SQ2);
 
 	// Triangle
 	if (apu->TRI_length_counter > 0 && !apu->TRI_LINEAR.bits.C)
@@ -327,36 +311,10 @@ void clock_2A03(State2A03* apu)
 		clock_frame_counter(apu);
 
 		// Pulse 1
-		if (clock_divider(&apu->SQ1_timer))
-		{
-			bool seq_out = (apu->SQ1_sequencer & apu->SQ1_sequence_sel) > 0;
-			apu->SQ1_sequence_sel = (apu->SQ1_sequence_sel >> 7) | (apu->SQ1_sequence_sel << 1); // Rotate left
-
-			if (seq_out && apu->SQ1_length_counter != 0 && !is_mute(apu, SQ1))
-			{
-				apu->channel_out.pulse1 = apu->SQ1_VOL.bits.C ? apu->SQ1_VOL.bits.EV : apu->SQ1_envelope.decay;
-			}
-			else
-			{
-				apu->channel_out.pulse1 = 0;
-			}
-		}
+		sq_clock(&apu->SQ1, &apu->channel_out.pulse1);
 
 		// Pulse 2
-		if (clock_divider(&apu->SQ2_timer))
-		{
-			bool seq_out = (apu->SQ2_sequencer & apu->SQ2_sequence_sel) > 0;
-			apu->SQ2_sequence_sel = (apu->SQ2_sequence_sel >> 7) | (apu->SQ2_sequence_sel << 1); // Rotate left
-
-			if (seq_out && apu->SQ2_length_counter != 0 && !is_mute(apu, SQ2))
-			{
-				apu->channel_out.pulse2 = apu->SQ2_VOL.bits.C ? apu->SQ2_VOL.bits.EV : apu->SQ2_envelope.decay;
-			}
-			else
-			{
-				apu->channel_out.pulse2 = 0;
-			}
-		}
+		sq_clock(&apu->SQ2, &apu->channel_out.pulse2);
 
 		// Noise
 		if (clock_divider(&apu->NOISE_timer))
@@ -478,8 +436,8 @@ void reset_2A03(State2A03* apu)
 	apu->total_cycles = 0;
 	apu->apu_cycles = 0;
 
-	apu->SQ1_sequence_sel = 0x80;
-	apu->SQ2_sequence_sel = 0x80;
+	apu->SQ1.sequence_sel = 0x80;
+	apu->SQ2.sequence_sel = 0x80;
 
 	apu->TRI_sequence_index = 0;
 
@@ -505,87 +463,87 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 	switch (addr)
 	{
 	case 0x4000: // SQ1_VOL: Duty and volume for pulse channel 1
-		apu->SQ1_VOL.reg = data;
+		apu->SQ1.vol.reg = data;
 
-		switch (apu->SQ1_VOL.bits.D)
+		switch (apu->SQ1.vol.bits.D)
 		{
 		case 0:
-			apu->SQ1_sequencer = 0b00000001;
+			apu->SQ1.sequencer = 0b00000001;
 			break;
 		case 1:
-			apu->SQ1_sequencer = 0b00000011;
+			apu->SQ1.sequencer = 0b00000011;
 			break;
 		case 2:
-			apu->SQ1_sequencer = 0b00001111;
+			apu->SQ1.sequencer = 0b00001111;
 			break;
 		case 3:
-			apu->SQ1_sequencer = 0b11111100;
+			apu->SQ1.sequencer = 0b11111100;
 			break;
 		}
-		apu->SQ1_envelope.div.period = apu->SQ1_VOL.bits.EV;
+		apu->SQ1.envelope.div.period = apu->SQ1.vol.bits.EV;
 		break;
 	case 0x4001: // SQ1_SWEEP: Sweep control for pulse channel 1
-		apu->SQ1_SWEEP.reg = data;
+		apu->SQ1.sweep_register.reg = data;
 
-		apu->SQ1_sweep.div.period = apu->SQ1_SWEEP.bits.P;
-		apu->SQ1_sweep.reload_flag = true;
+		apu->SQ1.sweep.div.period = apu->SQ1.sweep_register.bits.P;
+		apu->SQ1.sweep.reload_flag = true;
 		break;
 	case 0x4002: // SQ1_LO: Low byte period for pulse channel 1
-		apu->SQ1_LO = data;
+		apu->SQ1.low = data;
 
-		apu->SQ1_timer.period = ((uint32_t)apu->SQ1_HI.bits.H << 8) | (uint32_t)apu->SQ1_LO;
+		apu->SQ1.timer.period = ((uint32_t)apu->SQ1.high.bits.H << 8) | (uint32_t)apu->SQ1.low;
 		break;
 	case 0x4003: // SQ1_HI: High byte period for pulse channel 1
-		apu->SQ1_HI.reg = data;
+		apu->SQ1.high.reg = data;
 
-		apu->SQ1_envelope.start_flag = true;
-		apu->SQ1_timer.period = ((uint32_t)apu->SQ1_HI.bits.H << 8) | (uint32_t)apu->SQ1_LO;
-		apu->SQ1_sequence_sel = 0x80;
+		apu->SQ1.envelope.start_flag = true;
+		apu->SQ1.timer.period = ((uint32_t)apu->SQ1.high.bits.H << 8) | (uint32_t)apu->SQ1.low;
+		apu->SQ1.sequence_sel = 0x80;
 		if (apu->STATUS.flags.P1)
 		{
-			apu->SQ1_length_counter = LENGTH_COUNTER_LUT[apu->SQ1_HI.bits.L];
+			apu->SQ1.length_counter = LENGTH_COUNTER_LUT[apu->SQ1.high.bits.L];
 		}
 		break;
 	case 0x4004: // SQ2_VOL: Duty and volume for pulse channel 2
-		apu->SQ2_VOL.reg = data;
+		apu->SQ2.vol.reg = data;
 
-		switch (apu->SQ2_VOL.bits.D)
+		switch (apu->SQ2.vol.bits.D)
 		{
 		case 0:
-			apu->SQ2_sequencer = 0b00000001;
+			apu->SQ2.sequencer = 0b00000001;
 			break;
 		case 1:
-			apu->SQ2_sequencer = 0b00000011;
+			apu->SQ2.sequencer = 0b00000011;
 			break;
 		case 2:
-			apu->SQ2_sequencer = 0b00001111;
+			apu->SQ2.sequencer = 0b00001111;
 			break;
 		case 3:
-			apu->SQ2_sequencer = 0b11111100;
+			apu->SQ2.sequencer = 0b11111100;
 			break;
 		}
-		apu->SQ2_envelope.div.period = apu->SQ2_VOL.bits.EV;
+		apu->SQ2.envelope.div.period = apu->SQ2.vol.bits.EV;
 		break;
 	case 0x4005: // SQ2_SWEEP: Sweep control for pulse channel 2
-		apu->SQ2_SWEEP.reg = data;
+		apu->SQ2.sweep_register.reg = data;
 
-		apu->SQ2_sweep.div.period = apu->SQ2_SWEEP.bits.P;
-		apu->SQ2_sweep.reload_flag = true;
+		apu->SQ2.sweep.div.period = apu->SQ2.sweep_register.bits.P;
+		apu->SQ2.sweep.reload_flag = true;
 		break;
 	case 0x4006: // SQ2_LO: Low byte period for pulse channel 2
-		apu->SQ2_LO = data;
+		apu->SQ2.low = data;
 
-		apu->SQ2_timer.period = ((uint32_t)apu->SQ2_HI.bits.H << 8) | (uint32_t)apu->SQ2_LO;
+		apu->SQ2.timer.period = ((uint32_t)apu->SQ2.high.bits.H << 8) | (uint32_t)apu->SQ2.low;
 		break;
 	case 0x4007: // SQ2_HI: High byte period for pulse channel 2
-		apu->SQ2_HI.reg = data;
+		apu->SQ2.high.reg = data;
 
-		apu->SQ2_envelope.start_flag = true;
-		apu->SQ2_timer.period = ((uint32_t)apu->SQ2_HI.bits.H << 8) | (uint32_t)apu->SQ2_LO;
-		apu->SQ2_sequence_sel = 0x80;
+		apu->SQ2.envelope.start_flag = true;
+		apu->SQ2.timer.period = ((uint32_t)apu->SQ2.high.bits.H << 8) | (uint32_t)apu->SQ2.low;
+		apu->SQ2.sequence_sel = 0x80;
 		if (apu->STATUS.flags.P2)
 		{
-			apu->SQ2_length_counter = LENGTH_COUNTER_LUT[apu->SQ2_HI.bits.L];
+			apu->SQ2.length_counter = LENGTH_COUNTER_LUT[apu->SQ2.high.bits.L];
 		}
 		break;
 	case 0x4008: // TRI_LINEAR: Triangle wave linear counter
@@ -661,11 +619,11 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 
 		if (!apu->STATUS.flags.P1)
 		{
-			apu->SQ1_length_counter = 0;
+			apu->SQ1.length_counter = 0;
 		}
 		if (!apu->STATUS.flags.P2)
 		{
-			apu->SQ2_length_counter = 0;
+			apu->SQ2.length_counter = 0;
 		}
 		if (!apu->STATUS.flags.T)
 		{
@@ -733,8 +691,8 @@ uint8_t apu_read(State2A03* apu, uint16_t addr)
 		} ret;
 		ret.reg = 0;
 
-		ret.bits.SQ1 = apu->SQ1_length_counter > 0;
-		ret.bits.SQ2 = apu->SQ2_length_counter > 0;
+		ret.bits.SQ1 = apu->SQ1.length_counter > 0;
+		ret.bits.SQ2 = apu->SQ2.length_counter > 0;
 		ret.bits.T = apu->TRI_length_counter > 0;
 		ret.bits.N = apu->NOISE_length_counter > 0;
 		ret.bits.D = apu->DMC_memory_reader.bytes_remaining > 0;
