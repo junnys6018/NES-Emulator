@@ -24,6 +24,7 @@ kind "ConsoleApp"
 	{
 		"SDL2",
 		"SDL2main",
+		"glad"
 	}
 
 	includedirs
@@ -32,7 +33,8 @@ kind "ConsoleApp"
 		"tests",
 		"vendor/SDL2-2.0.12/include",
 		"vendor/stb",
-		"vendor/cJSON"
+		"vendor/cJSON",
+		"vendor/glad/include"
 	}
 	
 	filter "configurations:Debug"
@@ -67,3 +69,5 @@ kind "ConsoleApp"
 		{
 			"@cp %{wks.location}/bin/" .. outputdir .. "/%{prj.name}/%{prj.name} %{prj.location}/%{prj.name}.out"
 		}
+
+include "vendor/glad"
