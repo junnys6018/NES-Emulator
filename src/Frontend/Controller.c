@@ -1,4 +1,4 @@
-#include "Renderer.h"
+#include "Controller.h"
 
 #include <SDL.h> 
 #include <glad/glad.h>
@@ -15,6 +15,7 @@
 #include "OpenGL/Scanline.h"
 #include "OpenGL/BatchRenderer.h"
 #include "OpenGL/TextRenderer.h"
+#include "OpenGL/LineRenderer.h"
 
 #include "Views/AboutView.h"
 #include "Views/ApuWaveView.h"
@@ -160,6 +161,7 @@ void InitOpengl(SDL_Window* window)
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	InitScanlineEffect();
+	InitLineRenderer();
 	InitBatchRenderer();
 	StartupOptions* opt = GetStartupOptions();
 	InitTextRenderer(opt->font_style, opt->font_size);
@@ -169,6 +171,7 @@ void ShutdownOpengl()
 {
 	ShutdownBatchRenderer();
 	ShutdownTextRenderer();
+	ShutdownLineRenderer();
 	ShutdownScanlineEffect();
 	SDL_GL_DeleteContext(cc.gl_context);
 }
@@ -314,35 +317,9 @@ void ControllerDrawViews()
 
 	glClear(GL_COLOR_BUFFER_BIT);
 	BeginBatch();
+	BeginLines();
 
-	DrawNes(cc.m_nes_screen);
-	
-	// Draw 8x8 grid over nes screen for debugging
-	//if (rc.draw_grid)
-	//{
-	//	for (int i = 0; i <= 32; i++)
-	//	{
-	//		if (i == 16)
-	//			SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
-	//		else if (i % 2 == 0)
-	//			SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
-	//		else
-	//			SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
-	//		int x = rc.wm.nes_x + rc.wm.nes_w * i / 32;
-	//		SDL_RenderDrawLine(rc.rend, x, rc.wm.nes_y, x, rc.wm.nes_y + rc.wm.nes_h);
-	//	}
-	//	for (int i = 0; i <= 30; i++)
-	//	{
-	//		if (i == 15)
-	//			SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
-	//		else if (i % 2 == 0)
-	//			SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
-	//		else
-	//			SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
-	//		int y = rc.wm.nes_y + rc.wm.nes_w * i / 32;
-	//		SDL_RenderDrawLine(rc.rend, rc.wm.nes_x, y, rc.wm.nes_x + rc.wm.nes_w, y);
-	//	}
-	//}
+	DrawNes(cc.m_nes_screen, &cc.m_settings);
 
 	if (cc.draw_debug_view)
 	{
@@ -402,6 +379,7 @@ void ControllerDrawViews()
 
 	GuiEndFrame();
 	EndBatch();
+	EndLines();
 
 	// Swap framebuffers
 	SDL_GL_SwapWindow(cc.win);

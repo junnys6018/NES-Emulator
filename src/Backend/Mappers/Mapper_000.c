@@ -1,5 +1,5 @@
 #include "Mapper_000.h"
-#include "Frontend/Renderer.h"
+#include "Frontend/Controller.h"
 #include <stdlib.h>
 #include <string.h>
 

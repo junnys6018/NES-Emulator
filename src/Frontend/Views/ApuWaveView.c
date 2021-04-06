@@ -54,46 +54,39 @@ int no_trigger(AudioWindow* win)
 // Visualise audio buffer as a waveform
 void DrawWaveform(SDL_Rect* rect, AudioWindow* win, float vertical_scale, TRIGGER_FUNC trigger)
 {
-	//static SDL_Color waveform_colour = {247, 226, 64}; // yellow
+	static SDL_Color waveform_colour = {247, 226, 64}; // yellow
 
-	//// Clear the part of the screen where we are drawing the waveform
-	//SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
-	//SDL_RenderFillRect(rc.rend, rect);
+	// Clear the part of the screen where we are drawing the waveform
+	SubmitColoredQuad(rect, 0, 0, 0);
 
-	//// Draw x and y axis
-	//SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
-	//int mid_y = rect->y + rect->h / 2;
-	//int mid_x = rect->x + rect->w / 2;
-	//SDL_RenderDrawLine(rc.rend, rect->x, mid_y, rect->x + rect->w, mid_y);
-	//SDL_RenderDrawLine(rc.rend, mid_x, rect->y, mid_x, rect->y + rect->h);
+	// Draw x and y axis
+	int mid_y = rect->y + rect->h / 2;
+	int mid_x = rect->x + rect->w / 2;
+	SubmitLine(rect->x, mid_y, rect->x + rect->w, mid_y, 128, 128, 128);
+	SubmitLine(mid_x, rect->y, mid_x, rect->y + rect->h, 128, 128, 128);
 
-	//SDL_SetRenderDrawColor(rc.rend, waveform_colour.r, waveform_colour.g, waveform_colour.b, 255);
+	// Find the offset into the audio buffer to start drawing from
+	int trigger_x = trigger(win);
 
-	//// Find the offset into the audio buffer to start drawing from
-	//int trigger_x = trigger(win);
+	// The audio buffer is a ring buffer, win->write_pos is the starting index into the ring buffer. The ring buffer contains 2048 samples
+	int start_index = (win->write_pos + trigger_x) % 2048;
+	float curr_index = 0.0f;
 
-	//// Allocate an array of points for each pixel on the x-axis
-	//SDL_Point* points = malloc(rect->w * sizeof(SDL_Point));
+	// We want to visualise 1024 audio samples over rect->w pixels, so for each pixel we
+	// increment by index_inc amount into the audio buffer. We are effectivly using a
+	// nearest neighbour filter to filter 1024 samples into rect->w samples
+	float index_inc = 1024.0f / (float)rect->w;
 
-	//// The audio buffer is a ring buffer, win->write_pos is the starting index into the ring buffer. The ring buffer contains 2048 samples
-	//int start_index = (win->write_pos + trigger_x) % 2048;
-	//float curr_index = 0.0f;
-
-	//// We want to visualise 1024 audio samples over rect->w pixels, so for each pixel we
-	//// increment by index_inc amount into the audio buffer. We are effectivly using a
-	//// nearest neighbour filter to filter 1024 samples into rect->w samples
-	//float index_inc = 1024.0f / (float)rect->w;
-
-	//// For each pixel
-	//for (int i = 0; i < rect->w; i++)
-	//{
-	//	points[i].x = rect->x + i;
-	//	points[i].y = win->buffer[lroundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
-	//	curr_index += index_inc;
-	//}
-	//SDL_RenderDrawLines(rc.rend, points, rect->w);
-
-	//free(points);
+	// For each pixel
+	int last_y = win->buffer[lroundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
+	curr_index += index_inc;
+	for (int i = 1; i < rect->w; i++)
+	{
+		int curr_y = win->buffer[lroundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
+		curr_index += index_inc;
+		SubmitLine(rect->x + i - 1, last_y, rect->x + i, curr_y, waveform_colour.r, waveform_colour.g, waveform_colour.b);
+		last_y = curr_y;
+	}
 }
 
 void DrawAPUOsc(ChannelEnableModel* model)

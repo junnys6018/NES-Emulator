@@ -1,6 +1,6 @@
 #include "test_6502.h"
 
-#include "Frontend/Renderer.h"
+#include "Frontend/Controller.h"
 #include "Backend/nes.h"
 #include "event_filter_function.h"
 

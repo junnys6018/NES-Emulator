@@ -4,7 +4,7 @@
 
 #include "event_filter_function.h"
 #include "string_util.h"
-#include "Frontend/Renderer.h"
+#include "Frontend/Controller.h"
 #include "Backend/nes.h"
 
 Uint32 on_render_callback(Uint32 interval, void* param)

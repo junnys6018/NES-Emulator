@@ -1,13 +1,13 @@
 #include "BatchRenderer.h"
 #include "Shader.h"
 #include "Texture.h"
-#include "../Renderer.h"
+#include "../Controller.h"
 
 #include <glad/glad.h>
 #include <stdbool.h>
 #include <stdio.h>
 
-#define QUADS_PER_BATCH 1024
+#define QUADS_PER_BATCH 2048
 
 typedef struct
 {
@@ -130,18 +130,17 @@ void ShutdownBatchRenderer()
 
 void BeginBatch()
 {
-	glBindTextureUnit(0, white_texture.handle);
-	glBindVertexArray(vao);
-	glUseProgram(shader);
-
 	buffer_ptr = glMapNamedBuffer(vbo, GL_READ_WRITE);
-
 	buffer_offset = 0;
 	active_texture_index = 0;
+}
 
+void EndBatch()
+{
 	// Set the transform matrix, transforms SDL screen coordinates into openGL NDC
 	int w, h;
 	GetWindowSize(&w, &h);
+
 #define T(a, b) (b * 4 + a)
 	float transform[16] = {0};
 	transform[T(0, 0)] = 2.0f / w;
@@ -149,21 +148,21 @@ void BeginBatch()
 	transform[T(0, 3)] = -1.0f;
 	transform[T(1, 3)] = 1.0f;
 	transform[T(3, 3)] = 1.0f;
-
-	glUniformMatrix4fv(u_transform, 1, GL_FALSE, transform);
 #undef T
-}
 
-void EndBatch()
-{
+	glUseProgram(shader);
+	glUniformMatrix4fv(u_transform, 1, GL_FALSE, transform);
+	glBindTextureUnit(0, white_texture.handle);
+	glBindVertexArray(vao);
 	glUnmapNamedBuffer(vbo);
+
 	glDrawElements(GL_TRIANGLES, buffer_offset * 6 / 4, GL_UNSIGNED_INT, 0);
 
 	buffer_offset = 0;
 	active_texture_index = 0;
 }
 
-void flush()
+void FlushQuads()
 {
 	EndBatch();
 	buffer_ptr = glMapNamedBuffer(vbo, GL_READ_WRITE);
@@ -248,11 +247,10 @@ void SubmitTexturedColoredQuad(SDL_Rect* span, GLuint texture, float tx, float t
 	v->g = _g;
 	v->b = _b;
 	v->texture_slot = slot;
-	v++;
 
 	buffer_offset += 4;
 	if (buffer_offset == QUADS_PER_BATCH * 4 || active_texture_index == 31)
 	{
-		flush();
+		FlushQuads();
 	}
 }

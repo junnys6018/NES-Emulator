@@ -1,6 +1,6 @@
 #include "Mapper_001.h"
 #include "MapperUtils.h"
-#include "Frontend/Renderer.h"
+#include "Frontend/Controller.h"
 #include <string.h>
 #include <stdlib.h>
 

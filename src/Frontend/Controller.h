@@ -1,5 +1,5 @@
-#ifndef RENDERER_H
-#define RENDERER_H
+#ifndef CONTROLLER_H
+#define CONTROLLER_H
 #include "Backend/nes.h"
 #include "Models/SettingsModel.h"
 #include <SDL.h>

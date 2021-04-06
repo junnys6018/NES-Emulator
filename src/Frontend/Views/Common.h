@@ -4,7 +4,8 @@
 #include "../ColorDefs.h"
 #include "../OpenGL/TextRenderer.h"
 #include "../OpenGL/BatchRenderer.h"
-#include "../Renderer.h"
+#include "../OpenGL/LineRenderer.h"
+#include "../Controller.h"
 #include "../Gui.h"
 #include "../StartupOptions.h"
 

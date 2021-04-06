@@ -1,4 +1,4 @@
-#include "Frontend/Renderer.h"
+#include "Frontend/Controller.h"
 #include "Frontend/Gui.h"
 #include "Frontend/Audio.h"
 #include "Frontend/StartupOptions.h"
