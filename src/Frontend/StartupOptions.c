@@ -1,11 +1,11 @@
-#include "RuntimeSettings.h"
+#include "StartupOptions.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #include <cJSON.h>
 
-static RuntimeSettings rts;
+static StartupOptions rts;
 static const char* const default_json_file = \
 "{\n\
 	// For key, use a Key Name from the table listed here https://wiki.libsdl.org/SDL_Scancode \n\
@@ -54,7 +54,7 @@ static const char* const default_json_file = \
 	\"fontStyle\": \"Consola.ttf\"\n\
 }";
 
-RuntimeSettings* GetRuntimeSettings()
+StartupOptions* GetStartupOptions()
 {
 	return &rts;
 }
@@ -87,7 +87,7 @@ void OnError(char* message)
 	UseDefaultRuntimeSettings();
 }
 
-void InitRuntimeSettings()
+void LoadStartupOptions()
 {
 	FILE* file = fopen("settings.json", "r");
 	if (!file)

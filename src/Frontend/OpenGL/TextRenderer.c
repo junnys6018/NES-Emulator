@@ -1,5 +1,6 @@
 #include "TextRenderer.h"
 #include "BatchRenderer.h"
+#include "Texture.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +14,7 @@ typedef struct
 	// Font data
 	stbtt_fontinfo info;
 	uint8_t* fontdata;
-	GLuint atlas;
+	Texture2D atlas;
 	stbtt_packedchar chardata[96];
 	float scale;
 	int ascent, descent, line_gap;
@@ -65,14 +66,8 @@ void InitTextRenderer(char fontfile[256], int font_size)
 		pixels[i + 3] = bitmap[j++];
 	}
 
-	glGenTextures(1, &c.atlas);
-	glBindTexture(GL_TEXTURE_2D, c.atlas);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	GenerateTexture(&c.atlas, 512, 512, pixels, GL_LINEAR, GL_RGBA);
 
 	free(bitmap);
 	free(pixels);
@@ -88,7 +83,7 @@ void InitTextRenderer(char fontfile[256], int font_size)
 void ShutdownTextRenderer()
 {
 	free(c.fontdata);
-	glDeleteTextures(1, &c.atlas);
+	DeleteTexture(&c.atlas);
 }
 
 void SetTextOrigin(int xoff, int yoff)
@@ -118,7 +113,7 @@ void RenderChar(char glyph, SDL_Color col)
 	const int xoff = c.text_x + lroundf(info->xoff);
 	SDL_Rect dst_rect = { xoff, yoff, info->x1 - info->x0, info->y1 - info->y0 };
 
-	SubmitTexturedColoredQuad(&dst_rect, c.atlas, src.x / 512.0f, src.y / 512.0f, src.w / 512.0f, src.h / 512.0f, col.r, col.g, col.b);
+	SubmitTexturedColoredQuad(&dst_rect, c.atlas.handle, src.x / 512.0f, src.y / 512.0f, src.w / 512.0f, src.h / 512.0f, col.r, col.g, col.b);
 
 	c.text_x += lroundf(info->xadvance);
 }

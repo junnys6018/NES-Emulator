@@ -1,5 +1,6 @@
 #include "BatchRenderer.h"
 #include "Shader.h"
+#include "Texture.h"
 #include "../Renderer.h"
 
 #include <glad/glad.h>
@@ -16,7 +17,8 @@ typedef struct
 	float texture_slot;
 } Vertex;
 
-static GLuint vbo, ibo, vao, shader, white_texture;
+static GLuint vbo, ibo, vao, shader;
+static Texture2D white_texture;
 static GLint u_transform;
 static bool initialized = false;
 
@@ -108,17 +110,8 @@ void InitBatchRenderer()
 		glUniform1iv(glGetUniformLocation(shader, "textures"), 32, texture_slots);
 
 		// Create a white 1x1 texture
-		glGenTextures(1, &white_texture);
-		glBindTexture(GL_TEXTURE_2D, white_texture);
-
 		uint32_t data = 0xFFFFFFFF;
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, &data);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
+		GenerateTexture(&white_texture, 1, 1, &data, GL_NEAREST, GL_RGB);
 	}
 	else
 	{
@@ -131,13 +124,13 @@ void ShutdownBatchRenderer()
 	glDeleteBuffers(1, &vbo);
 	glDeleteBuffers(1, &ibo);
 	glDeleteVertexArrays(1, &vao);
-	glDeleteTextures(1, &white_texture);
+	DeleteTexture(&white_texture);
 	DestroyShader(shader);
 }
 
 void BeginBatch()
 {
-	glBindTextureUnit(0, white_texture);
+	glBindTextureUnit(0, white_texture.handle);
 	glBindVertexArray(vao);
 	glUseProgram(shader);
 

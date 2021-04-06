@@ -1,8 +1,6 @@
-#ifndef RUNTIME_SETTINGS_H
-#define RUNTIME_SETTINGS_H
-
+#ifndef STARTUP_OPTIONS_H
+#define STARTUP_OPTIONS_H
 #include <stdbool.h>
-
 #include <SDL.h>
 
 typedef struct
@@ -22,9 +20,9 @@ typedef struct
 
 	int font_size;
 	char font_style[256];
-} RuntimeSettings;
+} StartupOptions;
 
-RuntimeSettings* GetRuntimeSettings();
-void InitRuntimeSettings();
+StartupOptions* GetStartupOptions();
+void LoadStartupOptions();
 
 #endif

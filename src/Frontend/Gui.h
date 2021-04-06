@@ -17,6 +17,7 @@ void GuiShutdown();
 
 void GuiDispatchEvent(SDL_Event* e);
 void GuiEndFrame(); // Call once per frame at the end of adding gui elements
+GuiMetrics* GetGuiMetrics();
 
 bool GuiAddButton(const char* label, SDL_Rect* span);
 bool GuiAddCheckbox(const char* label, int xoff, int yoff, bool* v);

@@ -147,7 +147,7 @@ typedef struct
 	uint64_t total_cycles;
 	uint32_t frame_count;
 
-	color pixels[256 * 240];
+	uint8_t pixels[256 * 240 * 3];
 	Bus2C02* bus;
 	struct State6502* cpu;
 	

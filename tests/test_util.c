@@ -72,7 +72,7 @@ void EmulateUntilHalt(Nes* nes, int instructions_per_frame)
 			}
 			else if (event.type == SDL_USEREVENT && event.user.code == 0)
 			{
-				RendererDraw();
+				ControllerDrawViews();
 				//printf("instr: %i\n", instructions_done);
 				instructions_done = 0;
 			}
@@ -88,7 +88,7 @@ int TestBlarggRom(const char* name, uint16_t result_addr)
 	Nes nes;
 	InitNES(&nes, name);
 
-	RendererBindNES(&nes);
+	ControllerBindNES(&nes);
 
 	EmulateUntilHalt(&nes, 100000);
 
@@ -103,7 +103,7 @@ int TestBlarggRom(const char* name, uint16_t result_addr)
 		printf("Failed %s Test [%i]\n", GetFileName(name), result);
 	}
 
-	RendererDraw();
+	ControllerDrawViews();
 
 	NESDestroy(&nes);
 

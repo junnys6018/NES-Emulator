@@ -1,8 +1,8 @@
 #include "Frontend/Renderer.h"
 #include "Frontend/Gui.h"
-#include "Frontend/Controller.h"
 #include "Frontend/Audio.h"
-#include "Frontend/RuntimeSettings.h"
+#include "Frontend/StartupOptions.h"
+#include "Frontend/Models/SettingsModel.h"
 
 #include "Backend/nes.h"
 
@@ -28,11 +28,12 @@ int main(int argc, char** argv)
 	}
 
 	// Initialize all the things
-	InitRuntimeSettings();
+	LoadStartupOptions();
 	AudioPrecompute();
-	Controller controller = { .mode = MODE_NOT_RUNNING };
-	InitRenderer(&controller);
+	InitController();
 	InitSDLAudio();
+
+	SettingsModel* settings = GetSettings();
 
 	Nes nes;
 	InitNES(&nes, NULL);
@@ -50,7 +51,7 @@ int main(int argc, char** argv)
 		NESDestroy(&nes);
 		if (InitNES(&nes, argv[1]) == 0)
 		{
-			controller.mode = MODE_PLAY;
+			settings->mode = MODE_PLAY;
 		}
 		else
 		{
@@ -59,7 +60,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	RendererBindNES(&nes);
+	ControllerBindNES(&nes);
 
 	int window = 10;
 	float total_time = 0.0f;
@@ -73,7 +74,7 @@ int main(int argc, char** argv)
 		GetTime(&beg);
 		poll_keys(&nes.pad);
 
-		if (controller.mode == MODE_PLAY)
+		if (settings->mode == MODE_PLAY)
 		{
 			clock_nes_frame(&nes);
 			if (nes.apu.audio_pos != 0)
@@ -83,12 +84,12 @@ int main(int argc, char** argv)
 			}
 		}
 
-		RendererDraw();
+		ControllerDrawViews();
 
 		while (SDL_PollEvent(&event) != 0)
 		{
 			GuiDispatchEvent(&event);
-			if (controller.mode == MODE_STEP_THROUGH && event.type == SDL_KEYDOWN)
+			if (settings->mode == MODE_STEP_THROUGH && event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
 				{
@@ -114,7 +115,7 @@ int main(int argc, char** argv)
 		curr_frame++;
 		if (curr_frame == window)
 		{
-			controller.ms_per_frame = total_time / window;
+			settings->ms_per_frame = total_time / window;
 
 			total_time = 0.0f;
 			curr_frame = 0;
@@ -128,7 +129,7 @@ int main(int argc, char** argv)
 	}
 
 	NESDestroy(&nes);
-	RendererShutdown();
+	ControllerShutdown();
 	ShutdownSDLAudio();
 	SDL_Quit();
 

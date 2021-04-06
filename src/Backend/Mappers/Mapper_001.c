@@ -58,14 +58,14 @@ void UpdateRendererPatternTable(Mapper001* mapper)
 {
 	if (mapper->control.bits.C)
 	{
-		RendererSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank0_select) << 12), 0);
-		RendererSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank1_select) << 12), 1);
+		ControllerSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank0_select) << 12), 0);
+		ControllerSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank1_select) << 12), 1);
 	}
 	else
 	{
 		uint32_t base_addr = ((uint32_t)mapper->CHR_bank0_select >> 1) << 13;
-		RendererSetPatternTable(mapper->CHR + base_addr, 0);
-		RendererSetPatternTable(mapper->CHR + base_addr + 0x1000, 1);
+		ControllerSetPatternTable(mapper->CHR + base_addr, 0);
+		ControllerSetPatternTable(mapper->CHR + base_addr + 0x1000, 1);
 	}
 }
 

@@ -1,5 +1,5 @@
 #include "Gamepad.h"
-#include "Frontend/RuntimeSettings.h"
+#include "Frontend/StartupOptions.h"
 
 #include <SDL.h>
 
@@ -33,14 +33,14 @@ void poll_keys(Gamepad* pad)
 		state = SDL_GetKeyboardState(NULL);
 	}
 	
-	RuntimeSettings* rts = GetRuntimeSettings();
+	StartupOptions* opt = GetStartupOptions();
 
-	pad->current_input.keys.A = state[rts->key_A];
-	pad->current_input.keys.B = state[rts->key_B];
-	pad->current_input.keys.Start = state[rts->key_start]; // Enter key
-	pad->current_input.keys.Select = state[rts->key_select];
-	pad->current_input.keys.Up = state[rts->key_up];
-	pad->current_input.keys.Down = state[rts->key_down];
-	pad->current_input.keys.Left = state[rts->key_left];
-	pad->current_input.keys.Right = state[rts->key_right];
+	pad->current_input.keys.A = state[opt->key_A];
+	pad->current_input.keys.B = state[opt->key_B];
+	pad->current_input.keys.Start = state[opt->key_start]; // Enter key
+	pad->current_input.keys.Select = state[opt->key_select];
+	pad->current_input.keys.Up = state[opt->key_up];
+	pad->current_input.keys.Down = state[opt->key_down];
+	pad->current_input.keys.Left = state[opt->key_left];
+	pad->current_input.keys.Right = state[opt->key_right];
 }

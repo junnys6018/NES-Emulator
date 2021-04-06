@@ -74,6 +74,11 @@ void GuiDispatchEvent(SDL_Event* e)
 	}
 }
 
+GuiMetrics* GetGuiMetrics()
+{
+	return &gc.metrics;
+}
+
 void GuiEndFrame()
 {
 	static bool last_state; // true: pressed; false: released

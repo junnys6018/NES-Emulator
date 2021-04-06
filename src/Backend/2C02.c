@@ -224,12 +224,14 @@ void clock_2C02(State2C02* ppu)
 					uint16_t palatte_addr = 0x3F00 | palatte << 2 | bg_shade;
 					color = ppu_bus_read(ppu->bus, palatte_addr) & 0x3F;
 				}
-				int index = ppu->scanline * 256 + ppu->cycles - 1;
+				int index = 3 * (ppu->scanline * 256 + ppu->cycles - 1);
 				if (ppu->PPUMASK.flags.g)
 				{
 					color &= 0x30;
 				}
-				ppu->pixels[index] = PALETTE_MAP[color];
+				ppu->pixels[index + 0] = PALETTE_MAP[color].r;
+				ppu->pixels[index + 1] = PALETTE_MAP[color].g;
+				ppu->pixels[index + 2] = PALETTE_MAP[color].b;
 
 				Shift(ppu);
 				FetchDataAndIncV(ppu);
@@ -265,7 +267,6 @@ void clock_2C02(State2C02* ppu)
 					ppu->sprite_xpos[i]--;
 				}
 
-				int index = ppu->scanline * 256 + ppu->cycles - 1;
 				bool drawn = false;
 
 				// For each active sprite
@@ -317,7 +318,10 @@ void clock_2C02(State2C02* ppu)
 								{
 									color &= 0x30;
 								}
-								ppu->pixels[index] = PALETTE_MAP[color];
+								int index = 3 * (ppu->scanline * 256 + ppu->cycles - 1);
+								ppu->pixels[index + 0] = PALETTE_MAP[color].r;
+								ppu->pixels[index + 1] = PALETTE_MAP[color].g;
+								ppu->pixels[index + 2] = PALETTE_MAP[color].b;
 							}
 						}
 					}

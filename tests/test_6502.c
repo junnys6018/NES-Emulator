@@ -18,7 +18,7 @@ int Run_6502_Functional_Test()
 	Nes nes;
 	InitNES(&nes, "tests/roms/6502_functional_test.bin");
 
-	RendererBindNES(&nes);
+	ControllerBindNES(&nes);
 
 	EmulateUntilHalt(&nes, 200000);
 
@@ -38,7 +38,7 @@ int Run_6502_Functional_Test()
 	else
 		printf("Failed Functional Test\n");
 
-	RendererDraw();
+	ControllerDrawViews();
 	
 	NESDestroy(&nes);
 
@@ -50,8 +50,8 @@ int Run_6502_Interrupt_Test()
 	Nes nes;
 	InitNES(&nes, "tests/roms/6502_interrupt_test.bin");
 
-	RendererBindNES(&nes);
-	RendererDraw();
+	ControllerBindNES(&nes);
+	ControllerDrawViews();
 
 	// Update screen every 16ms
 	SDL_TimerID tid = SDL_AddTimer(16, on_render_callback, NULL);
@@ -109,7 +109,7 @@ int Run_6502_Interrupt_Test()
 				else
 					printf("Failed Interrupt Test\n");
 
-				RendererDraw();
+				ControllerDrawViews();
 				break;
 			}
 
@@ -126,7 +126,7 @@ int Run_6502_Interrupt_Test()
 			}
 			else if (event.type == SDL_USEREVENT && event.user.code == 0)
 			{
-				RendererDraw();
+				ControllerDrawViews();
 				instructions_done = 0;
 			}
 		}

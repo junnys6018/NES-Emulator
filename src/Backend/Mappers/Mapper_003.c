@@ -25,8 +25,8 @@ void m003CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 	{
 		map003->CHR_bank_select = data % map003->CHR_banks;
 		uint32_t index = (uint32_t)(map003->CHR_bank_select << 13);
-		RendererSetPatternTable(map003->CHR + index, 0);
-		RendererSetPatternTable(map003->CHR + index + 0x1000, 1);
+		ControllerSetPatternTable(map003->CHR + index, 0);
+		ControllerSetPatternTable(map003->CHR + index + 0x1000, 1);
 	}
 }
 

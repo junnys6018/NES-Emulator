@@ -88,13 +88,13 @@ void m004CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 		map->bank_select.reg = data;
 		if (map->bank_select.bits.C)
 		{
-			RendererSetPatternTable(map->left_pt, 1);
-			RendererSetPatternTable(map->right_pt, 0);
+			ControllerSetPatternTable(map->left_pt, 1);
+			ControllerSetPatternTable(map->right_pt, 0);
 		}
 		else
 		{
-			RendererSetPatternTable(map->left_pt, 0);
-			RendererSetPatternTable(map->right_pt, 1);
+			ControllerSetPatternTable(map->left_pt, 0);
+			ControllerSetPatternTable(map->right_pt, 1);
 		}
 	}
 	else if (addr >= 0x8000 && addr < 0xA000 && addr % 2 == 1)
@@ -290,6 +290,6 @@ void m004LoadFromFile(Header* header, Cartridge* cart, FILE* file, State6502* cp
 	fread(map->PRG_ROM, (size_t)map->PRG_ROM_banks * 8 * 1024, 1, file);
 	fread(map->CHR_ROM, (size_t)map->CHR_banks * 1024, 1, file);
 
-	RendererSetPatternTable(map->left_pt, 0);
-	RendererSetPatternTable(map->right_pt, 1);
+	ControllerSetPatternTable(map->left_pt, 0);
+	ControllerSetPatternTable(map->right_pt, 1);
 }

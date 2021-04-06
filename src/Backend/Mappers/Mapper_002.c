@@ -104,6 +104,6 @@ void m002LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 	map->mirrorMode = header->MirrorType == 1 ? VERTICAL : HORIZONTAL;
 
 	// Bind Pattern table to renderer
-	RendererSetPatternTable(map->CHR, 0);
-	RendererSetPatternTable(map->CHR + 0x1000, 1);
+	ControllerSetPatternTable(map->CHR, 0);
+	ControllerSetPatternTable(map->CHR + 0x1000, 1);
 }
