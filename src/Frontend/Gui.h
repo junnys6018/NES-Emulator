@@ -12,7 +12,7 @@ typedef struct
 	int padding;
 } GuiMetrics;
 
-void GuiInit(SDL_Renderer* rend, GuiMetrics* metrics);
+void GuiInit(GuiMetrics* metrics);
 void GuiShutdown();
 
 void GuiDispatchEvent(SDL_Event* e);

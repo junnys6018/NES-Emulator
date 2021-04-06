@@ -1,8 +1,8 @@
 #include "Renderer.h"
 
 #include <SDL.h> 
-#include <stb_rect_pack.h>
-#include <stb_truetype.h>
+#include <glad/glad.h>
+#include <SDL_opengl.h>
 
 #include <stdio.h>
 #include <stdint.h>
@@ -16,13 +16,12 @@
 #include "Gui.h"
 #include "FileDialog.h"
 #include "RuntimeSettings.h"
+#include "ColorDefs.h"
 
-SDL_Color white = { 255,255,255 };
-SDL_Color cyan = { 78,201,176 };
-SDL_Color red = { 255,0,0 };
-SDL_Color green = { 0,255,0 };
-SDL_Color blue = { 0,122,204 };
-SDL_Color light_blue = { 28,151,234 };
+#include "OpenGL/Debug.h"
+#include "OpenGL/Scanline.h"
+#include "OpenGL/BatchRenderer.h"
+#include "OpenGL/TextRenderer.h"
 
 ///////////////////////////
 //
@@ -67,18 +66,7 @@ typedef struct
 typedef struct
 {
 	SDL_Window* win;
-	SDL_Renderer* rend;
-
-	// Font data
-	stbtt_fontinfo info;
-	uint8_t* fontdata;
-	SDL_Texture* atlas;
-	stbtt_packedchar chardata[96];
-	float scale;
-	int ascent, descent, line_gap;
-	int y_advance;
-	int font_size;
-	int text_x, text_y, origin_x;
+	SDL_GLContext gl_context;
 
 	// Window size metrics
 	WindowMetrics wm;
@@ -132,18 +120,9 @@ static RendererContext rc;
 //
 ///////////////////////////
 
-void SDL_Emit_Error(const char* message)
-{
-	printf("[SDL ERROR] %s: %s\n", message, SDL_GetError());
-}
-
-void TTF_Emit_Error(const char* message)
-{
-	printf("[FONT ERROR]: %s\n", message);
-}
-
 void CalculateWindowMetrics(int w, int h)
 {
+	glViewport(0, 0, w, h);
 	rc.draw_debug_view = true;
 
 	rc.wm.width = w;
@@ -225,18 +204,53 @@ void ClearTexture(SDL_Texture* tex)
 	free(clear_data);
 }
 
+void InitOpengl(SDL_Window* window) 
+{
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+	rc.gl_context = SDL_GL_CreateContext(window);
+	int success = gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
+	if (!success)
+	{
+		printf("[ERROR] Failed to initialize opengl");
+	}
+
+	EnableGLDebugging();
+	glDisable(GL_DEPTH_TEST);
+	glClearColor(0.125, 0.125, 0.125, 1.0);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	InitScanlineEffect();
+	InitBatchRenderer();
+	RuntimeSettings* rts = GetRuntimeSettings();
+	InitTextRenderer(rts->font_style, rts->font_size);
+}
+
+void ShutdownOpengl()
+{
+	ShutdownBatchRenderer();
+	ShutdownTextRenderer();
+	SDL_GL_DeleteContext(rc.gl_context);
+}
 
 void InitRenderer(Controller* cont)
 {
 	RuntimeSettings* rts = GetRuntimeSettings();
-
 	const int starting_w = rts->startup_width, starting_h = rts->startup_height;
-	CalculateWindowMetrics(starting_w, starting_h);
 
 	rc.controller = cont;
 
 	// Create a window
-	Uint32 flags = SDL_WINDOW_RESIZABLE;
+	Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
 	rc.fullscreen = rts->fullscreen_on_startup;
 	if (rts->fullscreen_on_startup)
 	{
@@ -246,91 +260,37 @@ void InitRenderer(Controller* cont)
 	rc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, flags);
 	if (!rc.win)
 	{
-		SDL_Emit_Error("Could not create window");
+		printf("Could not create window");
 	}
 
-	// Create a renderer
-	rc.rend = SDL_CreateRenderer(rc.win, -1, SDL_RENDERER_ACCELERATED);
-	if (!rc.rend)
-	{
-		SDL_Emit_Error("Could not create renderer");
-	}
+	//// Create a renderer
+	InitOpengl(rc.win);
+	CalculateWindowMetrics(starting_w, starting_h);
 
-	// Load the font
-	FILE* file = fopen(rts->font_style, "rb");
-	fseek(file, 0, SEEK_END);
-	long size = ftell(file);
-	fseek(file, 0, SEEK_SET);
-	rc.fontdata = malloc(size);
-	if (!rc.fontdata)
-	{
-		TTF_Emit_Error("Cound not allocate buffer for font file!");
-	}
-	fread(rc.fontdata, 1, size, file);
-	fclose(file);
+	//// Create nametable textures
+	//rc.left_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
+	//ClearTexture(rc.left_nametable);
 
-	if (!stbtt_InitFont(&rc.info, rc.fontdata, 0))
-	{
-		TTF_Emit_Error("Could not init font");
-	}
+	//rc.right_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
+	//ClearTexture(rc.right_nametable);
 
-	rc.font_size = rts->font_size; // distance from highest ascender to the lowest descender in pixels
-	rc.scale = stbtt_ScaleForPixelHeight(&rc.info, (float)rc.font_size);
+	//// And main screen 
+	//rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
+	//ClearTexture(rc.nes_screen);
 
-	stbtt_pack_context spc;
-	unsigned char* bitmap = malloc(512 * 512);
-
-	stbtt_PackBegin(&spc, bitmap, 512, 512, 0, 1, NULL);
-	stbtt_PackFontRange(&spc, rc.fontdata, 0, (float)rc.font_size, 32, 96, rc.chardata);
-	stbtt_PackEnd(&spc);
-
-	// Convert bitmap into SDL texture
-	uint32_t* pixels = malloc(512 * 512 * sizeof(uint32_t));
-	SDL_PixelFormat* format = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA32);
-	for (int i = 0; i < 512 * 512; i++)
-	{
-		pixels[i] = SDL_MapRGBA(format, 255, 255, 255, bitmap[i]);
-	}
-	SDL_FreeFormat(format);
-
-	rc.atlas = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, 512, 512);
-	SDL_UpdateTexture(rc.atlas, NULL, pixels, 512 * sizeof(uint32_t));
-	SDL_SetTextureBlendMode(rc.atlas, SDL_BLENDMODE_BLEND);
-	
-	free(bitmap);
-	free(pixels);
-
-	// Get font metrics
-	stbtt_GetFontVMetrics(&rc.info, &rc.ascent, &rc.descent, &rc.line_gap);
-	rc.y_advance = lroundf(rc.scale * (rc.ascent - rc.descent + rc.line_gap));
-	rc.ascent = lroundf(rc.scale * rc.ascent);
-	rc.descent = lroundf(rc.scale * rc.descent);
-	rc.line_gap = lroundf(rc.scale * rc.line_gap);
-
-	// Create nametable textures
-	rc.left_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
-	ClearTexture(rc.left_nametable);
-
-	rc.right_nametable = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STATIC, 128, 128);
-	ClearTexture(rc.right_nametable);
-
-	// And main screen 
-	rc.nes_screen = SDL_CreateTexture(rc.rend, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 256, 240);
-	ClearTexture(rc.nes_screen);
-
-	// Enable sound channels
-	rc.ch.SQ1 = true;
-	rc.ch.SQ2 = true;
-	rc.ch.TRI = true;
-	rc.ch.NOISE = true;
-	rc.ch.DMC = true;
+	//// Enable sound channels
+	//rc.ch.SQ1 = true;
+	//rc.ch.SQ2 = true;
+	//rc.ch.TRI = true;
+	//rc.ch.NOISE = true;
+	//rc.ch.DMC = true;
 
 	// GUI
 	rc.gm.scroll_bar_width = 18;
 	rc.gm.checkbox_size = 18;
-	rc.gm.font_size = rc.font_size;
+	rc.gm.font_size = rts->font_size;
 	rc.gm.padding = rc.wm.padding;
-	GuiInit(rc.rend, &rc.gm);
+	GuiInit(&rc.gm);
 
 	rc.target = TARGET_NES_STATE;
 }
@@ -338,80 +298,15 @@ void InitRenderer(Controller* cont)
 void RendererShutdown()
 {
 	// Cleanup
-	SDL_DestroyTexture(rc.atlas);
+	ShutdownOpengl();
 
 	SDL_DestroyTexture(rc.left_nametable);
 	SDL_DestroyTexture(rc.right_nametable);
 	SDL_DestroyTexture(rc.nes_screen);
 
-	SDL_DestroyRenderer(rc.rend);
 	SDL_DestroyWindow(rc.win);
 
-	free(rc.fontdata);
-
 	GuiShutdown();
-}
-
-void RenderChar(char glyph, SDL_Color c)
-{
-	stbtt_packedchar* info = &rc.chardata[glyph - 32];
-	SDL_Rect src_rect = { info->x0, info->y0, info->x1 - info->x0, info->y1 - info->y0 };
-
-	const int yoff = rc.text_y + rc.ascent + lroundf(info->yoff);
-	const int xoff = rc.text_x + lroundf(info->xoff);
-	SDL_Rect dst_rect = { xoff, yoff, info->x1 - info->x0, info->y1 - info->y0 };
-
-	SDL_SetTextureColorMod(rc.atlas, c.r, c.g, c.b);
-	SDL_RenderCopy(rc.rend, rc.atlas, &src_rect, &dst_rect);
-
-	rc.text_x += lroundf(info->xadvance);
-}
-
-void RenderText(const char* text, SDL_Color c)
-{
-	rc.text_x = rc.origin_x;
-	while (*text)
-	{
-		RenderChar(*text, c);
-		text++;
-	}
-	rc.text_y += rc.y_advance;
-}
-
-Bounds TextBounds(const char* text)
-{
-	int sum = 0;
-	while (*text)
-	{
-		sum += lroundf(rc.chardata[*text - 32].xadvance);
-		text++;
-	}
-
-	Bounds b = { .w = sum,.h = rc.font_size };
-	return b;
-}
-
-int TextHeight(int lines)
-{
-	return (lines - 1) * rc.y_advance + rc.ascent - rc.descent;
-}
-
-void SetTextOrigin(int xoff, int yoff)
-{
-	rc.text_x = xoff;
-	rc.text_y = yoff;
-	rc.origin_x = xoff;
-}
-
-void SameLine()
-{
-	rc.text_y -= rc.y_advance;
-}
-
-void NewLine()
-{
-	rc.text_y += rc.y_advance;
-	rc.text_x = rc.origin_x;
 }
 
 ///////////////////////////
@@ -450,6 +345,11 @@ void SendPixelDataToScreen(color* pixels)
 	memcpy(dest, pixels, 256 * 240 * 3);
 
 	SDL_UnlockTexture(rc.nes_screen);
+}
+
+void GetWindowSize(int* w, int* h)
+{
+	SDL_GetWindowSize(rc.win, w, h);
 }
 
 ///////////////////////////
@@ -690,28 +590,28 @@ void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 
 void DrawPatternTable(int xoff, int yoff, int side)
 {
-	SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
+	//SDL_Texture* target = (side == 0 ? rc.left_nametable : rc.right_nametable);
 
-	SDL_Rect dest = { .x = xoff,.y = yoff,.w = rc.wm.pattern_table_len,.h = rc.wm.pattern_table_len };
-	SDL_RenderCopy(rc.rend, target, NULL, &dest);
+	//SDL_Rect dest = { .x = xoff,.y = yoff,.w = rc.wm.pattern_table_len,.h = rc.wm.pattern_table_len };
+	//SDL_RenderCopy(rc.rend, target, NULL, &dest);
 }
 
 void DrawPaletteData(int xoff, int yoff)
 {
-	int len = rc.wm.palette_visual_len;
-	SDL_Rect rect = { .x = xoff,.y = yoff,.w = len,.h = len };
-	for (int y = 0; y < 8; y++)
-	{
-		rect.x = xoff;
-		for (int x = 0; x < 4; x++)
-		{
-			color c = PALETTE_MAP[rc.palette[y * 4 + x] & 0x3F];
-			SDL_SetRenderDrawColor(rc.rend, c.r, c.g, c.b, 255);
-			SDL_RenderFillRect(rc.rend, &rect);
-			rect.x += len;
-		}
-		rect.y += len + rc.wm.padding;
-	}
+	//int len = rc.wm.palette_visual_len;
+	//SDL_Rect rect = { .x = xoff,.y = yoff,.w = len,.h = len };
+	//for (int y = 0; y < 8; y++)
+	//{
+	//	rect.x = xoff;
+	//	for (int x = 0; x < 4; x++)
+	//	{
+	//		color c = PALETTE_MAP[rc.palette[y * 4 + x] & 0x3F];
+	//		SDL_SetRenderDrawColor(rc.rend, c.r, c.g, c.b, 255);
+	//		SDL_RenderFillRect(rc.rend, &rect);
+	//		rect.x += len;
+	//	}
+	//	rect.y += len + rc.wm.padding;
+	//}
 }
 
 void DrawNESState()
@@ -788,46 +688,46 @@ int no_trigger(AudioWindow* win)
 // Visualise audio buffer as a waveform 
 void DrawWaveform(SDL_Rect* rect, AudioWindow* win, float vertical_scale, TRIGGER_FUNC trigger)
 {
-	static SDL_Color waveform_colour = {247, 226, 64}; // yellow
+	//static SDL_Color waveform_colour = {247, 226, 64}; // yellow
 
-	// Clear the part of the screen where we are drawing the waveform
-	SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
-	SDL_RenderFillRect(rc.rend, rect);
+	//// Clear the part of the screen where we are drawing the waveform
+	//SDL_SetRenderDrawColor(rc.rend, 0, 0, 0, 255);
+	//SDL_RenderFillRect(rc.rend, rect);
 
-	// Draw x and y axis
-	SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
-	int mid_y = rect->y + rect->h / 2;
-	int mid_x = rect->x + rect->w / 2;
-	SDL_RenderDrawLine(rc.rend, rect->x, mid_y, rect->x + rect->w, mid_y);
-	SDL_RenderDrawLine(rc.rend, mid_x, rect->y, mid_x, rect->y + rect->h);
+	//// Draw x and y axis
+	//SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
+	//int mid_y = rect->y + rect->h / 2;
+	//int mid_x = rect->x + rect->w / 2;
+	//SDL_RenderDrawLine(rc.rend, rect->x, mid_y, rect->x + rect->w, mid_y);
+	//SDL_RenderDrawLine(rc.rend, mid_x, rect->y, mid_x, rect->y + rect->h);
 
-	SDL_SetRenderDrawColor(rc.rend, waveform_colour.r, waveform_colour.g, waveform_colour.b, 255);
+	//SDL_SetRenderDrawColor(rc.rend, waveform_colour.r, waveform_colour.g, waveform_colour.b, 255);
 
-	// Find the offset into the audio buffer to start drawing from
-	int trigger_x = trigger(win);
+	//// Find the offset into the audio buffer to start drawing from
+	//int trigger_x = trigger(win);
 
-	// Allocate an array of points for each pixel on the x-axis
-	SDL_Point* points = malloc(rect->w * sizeof(SDL_Point));
+	//// Allocate an array of points for each pixel on the x-axis
+	//SDL_Point* points = malloc(rect->w * sizeof(SDL_Point));
 
-	// The audio buffer is a ring buffer, win->write_pos is the starting index into the ring buffer. The ring buffer contains 2048 samples
-	int start_index = (win->write_pos + trigger_x) % 2048;
-	float curr_index = 0.0f;
+	//// The audio buffer is a ring buffer, win->write_pos is the starting index into the ring buffer. The ring buffer contains 2048 samples
+	//int start_index = (win->write_pos + trigger_x) % 2048;
+	//float curr_index = 0.0f;
 
-	// We want to visualise 1024 audio samples over rect->w pixels, so for each pixel we
-	// increment by index_inc amount into the audio buffer. We are effectivly using a 
-	// nearest neighbour filter to filter 1024 samples into rect->w samples
-	float index_inc = 1024.0f / (float)rect->w;
+	//// We want to visualise 1024 audio samples over rect->w pixels, so for each pixel we
+	//// increment by index_inc amount into the audio buffer. We are effectivly using a 
+	//// nearest neighbour filter to filter 1024 samples into rect->w samples
+	//float index_inc = 1024.0f / (float)rect->w;
 
-	// For each pixel
-	for (int i = 0; i < rect->w; i++)
-	{
-		points[i].x = rect->x + i;
-		points[i].y = win->buffer[lroundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
-		curr_index += index_inc;
-	}
-	SDL_RenderDrawLines(rc.rend, points, rect->w);
+	//// For each pixel
+	//for (int i = 0; i < rect->w; i++)
+	//{
+	//	points[i].x = rect->x + i;
+	//	points[i].y = win->buffer[lroundf(curr_index + start_index) % 2048] * vertical_scale + mid_y;
+	//	curr_index += index_inc;
+	//}
+	//SDL_RenderDrawLines(rc.rend, points, rect->w);
 
-	free(points);
+	//free(points);
 }
 
 void DrawAPUOsc(int xoff, int yoff)
@@ -1053,45 +953,43 @@ void RendererDraw()
 		CalculateWindowMetrics(w, h);
 	}
 
-	// Clear screen to black
-	SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
-	SDL_RenderClear(rc.rend);
+	glClear(GL_COLOR_BUFFER_BIT);
+	BeginBatch();
 
 	SDL_Rect r_NesView = {rc.wm.nes_x, rc.wm.nes_y, rc.wm.nes_w, rc.wm.nes_h};
-	SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
+	//SDL_RenderCopy(rc.rend, rc.nes_screen, NULL, &r_NesView);
 	
 	// Draw 8x8 grid over nes screen for debugging
-	if (rc.draw_grid)
-	{
-		for (int i = 0; i <= 32; i++)
-		{
-			if (i == 16)
-				SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
-			else if (i % 2 == 0)
-				SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
-			else
-				SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
-			int x = rc.wm.nes_x + rc.wm.nes_w * i / 32;
-			SDL_RenderDrawLine(rc.rend, x, rc.wm.nes_y, x, rc.wm.nes_y + rc.wm.nes_h);
-		}
-		for (int i = 0; i <= 30; i++)
-		{
-			if (i == 15)
-				SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
-			else if (i % 2 == 0)
-				SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
-			else
-				SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
-			int y = rc.wm.nes_y + rc.wm.nes_w * i / 32;
-			SDL_RenderDrawLine(rc.rend, rc.wm.nes_x, y, rc.wm.nes_x + rc.wm.nes_w, y);
-		}
-	}
+	//if (rc.draw_grid)
+	//{
+	//	for (int i = 0; i <= 32; i++)
+	//	{
+	//		if (i == 16)
+	//			SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
+	//		else if (i % 2 == 0)
+	//			SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
+	//		else
+	//			SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
+	//		int x = rc.wm.nes_x + rc.wm.nes_w * i / 32;
+	//		SDL_RenderDrawLine(rc.rend, x, rc.wm.nes_y, x, rc.wm.nes_y + rc.wm.nes_h);
+	//	}
+	//	for (int i = 0; i <= 30; i++)
+	//	{
+	//		if (i == 15)
+	//			SDL_SetRenderDrawColor(rc.rend, 128, 128, 128, 255);
+	//		else if (i % 2 == 0)
+	//			SDL_SetRenderDrawColor(rc.rend, 64, 64, 64, 255);
+	//		else
+	//			SDL_SetRenderDrawColor(rc.rend, 32, 32, 32, 255);
+	//		int y = rc.wm.nes_y + rc.wm.nes_w * i / 32;
+	//		SDL_RenderDrawLine(rc.rend, rc.wm.nes_x, y, rc.wm.nes_x + rc.wm.nes_w, y);
+	//	}
+	//}
 
 	if (rc.draw_debug_view)
 	{
-		SDL_SetRenderDrawColor(rc.rend, 16, 16, 16, 255);
 		SDL_Rect r_DebugView = {.x = rc.wm.db_x, .y = rc.wm.db_y, .w = rc.wm.db_w, .h = rc.wm.db_h};
-		SDL_RenderFillRect(rc.rend, &r_DebugView);
+		SubmitColoredQuad(&r_DebugView, 16, 16, 16);
 
 		char* button_names[] = {"NES State", "APU Wave", "Memory", "About", "Settings"};
 		DrawTarget targets[] = {TARGET_NES_STATE, TARGET_APU_OSC, TARGET_MEMORY, TARGET_ABOUT, TARGET_SETTINGS};
@@ -1138,16 +1036,40 @@ void RendererDraw()
 		}
 
 		// Draw FPS
-		SetTextOrigin(rc.wm.db_x + rc.wm.padding, rc.wm.db_y + rc.wm.db_h - rc.font_size - rc.wm.padding);
+		SetTextOrigin(rc.wm.db_x + rc.wm.padding, rc.wm.db_y + rc.wm.db_h - GetRuntimeSettings()->font_size - rc.wm.padding);
 		char buf[64];
 		sprintf(buf, "%.3f ms/frame", rc.controller->ms_per_frame);
 		RenderText(buf, white);
 	}
 
 	GuiEndFrame();
+	EndBatch();
 
 	// Swap framebuffers
-	SDL_RenderPresent(rc.rend);
+	SDL_GL_SwapWindow(rc.win);
+
+
+
+
+
+	//glClear(GL_COLOR_BUFFER_BIT);
+
+	//BeginBatch();
+	//for (int i = 0; i < 10; i++)
+	//{
+	//	for (int j = 0; j < 10; j++)
+	//	{
+	//		int r = (i + j) % 2 == 0 ? 255 : 0;
+	//		int g = (i + j) % 2 == 0 ? 0 : 255;
+
+	//		SubmitColoredQuad(i * 10, j * 10, 10, 10, r, g, 0);
+	//	}
+	//}
+	//SubmitTexturedQuad(200, 300, 300, 300, TEMP_TEXTURE, 0.0f, 0.0f, 0.0f, 0.0f);
+	//EndBatch();
+
+
+	//SDL_GL_SwapWindow(rc.win);
 }
 
 #if 0

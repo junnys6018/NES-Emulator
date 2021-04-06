@@ -176,74 +176,31 @@ void flush()
 	buffer_ptr = glMapNamedBuffer(vbo, GL_READ_WRITE);
 }
 
-void SubmitColoredQuad(int x, int y, int w, int h, int r, int g, int b)
+void SubmitTexturedColoredQuad(SDL_Rect* span, GLuint texture, float tx, float ty, float tw, float th, uint8_t r, uint8_t g, uint8_t b)
 {
-	Vertex* v = buffer_ptr + buffer_offset;
-	float _r = (float)r / 255.0f;
-	float _g = (float)g / 255.0f;
-	float _b = (float)b / 255.0f;
-
-	v->x = x;
-	v->y = y;
-
-	v->r = _r;
-	v->g = _g;
-	v->b = _b;
-	v->texture_slot = 0.0f;
-	v++;
-
-	v->x = x + w;
-	v->y = y;
-
-	v->r = _r;
-	v->g = _g;
-	v->b = _b;
-	v->texture_slot = 0.0f;
-	v++;
-
-	v->x = x + w;
-	v->y = y + h;
-
-	v->r = _r;
-	v->g = _g;
-	v->b = _b;
-	v->texture_slot = 0.0f;
-	v++;
-
-	v->x = x;
-	v->y = y + h;
-
-	v->r = _r;
-	v->g = _g;
-	v->b = _b;
-	v->texture_slot = 0.0f;
-	v++;
-
-	buffer_offset += 4;
-	if (buffer_offset == QUADS_PER_BATCH * 4)
-	{
-		flush();
-	}
-}
-
-void SubmitTexturedQuad(int x, int y, int w, int h, GLuint texture, float tx, float ty, float tw, float th)
-{
-	bool texture_already_bound = false;
 	int bound_index = 0;
-	for (; bound_index < active_texture_index; bound_index++)
+	if (texture == 0)
 	{
-		if (active_textures[bound_index] == texture)
-		{
-			texture_already_bound = true;
-			break;
-		}
+		bound_index = -1;
 	}
-
-	if (!texture_already_bound)
+	else
 	{
-		bound_index = active_texture_index++;
-		active_textures[bound_index] = texture;
-		glBindTextureUnit(bound_index + 1, texture);
+		bool texture_already_bound = false;
+		for (; bound_index < active_texture_index; bound_index++)
+		{
+			if (active_textures[bound_index] == texture)
+			{
+				texture_already_bound = true;
+				break;
+			}
+		}
+
+		if (!texture_already_bound)
+		{
+			bound_index = active_texture_index++;
+			active_textures[bound_index] = texture;
+			glBindTextureUnit(bound_index + 1, texture);
+		}
 	}
 
 	if (tw == 0.0f || th == 0.0f)
@@ -256,44 +213,47 @@ void SubmitTexturedQuad(int x, int y, int w, int h, GLuint texture, float tx, fl
 
 	Vertex* v = buffer_ptr + buffer_offset;
 	float slot = bound_index + 1;
+	float _r = (float)r / 255.0f;
+	float _g = (float)g / 255.0f;
+	float _b = (float)b / 255.0f;
 
-	v->x = x;
-	v->y = y;
+	v->x = span->x;
+	v->y = span->y;
 	v->tx = tx;
 	v->ty = ty;
-	v->r = 1.0f;
-	v->g = 1.0f;
-	v->b = 1.0f;
+	v->r = _r;
+	v->g = _g;
+	v->b = _b;
 	v->texture_slot = slot;
 	v++;
 
-	v->x = x + w;
-	v->y = y;
+	v->x = span->x + span->w;
+	v->y = span->y;
 	v->tx = tx + tw;
 	v->ty = ty;
-	v->r = 1.0f;
-	v->g = 1.0f;
-	v->b = 1.0f;
+	v->r = _r;
+	v->g = _g;
+	v->b = _b;
 	v->texture_slot = slot;
 	v++;
 
-	v->x = x + w;
-	v->y = y + h;
+	v->x = span->x + span->w;
+	v->y = span->y + span->h;
 	v->tx = tx + tw;
 	v->ty = ty + th;
-	v->r = 1.0f;
-	v->g = 1.0f;
-	v->b = 1.0f;
+	v->r = _r;
+	v->g = _g;
+	v->b = _b;
 	v->texture_slot = slot;
 	v++;
 
-	v->x = x;
-	v->y = y + h;
+	v->x = span->x;
+	v->y = span->y + span->h;
 	v->tx = tx;
 	v->ty = ty + th;
-	v->r = 1.0f;
-	v->g = 1.0f;
-	v->b = 1.0f;
+	v->r = _r;
+	v->g = _g;
+	v->b = _b;
 	v->texture_slot = slot;
 	v++;
 
