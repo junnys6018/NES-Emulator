@@ -82,6 +82,14 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 	}
 	span.y += padding + gm->checkbox_size;
 
+	if (GuiAddCheckbox("Scanline Effect", span.x, span.y, &settings->scanline))
+	{
+		glBindTexture(GL_TEXTURE_2D, scr->scr.handle);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, settings->scanline ? GL_LINEAR : GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, settings->scanline ? GL_LINEAR : GL_NEAREST);
+	}
+	span.y += padding + gm->checkbox_size;
+
 	SetTextOrigin(xoff + padding, span.y);
 	RenderText("ROM Infomation", cyan);
 	Header header = nes->cart.header;

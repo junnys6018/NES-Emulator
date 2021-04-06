@@ -15,6 +15,7 @@ typedef struct
 	EmulationMode mode;
 	bool fullscreen;
 	bool draw_grid;
+	bool scanline;
 } SettingsModel;
 
 #endif
