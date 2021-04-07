@@ -5,7 +5,6 @@ Second controller
 controller input
 APU testing
 more mappers
-scanline post processing effect
 CI
 
 color emphasis
