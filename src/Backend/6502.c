@@ -19,7 +19,7 @@ typedef struct
 	char code[4]; // OP code of the instruction
 
 	// Executes the instruction, changing the state of the cpu, some instructions care if a page boundary was crossed
-	// to fetch its data, c is set to true is a page boundary was crossed.
+	// to fetch its data, c is set to true if a page boundary was crossed.
 	// Returns any additional cycles required to complete the instruction if any 
 	uint32_t(*operation)(State6502* cpu, bool c);
 
