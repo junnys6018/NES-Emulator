@@ -180,13 +180,21 @@ void ShutdownOpengl()
 void InitApplication(char* rom)
 {
 	cc.nes = malloc(sizeof(Nes));
-	InitNES(cc.nes, rom, SetPatternTable);
+	if (InitNES(cc.nes, rom, SetPatternTable) == 1)
+	{
+		cc.m_settings.mode = MODE_NOT_RUNNING;
+		InitNES(cc.nes, NULL, SetPatternTable);
+		printf("failed to load %s", rom);
+	}
+	else
+	{
+		cc.m_settings.mode = MODE_PLAY;
+	}
 	cc.m_palette.pal = cc.nes->ppu_bus.palette;
 
 	StartupOptions* opt = GetStartupOptions();
 	const int starting_w = opt->startup_width, starting_h = opt->startup_height;
 
-	cc.m_settings.mode = MODE_NOT_RUNNING;
 
 	// Create a window
 	Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;

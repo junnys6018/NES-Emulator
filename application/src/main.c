@@ -29,17 +29,8 @@ int main(int argc, char** argv)
 	AudioPrecompute();
 	InitSDLAudio();
 
-	//if (argc == 2 && strcmp(argv[1], "--test") == 0)
-	//{
-	//	RunAll6502Tests();
-	//	RunAll2C02Tests();
-	//}
-	//else if (argc == 2 && strcmp(argv[1], "--benchmark") == 0)
-	//{
-	//	RunAllBenchmarks();
-	//}
-
-	InitApplication(NULL);
+	
+	InitApplication(argc == 2 ? argv[1] : NULL);
 	ApplicationGameLoop();
 	ShutdownApplication();
 

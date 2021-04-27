@@ -19,6 +19,10 @@ int load_cartridge_from_file(Nes* nes, const char* filepath, UPDATE_PATTERN_TABL
 	Cartridge* cart = &nes->cart;
 	cart->updatePatternTableCB = callback;
 	FILE* file = fopen(filepath, "rb");
+	if (!file)
+	{
+		return 1;
+	}
 	
 	fread(&cart->header, sizeof(Header), 1, file);
 	Header header = cart->header;
