@@ -5,7 +5,7 @@
 #include "../OpenGL/TextRenderer.h"
 #include "../OpenGL/BatchRenderer.h"
 #include "../OpenGL/LineRenderer.h"
-#include "../Controller.h"
+#include "../Application.h"
 #include "../Gui.h"
 #include "../StartupOptions.h"
 

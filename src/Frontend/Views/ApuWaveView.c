@@ -91,7 +91,7 @@ void DrawWaveform(SDL_Rect* rect, AudioWindow* win, float vertical_scale, TRIGGE
 
 void DrawAPUOsc(ChannelEnableModel* model)
 {
-	State2A03* apu = &GetBoundNes()->apu;
+	State2A03* apu = &GetApplicationNes()->apu;
 	GuiMetrics* gm = GetGuiMetrics();
 	WindowMetrics* wm = GetWindowMetrics();
 	int xoff = wm->db_x;

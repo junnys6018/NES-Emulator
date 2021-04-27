@@ -9,7 +9,7 @@ void DrawMemoryView()
 	int xoff = wm->db_x;
 	int yoff = wm->db_y + wm->menu_button_h;
 	GuiMetrics* gm = GetGuiMetrics();
-	Nes* nes = GetBoundNes();
+	Nes* nes = GetApplicationNes();
 
 	static int cpu_addr_offset = 0;
 	static int ppu_addr_offset = 0;

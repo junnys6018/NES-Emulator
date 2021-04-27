@@ -2,44 +2,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "event_filter_function.h"
 #include "string_util.h"
-#include "Frontend/Controller.h"
 #include "Backend/nes.h"
-
-Uint32 on_render_callback(Uint32 interval, void* param)
-{
-	SDL_Event event;
-	SDL_UserEvent userevent;
-
-	userevent.type = SDL_USEREVENT;
-	userevent.code = 0;
-	userevent.data1 = NULL;
-	userevent.data2 = NULL;
-
-	event.type = SDL_USEREVENT;
-	event.user = userevent;
-
-	SDL_PushEvent(&event);
-
-	return interval;
-}
 
 void EmulateUntilHalt(Nes* nes, int instructions_per_frame)
 {
-	// Update screen every 16ms
-	SDL_TimerID tid = SDL_AddTimer(16, on_render_callback, NULL);
-
-	// Filter away events that are not used
-	EventTypeList list = { .size = 2,.event_types = {SDL_USEREVENT, SDL_QUIT} };
-	SDL_SetEventFilter(event_whitelist, &list);
-
 	// Used to detect if cpu has halted
 	uint16_t old_PC[32];
 
 	int instructions_done = 0;
 
-	SDL_Event event;
 	while (true)
 	{
 		if (instructions_done < instructions_per_frame)
@@ -62,33 +34,13 @@ void EmulateUntilHalt(Nes* nes, int instructions_per_frame)
 				break;
 			}
 		}
-
-		// Poll Events
-		while (SDL_PollEvent(&event) != 0)
-		{
-			if (event.type == SDL_QUIT)
-			{
-				exit(EXIT_SUCCESS);
-			}
-			else if (event.type == SDL_USEREVENT && event.user.code == 0)
-			{
-				ControllerDrawViews();
-				//printf("instr: %i\n", instructions_done);
-				instructions_done = 0;
-			}
-		}
-
 	}
-	SDL_RemoveTimer(tid);
-	SDL_SetEventFilter(reset_filter_event, NULL);
 }
 
 int TestBlarggRom(const char* name, uint16_t result_addr)
 {
 	Nes nes;
 	InitNES(&nes, name, NULL);
-
-	ControllerBindNES(&nes);
 
 	EmulateUntilHalt(&nes, 100000);
 
@@ -102,8 +54,6 @@ int TestBlarggRom(const char* name, uint16_t result_addr)
 	{
 		printf("Failed %s Test [%i]\n", GetFileName(name), result);
 	}
-
-	ControllerDrawViews();
 
 	NESDestroy(&nes);
 

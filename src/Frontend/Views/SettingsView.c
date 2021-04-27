@@ -5,7 +5,7 @@
 
 void SetAPUChannels(ChannelEnableModel* ch)
 {
-	State2A03* apu = &GetBoundNes()->apu;
+	State2A03* apu = &GetApplicationNes()->apu;
 
 	apu_channel_set(apu, CHANNEL_SQ1, ch->SQ1);
 	apu_channel_set(apu, CHANNEL_SQ2, ch->SQ2);
@@ -16,7 +16,7 @@ void SetAPUChannels(ChannelEnableModel* ch)
 
 void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* settings)
 {
-	Nes* nes = GetBoundNes();
+	Nes* nes = GetApplicationNes();
 	GuiMetrics* gm = GetGuiMetrics();
 	WindowMetrics* wm = GetWindowMetrics();
 	int xoff = wm->db_x;

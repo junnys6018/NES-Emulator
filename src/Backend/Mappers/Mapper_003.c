@@ -1,5 +1,4 @@
 #include "Mapper_003.h"
-#include "Frontend/Controller.h" // To set pattern table
 #include <string.h>
 
 uint8_t m003CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)

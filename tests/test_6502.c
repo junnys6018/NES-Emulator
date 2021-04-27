@@ -1,9 +1,5 @@
 #include "test_6502.h"
-
-#include "Frontend/Controller.h"
 #include "Backend/nes.h"
-#include "event_filter_function.h"
-
 #include "timer.h"
 #include "test_util.h"
 
@@ -17,8 +13,6 @@ int Run_6502_Functional_Test()
 {
 	Nes nes;
 	InitNES(&nes, "tests/roms/6502_functional_test.bin", NULL);
-
-	ControllerBindNES(&nes);
 
 	EmulateUntilHalt(&nes, 200000);
 
@@ -38,7 +32,6 @@ int Run_6502_Functional_Test()
 	else
 		printf("Failed Functional Test\n");
 
-	ControllerDrawViews();
 	
 	NESDestroy(&nes);
 
@@ -49,17 +42,6 @@ int Run_6502_Interrupt_Test()
 {
 	Nes nes;
 	InitNES(&nes, "tests/roms/6502_interrupt_test.bin", NULL);
-
-	ControllerBindNES(&nes);
-	ControllerDrawViews();
-
-	// Update screen every 16ms
-	SDL_TimerID tid = SDL_AddTimer(16, on_render_callback, NULL);
-
-	// Filter away events that are not used
-	EventTypeList list = { .size = 2,.event_types = {SDL_USEREVENT, SDL_QUIT} };
-	SDL_SetEventFilter(event_whitelist, &list);
-
 
 	const uint16_t feedback_register_addr = 0xBFFC; // Location of register used to feed interrupts into the cpu
 	uint8_t old_nmi = 0; // Used to detect a level change
@@ -109,35 +91,14 @@ int Run_6502_Interrupt_Test()
 				else
 					printf("Failed Interrupt Test\n");
 
-				ControllerDrawViews();
 				break;
 			}
 
 			old_PC = nes.cpu.PC;
 		}
-
-
-		// Poll Events
-		while (SDL_PollEvent(&event) != 0)
-		{
-			if (event.type == SDL_QUIT)
-			{
-				exit(EXIT_SUCCESS);
-			}
-			else if (event.type == SDL_USEREVENT && event.user.code == 0)
-			{
-				ControllerDrawViews();
-				instructions_done = 0;
-			}
-		}
-
 	}
 
 	NESDestroy(&nes);
-
-	SDL_RemoveTimer(tid);
-	SDL_SetEventFilter(reset_filter_event, NULL);
-
 	return passed ? 0 : 1;
 }
 

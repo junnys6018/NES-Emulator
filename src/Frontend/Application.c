@@ -1,4 +1,4 @@
-#include "Controller.h"
+#include "Application.h"
 
 #include <SDL.h> 
 #include <glad/glad.h>
@@ -10,6 +10,7 @@
 #include "Gui.h"
 #include "StartupOptions.h"
 #include "ColorDefs.h"
+#include "timer.h"
 
 #include "OpenGL/Debug.h"
 #include "OpenGL/Scanline.h"
@@ -59,7 +60,6 @@ typedef struct
 	// What screen we are currently drawing
 	DrawTarget target;
 
-	// Pointer to the nes the renderer is drawing
 	Nes* nes;
 
 	// Models
@@ -176,8 +176,12 @@ void ShutdownOpengl()
 	SDL_GL_DeleteContext(cc.gl_context);
 }
 
-void InitController()
+void InitApplication(char* rom)
 {
+	cc.nes = malloc(sizeof(Nes));
+	InitNES(cc.nes, rom, SetPatternTable);
+	cc.m_palette.pal = cc.nes->ppu_bus.palette;
+
 	StartupOptions* opt = GetStartupOptions();
 	const int starting_w = opt->startup_width, starting_h = opt->startup_height;
 
@@ -228,7 +232,7 @@ void InitController()
 	cc.target = TARGET_NES_STATE;
 }
 
-void ControllerShutdown()
+void ShutdownApplication()
 {
 	ShutdownOpengl();
 
@@ -239,6 +243,8 @@ void ControllerShutdown()
 	SDL_DestroyWindow(cc.win);
 
 	GuiShutdown();
+
+	free(cc.nes);
 }
 
 ///////////////////////////
@@ -252,7 +258,7 @@ WindowMetrics* GetWindowMetrics()
 	return &cc.wm;
 }
 
-Nes* GetBoundNes()
+Nes* GetApplicationNes()
 {
 	return cc.nes;
 }
@@ -260,11 +266,6 @@ Nes* GetBoundNes()
 void SetFullScreen(bool b)
 {
 	SDL_SetWindowFullscreen(cc.win, b ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-}
-
-SettingsModel* GetSettings()
-{
-	return &cc.m_settings;
 }
 
 // Whenever a pattern table has been bank switched, the pointer the renderer has to the pattern table
@@ -281,12 +282,6 @@ void SetPatternTable(uint8_t* table_data, int side)
 	}
 }
 
-void ControllerBindNES(Nes* nes)
-{
-	cc.nes = nes;
-	cc.m_palette.pal = nes->ppu_bus.palette;
-}
-
 void GetWindowSize(int* w, int* h)
 {
 	SDL_GetWindowSize(cc.win, w, h);
@@ -298,7 +293,7 @@ void GetWindowSize(int* w, int* h)
 //
 ///////////////////////////
 
-void ControllerDrawViews()
+void DrawViews()
 {
 	assert(cc.nes); // Nes must be bound for rendering
 
@@ -379,4 +374,73 @@ void ControllerDrawViews()
 
 	// Swap framebuffers
 	SDL_GL_SwapWindow(cc.win);
+}
+
+void ApplicationGameLoop()
+{
+	int window = 10;
+	float total_time = 0.0f;
+	int curr_frame = 0;
+
+	SDL_Event event;
+	timepoint beg, end;
+	bool running = true;
+	while (running)
+	{
+		GetTime(&beg);
+		poll_keys(&cc.nes->pad);
+
+		if (cc.m_settings.mode == MODE_PLAY)
+		{
+			clock_nes_frame(cc.nes);
+			if (cc.nes->apu.audio_pos != 0)
+			{
+				WriteSamples(cc.nes->apu.audio_buffer, cc.nes->apu.audio_pos);
+				cc.nes->apu.audio_pos = 0;
+			}
+		}
+
+		DrawViews();
+
+		while (SDL_PollEvent(&event) != 0)
+		{
+			GuiDispatchEvent(&event);
+			if (cc.m_settings.mode == MODE_STEP_THROUGH && event.type == SDL_KEYDOWN)
+			{
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_SPACE:
+					clock_nes_instruction(cc.nes);
+					break;
+				case SDLK_f:
+					clock_nes_frame(cc.nes);
+					break;
+				case SDLK_p:
+					clock_nes_cycle(cc.nes);
+					break;
+				}
+			}
+			else if (event.type == SDL_QUIT)
+			{
+				running = false;
+			}
+		}
+
+		GetTime(&end);
+		total_time += GetElapsedTimeMilli(&beg, &end);
+		curr_frame++;
+		if (curr_frame == window)
+		{
+			cc.m_settings.ms_per_frame = total_time / window;
+
+			total_time = 0.0f;
+			curr_frame = 0;
+		}
+
+		float elapsed = GetElapsedTimeMicro(&beg, &end);
+		if (elapsed < 16666) // 60 FPS
+		{
+			SleepMicro((uint64_t)(16666 - elapsed));
+		}
+	}
 }

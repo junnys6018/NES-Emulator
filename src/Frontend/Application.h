@@ -4,9 +4,9 @@
 #include "Models/SettingsModel.h"
 #include <SDL.h>
 
-void InitController();
-void ControllerShutdown();
-void ControllerDrawViews();
+void InitApplication(char* rom);
+void ShutdownApplication();
+void ApplicationGameLoop();
 
 typedef struct
 {
@@ -35,9 +35,7 @@ typedef struct
 
 void GetWindowSize(int* w, int* h);
 WindowMetrics* GetWindowMetrics();
-SettingsModel* GetSettings();
-Nes* GetBoundNes();
+Nes* GetApplicationNes();
 void SetFullScreen(bool b);
 void SetPatternTable(uint8_t* table_data, int side); // The emulator to call into
-void ControllerBindNES(Nes* nes);
 #endif

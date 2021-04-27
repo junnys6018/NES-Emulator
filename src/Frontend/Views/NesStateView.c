@@ -80,7 +80,7 @@ void DrawProgramView(int xoff, int yoff, State6502* cpu)
 void DrawPPUStatus(int xoff, int yoff, State2C02* ppu)
 {
 	int padding = GetWindowMetrics()->padding;
-	Nes* nes = GetBoundNes();
+	Nes* nes = GetApplicationNes();
 
 	SetTextOrigin(xoff + padding, yoff + padding);
 	RenderText("PPUCTRL   ($2000): ", white);
@@ -224,8 +224,8 @@ void DrawNESState(NameTableModel* nt, PaletteDataModel pal)
 	int xoff = wm->db_x;
 	int yoff = wm->db_y + wm->menu_button_h;
 	int padding = wm->padding;
-	State6502* cpu = &GetBoundNes()->cpu;
-	State2C02* ppu = &GetBoundNes()->ppu;
+	State6502* cpu = &GetApplicationNes()->cpu;
+	State2C02* ppu = &GetApplicationNes()->ppu;
 
 	DrawProgramView(xoff, yoff, cpu);
 	xoff += TextBounds("$0000: ORA ($00,X)").w + padding;

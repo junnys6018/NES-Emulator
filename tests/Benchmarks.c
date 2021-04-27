@@ -51,7 +51,7 @@ void Run2C02Benchmark()
 void RunNESBenchmark()
 {
 	Nes nes;
-	InitNES(&nes, "roms/SuperMarioBros.nes", NULL);
+	InitNES(&nes, "tests/roms/SuperMarioBros.nes", NULL);
 
 	int NUM = 100000000;
 	timepoint beg, end;
