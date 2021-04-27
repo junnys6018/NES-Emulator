@@ -2,5 +2,5 @@
 	path = tests/roms
 	url = https://github.com/junnys6018/NES-Test-Roms.git
 [submodule "vendor/glad"]
-	path = vendor/glad
+	path = application/vendor/glad
 	url = https://github.com/junnys6018/glad.git
