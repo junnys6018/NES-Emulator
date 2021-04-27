@@ -1,7 +1,7 @@
 #include "Scanline.h"
 #include "Shader.h"
 #include "Framebuffer.h"
-#include "../Controller.h"
+#include "Application.h"
 #include <glad/glad.h>
 
 static GLuint vbo, vao, shader;

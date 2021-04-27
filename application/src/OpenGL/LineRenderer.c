@@ -1,6 +1,6 @@
 #include "LineRenderer.h"
 #include "Shader.h"
-#include "../Controller.h"
+#include "Application.h"
 #include <glad/glad.h>
 #include <stdbool.h>
 

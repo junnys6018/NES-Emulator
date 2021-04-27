@@ -1,15 +1,12 @@
-#include "Frontend/Application.h"
-#include "Frontend/Gui.h"
-#include "Frontend/Audio.h"
-#include "Frontend/StartupOptions.h"
-#include "Frontend/Models/SettingsModel.h"
+#include "Application.h"
+#include "Gui.h"
+#include "Audio.h"
+#include "StartupOptions.h"
+#include "Models/SettingsModel.h"
 
-#include "Backend/nes.h"
+#include "nes.h"
 
-#include "test_6502.h"
-#include "test_2C02.h"
-#include "Benchmarks.h"
-#include "timer.h"
+#include "util/timer.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -32,15 +29,15 @@ int main(int argc, char** argv)
 	AudioPrecompute();
 	InitSDLAudio();
 
-	if (argc == 2 && strcmp(argv[1], "--test") == 0)
-	{
-		RunAll6502Tests();
-		RunAll2C02Tests();
-	}
-	else if (argc == 2 && strcmp(argv[1], "--benchmark") == 0)
-	{
-		RunAllBenchmarks();
-	}
+	//if (argc == 2 && strcmp(argv[1], "--test") == 0)
+	//{
+	//	RunAll6502Tests();
+	//	RunAll2C02Tests();
+	//}
+	//else if (argc == 2 && strcmp(argv[1], "--benchmark") == 0)
+	//{
+	//	RunAllBenchmarks();
+	//}
 
 	InitApplication(NULL);
 	ApplicationGameLoop();

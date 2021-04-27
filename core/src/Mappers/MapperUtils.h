@@ -1,6 +1,6 @@
 #ifndef MAPPER_UTILS_H
 #define MAPPER_UTILS_H
-#include "Backend/Cartridge.h"
+#include "Cartridge.h"
 
 typedef enum
 {

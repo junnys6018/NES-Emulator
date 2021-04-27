@@ -1,6 +1,6 @@
 #include "ApuWaveView.h"
 #include "Common.h"
-#include "../../Backend/2A03.h"
+#include "2A03.h"
 
 // A trigger function takes an audio buffer and returns an offset into that buffer
 // when drawing a wave in DrawWaveform(), we start drawing from this offset.

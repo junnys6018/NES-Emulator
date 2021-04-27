@@ -1,6 +1,6 @@
 #include "SettingsView.h"
 #include "Common.h"
-#include "../../FileDialog.h"
+#include "Util/FileDialog.h"
 #include <stdio.h>
 
 void SetAPUChannels(ChannelEnableModel* ch)

@@ -1,6 +1,6 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
-#include "Backend/nes.h"
+#include "nes.h"
 #include "Models/SettingsModel.h"
 #include <SDL.h>
 

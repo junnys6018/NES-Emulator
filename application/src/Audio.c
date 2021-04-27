@@ -1,6 +1,5 @@
 #include "Audio.h"
-#include "Frontend/Controller.h"
-#include "Backend/2A03.h"
+#include "2A03.h"
 
 #include <string.h>
 #include <stdio.h>

@@ -1,7 +1,6 @@
 #include "BatchRenderer.h"
 #include "Shader.h"
 #include "Texture.h"
-#include "../Controller.h"
 
 #include <glad/glad.h>
 #include <stdbool.h>

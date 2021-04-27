@@ -1,5 +1,4 @@
 #include "2C02.h"
-#include "Frontend/Controller.h" // To upload pixel data to renderer
 
 #include <stdio.h> // For printf
 #include <string.h> // For memset

@@ -1,5 +1,5 @@
 #include "nes.h"
-#include "Backend/Mappers/Mapper_JUN.h"
+#include "Mappers/Mapper_JUN.h"
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>

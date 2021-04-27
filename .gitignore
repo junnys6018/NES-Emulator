@@ -12,7 +12,7 @@ Resources
 *.make
 *.out
 
-settings.json
+application/settings.json
 
 blockoban/int
 blockoban/blockoban.nes

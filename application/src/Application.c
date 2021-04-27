@@ -10,7 +10,8 @@
 #include "Gui.h"
 #include "StartupOptions.h"
 #include "ColorDefs.h"
-#include "timer.h"
+#include "Util/timer.h"
+#include "Audio.h"
 
 #include "OpenGL/Debug.h"
 #include "OpenGL/Scanline.h"
@@ -376,6 +377,30 @@ void DrawViews()
 	SDL_GL_SwapWindow(cc.win);
 }
 
+void SetNesKeys()
+{
+	static const int8_t* state = NULL;
+	if (!state)
+	{
+		state = SDL_GetKeyboardState(NULL);
+	}
+
+	StartupOptions* opt = GetStartupOptions();
+
+	Keys keys;
+
+	keys.keys.A = state[opt->key_A];
+	keys.keys.B = state[opt->key_B];
+	keys.keys.Start = state[opt->key_start]; // Enter key
+	keys.keys.Select = state[opt->key_select];
+	keys.keys.Up = state[opt->key_up];
+	keys.keys.Down = state[opt->key_down];
+	keys.keys.Left = state[opt->key_left];
+	keys.keys.Right = state[opt->key_right];
+
+	poll_keys(&cc.nes->pad, keys);
+}
+
 void ApplicationGameLoop()
 {
 	int window = 10;
@@ -388,7 +413,7 @@ void ApplicationGameLoop()
 	while (running)
 	{
 		GetTime(&beg);
-		poll_keys(&cc.nes->pad);
+		SetNesKeys();
 
 		if (cc.m_settings.mode == MODE_PLAY)
 		{
