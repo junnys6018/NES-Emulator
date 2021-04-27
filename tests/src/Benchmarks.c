@@ -1,5 +1,5 @@
 #include "Benchmarks.h"
-#include "Backend/nes.h"
+#include "nes.h"
 
 #include <timer.h>
 #include <stdio.h>
@@ -7,7 +7,7 @@
 void Run6502Benchmark()
 {
 	Nes nes;
-	InitNES(&nes, "tests/roms/6502_functional_test.bin", NULL);
+	InitNES(&nes, "roms/6502_functional_test.bin", NULL);
 
 	int NUM = 100000000;
 	timepoint beg, end;
@@ -28,7 +28,7 @@ void Run6502Benchmark()
 void Run2C02Benchmark()
 {
 	Nes nes;
-	InitNES(&nes, "tests/roms/palette.nes", NULL);
+	InitNES(&nes, "roms/palette.nes", NULL);
 
 	nes.ppu.PPUMASK.reg = 0x18; // enable all rendering
 
@@ -51,7 +51,7 @@ void Run2C02Benchmark()
 void RunNESBenchmark()
 {
 	Nes nes;
-	InitNES(&nes, "tests/roms/SuperMarioBros.nes", NULL);
+	InitNES(&nes, "roms/SuperMarioBros.nes", NULL);
 
 	int NUM = 100000000;
 	timepoint beg, end;
