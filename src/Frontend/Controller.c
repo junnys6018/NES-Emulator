@@ -269,7 +269,7 @@ SettingsModel* GetSettings()
 
 // Whenever a pattern table has been bank switched, the pointer the renderer has to the pattern table
 // will be invalid, backend code will call this function to update that pointer to the new pattern table
-void ControllerSetPatternTable(uint8_t* table_data, int side)
+void SetPatternTable(uint8_t* table_data, int side)
 {
 	if (side == 0)
 	{
@@ -285,12 +285,6 @@ void ControllerBindNES(Nes* nes)
 {
 	cc.nes = nes;
 	cc.m_palette.pal = nes->ppu_bus.palette;
-}
-
-// The PPU will call this function whenever a new frame is ready
-void SendPixelDataToScreen(uint8_t* pixels)
-{
-	glTextureSubImage2D(cc.m_nes_screen.scr.handle, 0, 0, 0, 256, 240, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 }
 
 void GetWindowSize(int* w, int* h)
@@ -319,6 +313,8 @@ void ControllerDrawViews()
 	BeginBatch();
 	BeginLines();
 
+	uint8_t* pixels = get_framebuffer(&cc.nes->ppu);
+	glTextureSubImage2D(cc.m_nes_screen.scr.handle, 0, 0, 0, 256, 240, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 	DrawNes(cc.m_nes_screen, &cc.m_settings);
 
 	if (cc.draw_debug_view)
@@ -384,48 +380,3 @@ void ControllerDrawViews()
 	// Swap framebuffers
 	SDL_GL_SwapWindow(cc.win);
 }
-
-#if 0
-// For debugging
-void DrawNametable(State2C02* ppu)
-{
-	color* pixels;
-	color col[4] = { {0,0,0},{255,0,0,},{0,0,0,},{255,0,0} };
-	int pitch;
-	SDL_LockTexture(cc.nes_screen, NULL, &pixels, &pitch);
-
-	memset(pixels, 255, 256 * 240 * 3);
-
-	for (int x = 0; x < 32; x++)
-	{
-		for (int y = 0; y < 30; y++)
-		{
-			uint16_t nt_addr = 0x2000 | (y * 32 + x);
-			uint8_t nt_byte = ppu_bus_read(ppu->bus, nt_addr);
-			// Draw 8x8 tile
-			for (int fine_y = 0; fine_y < 8; fine_y++)
-			{
-				uint16_t pt_addr = (uint16_t)(nt_byte << 4) | fine_y;
-				uint8_t pt_byte_low = ppu_bus_read(ppu->bus, pt_addr);
-				uint8_t pt_byte_high = ppu_bus_read(ppu->bus, pt_addr | 1 << 3);
-				for (int fine_x = 0; fine_x < 8; fine_x++)
-				{
-					int yoff = y * 8 + fine_y;
-					int xoff = x * 8 + 7 - fine_x;
-					int index = yoff * 256 + xoff;
-					int shade = (pt_byte_low & (1 << fine_x)) >> fine_x | pt_byte_high & (1 << fine_x) >> (fine_x - 1);
-					pixels[index] = col[shade];
-					if (fine_x == 0 || fine_y == 0)
-					{
-						pixels[index].r = 100;
-						pixels[index].g = 100;
-						pixels[index].b = 100;
-					}
-				}
-			}
-		}
-	}
-
-	SDL_UnlockTexture(cc.nes_screen);
-}
-#endif

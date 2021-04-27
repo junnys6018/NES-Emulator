@@ -2,11 +2,12 @@
 #define CARTRIDGE_H
 #include <stdint.h>
 #include <stdbool.h>
-
-typedef uint8_t(*CPU_READ_BYTE)(void* mapper, uint16_t addr, bool* read);
-typedef void(*CPU_WRITE_BYTE)(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
-typedef uint8_t(*PPU_READ_BYTE)(void* mapper, uint16_t addr);
-typedef void(*PPU_WRITE_BYTE)(void* mapper, uint16_t addr, uint8_t data);
+struct Cartridge;
+typedef uint8_t (*CPU_READ_BYTE)(struct Cartridge* cart, uint16_t addr, bool* read);
+typedef void (*CPU_WRITE_BYTE)(struct Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote);
+typedef uint8_t (*PPU_READ_BYTE)(struct Cartridge* cart, uint16_t addr);
+typedef void (*PPU_WRITE_BYTE)(struct Cartridge* cart, uint16_t addr, uint8_t data);
+typedef void (*UPDATE_PATTERN_TABLE_CB)(void* table, int side);
 
 typedef struct
 {
@@ -76,11 +77,13 @@ typedef struct
 
 	NAMETABLE_MIRROR PPUMirrorNametable;
 
+	UPDATE_PATTERN_TABLE_CB updatePatternTableCB;
+
 	void* mapper;
 } Cartridge;
 
 // Returns 0 on success; non zero on failure
-int load_cartridge_from_file(struct Nes* nes, const char* filepath);
+int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback);
 void free_cartridge(Cartridge* cart);
 
 

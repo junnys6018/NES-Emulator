@@ -14,9 +14,10 @@
 
 // TODO: error handling for each mapper loading function
 
-int load_cartridge_from_file(Nes* nes, const char* filepath)
+int load_cartridge_from_file(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
 {
 	Cartridge* cart = &nes->cart;
+	cart->updatePatternTableCB = callback;
 	FILE* file = fopen(filepath, "rb");
 	
 	fread(&cart->header, sizeof(Header), 1, file);

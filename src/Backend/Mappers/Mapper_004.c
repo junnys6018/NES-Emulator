@@ -25,13 +25,13 @@ void clock_IRQ(Mapper004* map)
 	}
 }
 
-uint8_t m004CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
+uint8_t m004CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = (addr >= 0x4020 && addr <= 0xFFFF);
 	if (!*read)
 		return 0;
 
-	Mapper004* map = (Mapper004*)mapper;
+	Mapper004* map = (Mapper004*)cart->mapper;
 	if (addr >= 0x6000 && addr < 0x8000)
 	{
 		if (map->ram_protect.bits.R)
@@ -69,11 +69,11 @@ uint8_t m004CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 	return map->PRG_ROM[(bank_index << 13) | (addr & 0x1FFF)];
 }
 
-void m004CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)
+void m004CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
-	Mapper004* map = (Mapper004*)mapper;
+	Mapper004* map = (Mapper004*)cart->mapper;
 
 	// Write to ram
 	if (addr >= 0x6000 && addr < 0x8000)
@@ -88,13 +88,13 @@ void m004CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 		map->bank_select.reg = data;
 		if (map->bank_select.bits.C)
 		{
-			ControllerSetPatternTable(map->left_pt, 1);
-			ControllerSetPatternTable(map->right_pt, 0);
+			cart->updatePatternTableCB(map->left_pt, 1);
+			cart->updatePatternTableCB(map->right_pt, 0);
 		}
 		else
 		{
-			ControllerSetPatternTable(map->left_pt, 0);
-			ControllerSetPatternTable(map->right_pt, 1);
+			cart->updatePatternTableCB(map->left_pt, 0);
+			cart->updatePatternTableCB(map->right_pt, 1);
 		}
 	}
 	else if (addr >= 0x8000 && addr < 0xA000 && addr % 2 == 1)
@@ -159,9 +159,9 @@ void m004CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 	}
 }
 
-uint8_t m004PPUPeekCartridge(void* mapper, uint16_t addr)
+uint8_t m004PPUPeekCartridge(Cartridge* cart, uint16_t addr)
 {
-	Mapper004* map = (Mapper004*)mapper;
+	Mapper004* map = (Mapper004*)cart->mapper;
 
 	// CHR A12 invert
 	if (map->bank_select.bits.C)
@@ -206,9 +206,9 @@ uint8_t m004PPUPeekCartridge(void* mapper, uint16_t addr)
 	return map->CHR_ROM[(bank_index << 10) | (addr & 0x03FF)];
 }
 
-uint8_t m004PPUReadCartridge(void* mapper, uint16_t addr)
+uint8_t m004PPUReadCartridge(Cartridge* cart, uint16_t addr)
 {
-	Mapper004* map = (Mapper004*)mapper;
+	Mapper004* map = (Mapper004*)cart->mapper;
 
 	// PPU A12 rising edge
 	bool PPU_A12 = (addr & 0x1000) > 0;
@@ -218,10 +218,10 @@ uint8_t m004PPUReadCartridge(void* mapper, uint16_t addr)
 	}
 	map->old_PPU_A12 = PPU_A12;
 
-	return m004PPUPeekCartridge(mapper, addr);
+	return m004PPUPeekCartridge(cart, addr);
 }
 
-void m004PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
+void m004PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
 	// Do nothing, CHR is a rom
 }
@@ -290,6 +290,9 @@ void m004LoadFromFile(Header* header, Cartridge* cart, FILE* file, State6502* cp
 	fread(map->PRG_ROM, (size_t)map->PRG_ROM_banks * 8 * 1024, 1, file);
 	fread(map->CHR_ROM, (size_t)map->CHR_banks * 1024, 1, file);
 
-	ControllerSetPatternTable(map->left_pt, 0);
-	ControllerSetPatternTable(map->right_pt, 1);
+	if (cart->updatePatternTableCB)
+	{
+		cart->updatePatternTableCB(map->left_pt, 0);
+		cart->updatePatternTableCB(map->right_pt, 1);
+	}
 }

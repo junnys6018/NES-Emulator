@@ -4,11 +4,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
+uint8_t m001CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = (addr >= 0x4020 && addr <= 0xFFFF);
 
-	Mapper001* map001 = (Mapper001*)mapper;
+	Mapper001* map001 = (Mapper001*)cart->mapper;
 	if (addr >= 0x6000 && addr < 0x8000)
 	{
 		// PRG Ram chip enable (active low)
@@ -54,26 +54,26 @@ uint8_t m001CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 	return 0;
 }
 
-void UpdateRendererPatternTable(Mapper001* mapper)
+void UpdateRendererPatternTable(Mapper001* mapper, UPDATE_PATTERN_TABLE_CB callback)
 {
 	if (mapper->control.bits.C)
 	{
-		ControllerSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank0_select) << 12), 0);
-		ControllerSetPatternTable(mapper->CHR + ((uint32_t)(mapper->CHR_bank1_select) << 12), 1);
+		callback(mapper->CHR + ((uint32_t)(mapper->CHR_bank0_select) << 12), 0);
+		callback(mapper->CHR + ((uint32_t)(mapper->CHR_bank1_select) << 12), 1);
 	}
 	else
 	{
 		uint32_t base_addr = ((uint32_t)mapper->CHR_bank0_select >> 1) << 13;
-		ControllerSetPatternTable(mapper->CHR + base_addr, 0);
-		ControllerSetPatternTable(mapper->CHR + base_addr + 0x1000, 1);
+		callback(mapper->CHR + base_addr, 0);
+		callback(mapper->CHR + base_addr + 0x1000, 1);
 	}
 }
 
-void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)
+void m001CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
-	Mapper001* map001 = (Mapper001*)mapper;
+	Mapper001* map001 = (Mapper001*)cart->mapper;
 	if (addr >= 0x6000 && addr < 0x8000)
 	{
 		// PRG Ram chip enable (active low)
@@ -117,17 +117,17 @@ void m001CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrot
 			}
 			map001->shift_register = 0b10000;
 
-			if (update_pattern_table)
+			if (update_pattern_table && cart->updatePatternTableCB)
 			{
-				UpdateRendererPatternTable(map001);
+				UpdateRendererPatternTable(map001, cart->updatePatternTableCB);
 			}
 		}
 	}
 }
 
-uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
+uint8_t m001PPUReadCartridge(Cartridge* cart, uint16_t addr)
 {
-	Mapper001* map001 = (Mapper001*)mapper;
+	Mapper001* map001 = (Mapper001*)cart->mapper;
 	switch (map001->control.bits.C)
 	{
 	case 0: // swtich 8KB at a time
@@ -151,9 +151,9 @@ uint8_t m001PPUReadCartridge(void* mapper, uint16_t addr)
 	return 0;
 }
 
-void m001PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
+void m001PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
-	Mapper001* map001 = (Mapper001*)mapper;
+	Mapper001* map001 = (Mapper001*)cart->mapper;
 	switch (map001->control.bits.C)
 	{
 	case 0: // swtich 8KB at a time

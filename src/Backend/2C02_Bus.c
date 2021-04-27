@@ -7,7 +7,7 @@ uint8_t ppu_bus_read(Bus2C02* bus, uint16_t addr)
 	// Read CHR from cartridge
 	if (addr >= 0x0000 && addr < 0x2000) 
 	{
-		return bus->cartridge->PPUReadCartridge(bus->cartridge->mapper, addr);
+		return bus->cartridge->PPUReadCartridge(bus->cartridge, addr);
 	}
 	// Read Nametable
 	else if (addr >= 0x2000 && addr < 0x3F00)
@@ -34,7 +34,7 @@ uint8_t ppu_bus_peek(Bus2C02* bus, uint16_t addr)
 	addr &= 0x3FFF;
 	if (addr >= 0x0000 && addr < 0x2000)
 	{
-		return bus->cartridge->PPUPeakCartridge(bus->cartridge->mapper, addr);
+		return bus->cartridge->PPUPeakCartridge(bus->cartridge, addr);
 	}
 	else
 	{
@@ -49,7 +49,7 @@ void ppu_bus_write(Bus2C02* bus, uint16_t addr, uint8_t data)
 	// Write data to cartridge
 	if (addr >= 0x0000 && addr < 0x2000)
 	{
-		bus->cartridge->PPUWriteCartridge(bus->cartridge->mapper, addr, data);
+		bus->cartridge->PPUWriteCartridge(bus->cartridge, addr, data);
 	}
 	// Write to Nametable
 	else if (addr >= 0x2000 && addr < 0x3F00)

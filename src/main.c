@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 	SettingsModel* settings = GetSettings();
 
 	Nes nes;
-	InitNES(&nes, NULL);
+	InitNES(&nes, NULL, SetPatternTable);
 	if (argc == 2 && strcmp(argv[1], "--test") == 0)
 	{
 		RunAll6502Tests();
@@ -49,14 +49,14 @@ int main(int argc, char** argv)
 	else if (argc == 2)
 	{
 		NESDestroy(&nes);
-		if (InitNES(&nes, argv[1]) == 0)
+		if (InitNES(&nes, argv[1], SetPatternTable) == 0)
 		{
 			settings->mode = MODE_PLAY;
 		}
 		else
 		{
 			printf("[ERROR] Failed to load %s as an ines rom\n", argv[1]);
-			InitNES(&nes, NULL);
+			InitNES(&nes, NULL, SetPatternTable);
 		}
 	}
 

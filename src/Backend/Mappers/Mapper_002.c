@@ -1,10 +1,10 @@
 #include "Mapper_002.h"
 
-uint8_t m002CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
+uint8_t m002CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = (addr >= 0x4020 && addr <= 0xFFFF);
 
-	Mapper002* map002 = (Mapper002*)mapper;
+	Mapper002* map002 = (Mapper002*)cart->mapper;
 	if (addr >= 0x8000 && addr < 0xC000)
 	{
 		// Bankswitch
@@ -20,26 +20,26 @@ uint8_t m002CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 	return 0;
 }
 
-void m002CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)
+void m002CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
-	Mapper002* map002 = (Mapper002*)mapper;
+	Mapper002* map002 = (Mapper002*)cart->mapper;
 	if (addr >= 0x8000 && addr <= 0xFFFF)
 	{
 		map002->PRG_bank_select = data % map002->PRG_ROM_banks;
 	}
 }
 
-uint8_t m002PPUReadCartridge(void* mapper, uint16_t addr)
+uint8_t m002PPUReadCartridge(Cartridge* cart, uint16_t addr)
 {
-	Mapper002* map002 = (Mapper002*)mapper;
+	Mapper002* map002 = (Mapper002*)cart->mapper;
 	return map002->CHR[addr];
 }
 
-void m002PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
+void m002PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
-	Mapper002* map002 = (Mapper002*)mapper;
+	Mapper002* map002 = (Mapper002*)cart->mapper;
 	if (map002->chr_is_ram)
 	{
 		map002->CHR[addr] = data;
@@ -104,6 +104,10 @@ void m002LoadFromFile(Header* header, Cartridge* cart, FILE* file)
 	map->mirrorMode = header->MirrorType == 1 ? VERTICAL : HORIZONTAL;
 
 	// Bind Pattern table to renderer
-	ControllerSetPatternTable(map->CHR, 0);
-	ControllerSetPatternTable(map->CHR + 0x1000, 1);
+	if (cart->updatePatternTableCB)
+	{
+		cart->updatePatternTableCB(map->CHR, 0);
+		cart->updatePatternTableCB(map->CHR + 0x1000, 1);
+	}
+
 }

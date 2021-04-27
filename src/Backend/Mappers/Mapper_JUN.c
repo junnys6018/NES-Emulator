@@ -2,31 +2,31 @@
 #include <stdlib.h>
 #include <assert.h>
 
-uint8_t mJUNCPUReadCartridge(void* mapper, uint16_t addr, bool* read)
+uint8_t mJUNCPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = true;
-	MapperJUN* mapJUN = (MapperJUN*)mapper;
+	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
 
 	return mapJUN->PRG_RAM[addr];
 }
 
-void mJUNCPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)
+void mJUNCPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = true;
-	MapperJUN* mapJUN = (MapperJUN*)mapper;
+	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
 	
 	mapJUN->PRG_RAM[addr] = data;
 }
 
-uint8_t mJUNPPUReadCartridge(void* mapper, uint16_t addr)
+uint8_t mJUNPPUReadCartridge(Cartridge* cart, uint16_t addr)
 {
-	MapperJUN* mapJUN = (MapperJUN*)mapper;
+	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
 	return mapJUN->CHR[addr];
 }
 
-void mJUNPPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
+void mJUNPPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
-	MapperJUN* mapJUN = (MapperJUN*)mapper;
+	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
 	mapJUN->CHR[addr] = data;
 }
 

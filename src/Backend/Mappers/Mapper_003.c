@@ -2,11 +2,11 @@
 #include "Frontend/Controller.h" // To set pattern table
 #include <string.h>
 
-uint8_t m003CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
+uint8_t m003CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = (addr >= 0x4020 && addr <= 0xFFFF);
 
-	Mapper003* map003 = (Mapper003*)mapper;
+	Mapper003* map003 = (Mapper003*)cart->mapper;
 	if (addr >= 0x8000 && addr <= 0xFFFF)
 	{
 		addr &= (map003->PRG_ROM_banks == 1 ? 0x3FFF : 0x7FFF);
@@ -16,31 +16,34 @@ uint8_t m003CPUReadCartridge(void* mapper, uint16_t addr, bool* read)
 	return 0;
 }
 
-void m003CPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote)
+void m003CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
-	Mapper003* map003 = (Mapper003*)mapper;
+	Mapper003* map003 = (Mapper003*)cart->mapper;
 	if (addr >= 0x8000 && addr <= 0xFFFF)
 	{
 		map003->CHR_bank_select = data % map003->CHR_banks;
 		uint32_t index = (uint32_t)(map003->CHR_bank_select << 13);
-		ControllerSetPatternTable(map003->CHR + index, 0);
-		ControllerSetPatternTable(map003->CHR + index + 0x1000, 1);
+		if (cart->updatePatternTableCB)
+		{
+			cart->updatePatternTableCB(map003->CHR + index, 0);
+			cart->updatePatternTableCB(map003->CHR + index + 0x1000, 1);
+		}
 	}
 }
 
-uint8_t m003PPUReadCartridge(void* mapper, uint16_t addr)
+uint8_t m003PPUReadCartridge(Cartridge* cart, uint16_t addr)
 {
-	Mapper003* map003 = (Mapper003*)mapper;
+	Mapper003* map003 = (Mapper003*)cart->mapper;
 
 	uint32_t index = ((uint32_t)map003->CHR_bank_select << 13) | addr;
 	return map003->CHR[index];
 }
 
-void m003PPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data)
+void m003PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
-	Mapper003* map003 = (Mapper003*)mapper;
+	Mapper003* map003 = (Mapper003*)cart->mapper;
 	if (map003->chr_is_ram)
 	{
 		uint32_t index = ((uint32_t)map003->CHR_bank_select << 13) | addr;

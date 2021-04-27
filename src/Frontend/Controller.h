@@ -38,9 +38,6 @@ WindowMetrics* GetWindowMetrics();
 SettingsModel* GetSettings();
 Nes* GetBoundNes();
 void SetFullScreen(bool b);
-
-// side = 0: left nametable; side = 1: right nametable
-void ControllerSetPatternTable(uint8_t* table_data, int side);
+void SetPatternTable(uint8_t* table_data, int side); // The emulator to call into
 void ControllerBindNES(Nes* nes);
-void SendPixelDataToScreen(uint8_t* pixels);
 #endif

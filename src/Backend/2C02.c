@@ -159,6 +159,11 @@ void TransitionSpriteEvalulationStateMachine(State2C02* ppu)
 	}
 }
 
+void SwapFrameBuffers(State2C02* ppu)
+{
+	ppu->back_buffer = 1 - ppu->back_buffer;
+}
+
 void clock_2C02(State2C02* ppu)
 {
 	uint8_t bg_shade = 0;
@@ -229,9 +234,9 @@ void clock_2C02(State2C02* ppu)
 				{
 					color &= 0x30;
 				}
-				ppu->pixels[index + 0] = PALETTE_MAP[color].r;
-				ppu->pixels[index + 1] = PALETTE_MAP[color].g;
-				ppu->pixels[index + 2] = PALETTE_MAP[color].b;
+				ppu->pixels[ppu->back_buffer][index + 0] = PALETTE_MAP[color].r;
+				ppu->pixels[ppu->back_buffer][index + 1] = PALETTE_MAP[color].g;
+				ppu->pixels[ppu->back_buffer][index + 2] = PALETTE_MAP[color].b;
 
 				Shift(ppu);
 				FetchDataAndIncV(ppu);
@@ -319,9 +324,9 @@ void clock_2C02(State2C02* ppu)
 									color &= 0x30;
 								}
 								int index = 3 * (ppu->scanline * 256 + ppu->cycles - 1);
-								ppu->pixels[index + 0] = PALETTE_MAP[color].r;
-								ppu->pixels[index + 1] = PALETTE_MAP[color].g;
-								ppu->pixels[index + 2] = PALETTE_MAP[color].b;
+								ppu->pixels[ppu->back_buffer][index + 0] = PALETTE_MAP[color].r;
+								ppu->pixels[ppu->back_buffer][index + 1] = PALETTE_MAP[color].g;
+								ppu->pixels[ppu->back_buffer][index + 2] = PALETTE_MAP[color].b;
 							}
 						}
 					}
@@ -547,10 +552,7 @@ void clock_2C02(State2C02* ppu)
 		ppu->ppustatus_read_early = false;
 		ppu->ppustatus_read_late = false;
 
-		// Send pixel data to renderer
-		SendPixelDataToScreen(ppu->pixels);
-		// Clear pixels
-		memset(ppu->pixels, 0, sizeof(ppu->pixels));
+		SwapFrameBuffers(ppu);
 	}
 
 	// Pull the nmi line low if we are in vertical blanking and nmi's are enabled
@@ -631,6 +633,7 @@ void power_on_2C02(State2C02* ppu)
 	ppu->total_cycles = 0;
 	ppu->frame_count = 0;
 	memset(ppu->pixels, 0, sizeof(ppu->pixels));
+	ppu->back_buffer = 0;
 	ppu->ppustatus_read_early = false;
 	ppu->ppustatus_read_late = false;
 
@@ -782,4 +785,9 @@ uint8_t ppu_read(State2C02* ppu, uint16_t addr)
 	}
 
 	return 0;
+}
+
+uint8_t* get_framebuffer(State2C02* ppu)
+{
+	return &ppu->pixels[1 - ppu->back_buffer][0];
 }

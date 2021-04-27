@@ -147,7 +147,8 @@ typedef struct
 	uint64_t total_cycles;
 	uint32_t frame_count;
 
-	uint8_t pixels[256 * 240 * 3];
+	uint8_t pixels[2][256 * 240 * 3];
+	int back_buffer;
 	Bus2C02* bus;
 	struct State6502* cpu;
 	
@@ -165,4 +166,5 @@ void reset_2C02(State2C02* ppu);
 void power_on_2C02(State2C02* ppu);
 void ppu_write(State2C02* ppu, uint16_t addr, uint8_t data);
 uint8_t ppu_read(State2C02* ppu, uint16_t addr);
+uint8_t* get_framebuffer(State2C02* ppu);
 #endif // !_2C02_H

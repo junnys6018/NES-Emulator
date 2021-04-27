@@ -4,17 +4,16 @@
 #include <assert.h>
 #include <stdlib.h>
 
-int InitNES(Nes* nes, const char* filepath)
+int InitNES(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
 {
 	memset(nes, 0, sizeof(Nes));
 	if (filepath)
 	{
-		if (load_cartridge_from_file(nes, filepath) != 0)
+		if (load_cartridge_from_file(nes, filepath, callback) != 0)
 		{
 			// Loading cart failed
 			return 1;
 		}
-
 	}
 	else // Load a dummy cart
 	{
@@ -101,7 +100,7 @@ void clock_nes_frame(Nes* nes)
 
 		clock_2C02(&nes->ppu);
 		clock_2A03(&nes->apu);
-	} while (!(nes->ppu.scanline == 241 && nes->ppu.cycles == 0));
+	} while (!(nes->ppu.scanline == 242 && nes->ppu.cycles == 0));
 }
 
 void clock_nes_cycle(Nes* nes)

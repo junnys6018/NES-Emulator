@@ -16,7 +16,7 @@
 int Run_6502_Functional_Test()
 {
 	Nes nes;
-	InitNES(&nes, "tests/roms/6502_functional_test.bin");
+	InitNES(&nes, "tests/roms/6502_functional_test.bin", NULL);
 
 	ControllerBindNES(&nes);
 
@@ -48,7 +48,7 @@ int Run_6502_Functional_Test()
 int Run_6502_Interrupt_Test()
 {
 	Nes nes;
-	InitNES(&nes, "tests/roms/6502_interrupt_test.bin");
+	InitNES(&nes, "tests/roms/6502_interrupt_test.bin", NULL);
 
 	ControllerBindNES(&nes);
 	ControllerDrawViews();
