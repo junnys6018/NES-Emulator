@@ -11,11 +11,11 @@ typedef struct
 	uint8_t CHR[8 * 1024];
 } MapperJUN;
 
-uint8_t mJUNCPUReadCartridge(void* mapper, uint16_t addr, bool* read);
-void mJUNCPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data, bool* wrote);
+uint8_t mJUNCPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read);
+void mJUNCPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote);
 
-uint8_t mJUNPPUReadCartridge(void* mapper, uint16_t addr);
-void mJUNPPUWriteCartridge(void* mapper, uint16_t addr, uint8_t data);
+uint8_t mJUNPPUReadCartridge(Cartridge* cart, uint16_t addr);
+void mJUNPPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data);
 
 NametableIndex mJUNPPUMirrorNametable(void* mapper, uint16_t addr);
 

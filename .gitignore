@@ -16,3 +16,6 @@ application/settings.json
 
 blockoban/int
 blockoban/blockoban.nes
+
+web/bin-int
+web/static/emu.*

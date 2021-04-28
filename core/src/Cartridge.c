@@ -14,9 +14,9 @@
 
 // TODO: error handling for each mapper loading function
 
-int load_cartridge_from_file(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
+int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
 {
-	Cartridge* cart = &nes->cart;
+	Cartridge* cart = &((Nes*)nes)->cart;
 	cart->updatePatternTableCB = callback;
 	FILE* file = fopen(filepath, "rb");
 	if (!file)
@@ -48,7 +48,7 @@ int load_cartridge_from_file(Nes* nes, const char* filepath, UPDATE_PATTERN_TABL
 			m003LoadFromFile(&header, cart, file);
 			break;
 		case 4:
-			m004LoadFromFile(&header, cart, file, &nes->cpu);
+			m004LoadFromFile(&header, cart, file, &((Nes*)nes)->cpu);
 			break;
 		default:
 			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);

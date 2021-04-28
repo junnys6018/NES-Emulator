@@ -83,6 +83,7 @@ typedef struct
 } Cartridge;
 
 // Returns 0 on success; non zero on failure
+struct Nes;
 int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback);
 void free_cartridge(Cartridge* cart);
 

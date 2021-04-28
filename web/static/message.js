@@ -1,0 +1,10 @@
+let MESSAGE_TYPE = Object.freeze({
+	KEY_UP: 0,
+	KEY_DOWN: 1,
+	LOAD_ROM: 2,
+	PRINT_TIME: 3,
+	RESET_TIME: 4,
+
+	SEND_PIXELS: 5,
+	SEND_AUDIO: 6,
+});

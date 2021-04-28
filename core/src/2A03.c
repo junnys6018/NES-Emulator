@@ -415,11 +415,12 @@ void clock_2A03(State2A03* apu)
 			apu->audio_buffer[apu->audio_pos] = apu_filtered_sample(apu);
 			if (apu->audio_pos < 4095)
 				apu->audio_pos++;
-
+#if !defined(__EMSCRIPTEN__)
 			WindowAddSample(&apu->SQ1_win, apu->channel_enable & CHANNEL_SQ1 ? PULSE_LUT[apu->channel_out.pulse1] : 0.0f);
 			WindowAddSample(&apu->SQ2_win, apu->channel_enable & CHANNEL_SQ2 ? PULSE_LUT[apu->channel_out.pulse2] : 0.0f);
 			WindowAddSample(&apu->TRI_win, tri_en ? TND_LUT[3 * apu->channel_out.triangle] : 0.0f);
 			WindowAddSample(&apu->NOISE_win, apu->channel_enable & CHANNEL_NOISE ? TND_LUT[2 * apu->channel_out.noise] : 0.0f);
+#endif
 		}
 	}
 }

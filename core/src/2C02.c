@@ -161,6 +161,11 @@ void TransitionSpriteEvalulationStateMachine(State2C02* ppu)
 void SwapFrameBuffers(State2C02* ppu)
 {
 	ppu->back_buffer = 1 - ppu->back_buffer;
+#ifdef __EMSCRIPTEN__
+	memset(ppu->pixels[ppu->back_buffer], 0, 256 * 240 * 4);
+#else
+	memset(ppu->pixels[ppu->back_buffer], 0, 256 * 240 * 3);
+#endif
 }
 
 void clock_2C02(State2C02* ppu)
@@ -228,7 +233,11 @@ void clock_2C02(State2C02* ppu)
 					uint16_t palatte_addr = 0x3F00 | palatte << 2 | bg_shade;
 					color = ppu_bus_read(ppu->bus, palatte_addr) & 0x3F;
 				}
+#ifdef __EMSCRIPTEN__
+				int index = 4 * (ppu->scanline * 256 + ppu->cycles - 1);
+#else
 				int index = 3 * (ppu->scanline * 256 + ppu->cycles - 1);
+#endif
 				if (ppu->PPUMASK.flags.g)
 				{
 					color &= 0x30;
@@ -236,7 +245,9 @@ void clock_2C02(State2C02* ppu)
 				ppu->pixels[ppu->back_buffer][index + 0] = PALETTE_MAP[color].r;
 				ppu->pixels[ppu->back_buffer][index + 1] = PALETTE_MAP[color].g;
 				ppu->pixels[ppu->back_buffer][index + 2] = PALETTE_MAP[color].b;
-
+#ifdef __EMSCRIPTEN__
+				ppu->pixels[ppu->back_buffer][index + 3] = 255;
+#endif
 				Shift(ppu);
 				FetchDataAndIncV(ppu);
 			}
@@ -322,10 +333,17 @@ void clock_2C02(State2C02* ppu)
 								{
 									color &= 0x30;
 								}
+#ifdef __EMSCRIPTEN__
+								int index = 4 * (ppu->scanline * 256 + ppu->cycles - 1);
+#else
 								int index = 3 * (ppu->scanline * 256 + ppu->cycles - 1);
+#endif
 								ppu->pixels[ppu->back_buffer][index + 0] = PALETTE_MAP[color].r;
 								ppu->pixels[ppu->back_buffer][index + 1] = PALETTE_MAP[color].g;
 								ppu->pixels[ppu->back_buffer][index + 2] = PALETTE_MAP[color].b;
+#ifdef __EMSCRIPTEN__
+								ppu->pixels[ppu->back_buffer][index + 3] = 255;
+#endif
 							}
 						}
 					}
@@ -631,7 +649,7 @@ void power_on_2C02(State2C02* ppu)
 
 	ppu->total_cycles = 0;
 	ppu->frame_count = 0;
-	memset(ppu->pixels, 0, sizeof(ppu->pixels));
+	memset(ppu->pixels, 255, sizeof(ppu->pixels));
 	ppu->back_buffer = 0;
 	ppu->ppustatus_read_early = false;
 	ppu->ppustatus_read_late = false;

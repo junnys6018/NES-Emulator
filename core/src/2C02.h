@@ -147,7 +147,11 @@ typedef struct
 	uint64_t total_cycles;
 	uint32_t frame_count;
 
+#ifdef __EMSCRIPTEN__
+	uint8_t pixels[2][256 * 240 * 4];
+#else
 	uint8_t pixels[2][256 * 240 * 3];
+#endif
 	int back_buffer;
 	Bus2C02* bus;
 	struct State6502* cpu;

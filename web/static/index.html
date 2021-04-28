@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<script src="message.js"></script>
+	<style>
+		#nes {
+			outline: none;
+			image-rendering: pixelated;
+			transform: scale3d(2, 2, 1);
+			transform-origin: 0 0;
+		}
+
+		#rom-select, .my-button {
+			float: right;
+			display: block;
+		}
+	</style>
+</head>
+
+<body>
+	<canvas id="nes" width="256" height="240" tabindex="0"></canvas>
+	<select name="rom" id="rom-select" onchange="changeRom()">
+		<option value="package/blockoban.nes">Blockoban</option>
+		<option value="package/DonkeyKong.nes">Donkey Kong</option>
+		<option value="package/Dr.Mario.nes">Dr. Mario</option>
+		<option value="package/LegendofZelda.nes">Legend of Zelda</option>
+		<option value="package/Tetris.nes">Tetris</option>
+		<option value="package/SuperMarioBros.nes">Super Mario Bros</option>
+		<option value="package/alter_ego.nes">Alter Ego</option>
+	</select>
+
+	<button class="my-button" onclick="printTime()">Print time</button>
+	<button class="my-button" onclick="resetTime()">Reset</button>
+
+	<script>
+		const nesWorker = new Worker("nes.js");
+
+		const KEY_MAP = Object.freeze({
+			"x": 0,
+			"z": 1,
+			"q": 2,
+			"Enter": 3,
+			"ArrowUp": 4,
+			"ArrowDown": 5,
+			"ArrowLeft": 6,
+			"ArrowRight": 7
+		});
+
+		const canvas = document.getElementById("nes");
+		const ctx = canvas.getContext("2d");
+		let audioContext;
+
+		nesWorker.onmessage = function (e) {
+			switch (e.data.type) {
+			case MESSAGE_TYPE.SEND_PIXELS:
+				ctx.putImageData(e.data.pixels, 0, 0);
+				break;
+			case MESSAGE_TYPE.SEND_AUDIO:
+				// Disable audio for now, getting gapless PCM playback is a pain in ass with the web audio api
+				if (audioContext !== undefined && false) { 
+					let audioBuffer = audioContext.createBuffer(1, e.data.audio.length, 44100);
+					audioBuffer.copyToChannel(e.data.audio, 0);
+
+					let audioBufferSourceNode = audioContext.createBufferSource();
+					audioBufferSourceNode.buffer = audioBuffer;
+					audioBufferSourceNode.connect(audioContext.destination);
+					audioBufferSourceNode.start();
+				}
+				break;
+			}
+		};
+
+		canvas.addEventListener("keyup", function (event) {
+			if (event.key in KEY_MAP) {
+				nesWorker.postMessage({ type: MESSAGE_TYPE.KEY_UP, key: KEY_MAP[event.key] });
+			}
+		});
+
+		canvas.addEventListener("keydown", function (event) {
+			if (event.key in KEY_MAP) {
+				nesWorker.postMessage({type: MESSAGE_TYPE.KEY_DOWN, key: KEY_MAP[event.key]});
+			}
+		});
+
+		let firstClick = true;
+		canvas.onclick = function() {
+			if (firstClick) {
+				audioContext = new AudioContext();
+				firstClick = false;
+			}
+		}
+
+		function changeRom() {
+			let select = document.getElementById("rom-select");
+			nesWorker.postMessage({type: MESSAGE_TYPE.LOAD_ROM, rom: select.value});
+		}
+
+		function printTime() {
+			nesWorker.postMessage({type: MESSAGE_TYPE.PRINT_TIME});
+		}
+
+		function resetTime() {
+			nesWorker.postMessage({type: MESSAGE_TYPE.RESET_TIME});
+		}
+
+	</script>
+</body>
+
+</html>
