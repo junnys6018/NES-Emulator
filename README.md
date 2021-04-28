@@ -1,7 +1,10 @@
 # NES-Emulator
 NES Emulator written from scratch in C.  
   
-Currently can be built for Linux and Windows, with plans for building to Web Assembley (emscripten) in the future
+Can be built for Linux, Windows and webassembly!
+
+## Demo
+https://junnys6018.github.io/nes/
 
 ## Screenshots
 ![Demo Gif](media/demo.gif)
