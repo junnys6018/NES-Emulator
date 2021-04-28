@@ -2,100 +2,118 @@
 <html>
 <head>
 	<script src="message.js"></script>
-  <!-- Latest compiled and minified CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+	<!-- Latest compiled and minified CSS -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
+	integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
 
-  <!-- Nice font -->
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap" rel="stylesheet">
+	<!-- Nice font -->
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Cutive+Mono&display=swap" rel="stylesheet">
 	<style>
-    body {
-      margin: 0px;
-      color: white;
-      background-color: #202020;
-      font-family: 'Cutive Mono', monospace;
-      font-size: large;
-    }
+	body {
+		margin: 0px;
+		color: white;
+		background-color: #202020;
+		font-family: 'Consolas', 'Cutive Mono', monospace;
+		font-size: large;
+	}
 
-		#nes {
-      margin-top: auto;
-      margin-bottom: auto;
-      height: 90%;
-      image-rendering: -moz-crisp-edges;
-      image-rendering: -webkit-crisp-edges;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-		}
+	#nes {
+		height: 100%;
+		image-rendering: -moz-crisp-edges;
+		image-rendering: -webkit-crisp-edges;
+		image-rendering: pixelated;
+		image-rendering: crisp-edges;
+	}
 
-		#rom-select {
-      display: block;
-      margin-bottom: 1em;
-		}
+	.canvas-wrap {
+		position: relative;
+		margin-top: auto;
+		margin-bottom: auto;
+		height: 90%;
+	}
 
-    .my-container {
-      width: 100%;
-      height: 100vh;
-      margin: 0px;
-    }
+	#overlay {
+		position: absolute;
+		top: 0px;
+		left: 0px;
+		width: 100%;
+		height: 100%;
+		z-index: -1;
+		background-color: black;
+	}
 
-    .side-panel {
-      margin-top: 5vh;
-      max-width: 30%;
-    }
+	#rom-select {
+		display: block;
+		margin-bottom: 1em;
+	}
 
-    a {
-      color: white;
-      text-decoration: none;
-      font-weight: bold;
-    }
+	.my-container {
+		width: 100%;
+		height: 100vh;
+		margin: 0px;
+	}
 
-    a:hover {
-      text-decoration: underline;
-      color: white;
-    }
+	.side-panel {
+		margin-top: 5vh;
+		max-width: 30%;
+	}
 
-    h3 {
-      color: rgb(78, 201, 176);
-    }
+	a {
+		color: white;
+		text-decoration: none;
+		font-weight: bold;
+	}
+
+	a:hover {
+		text-decoration: underline;
+		color: white;
+	}
+
+	h3 {
+		color: rgb(78, 201, 176);
+	}
 
 	</style>
 </head>
 
 <body>
 	<div class="my-container d-flex justify-content-evenly">
-    <div class="side-panel">
-      <h3>About</h3>
-      <p>
-        This is a demo of my Nes Emulator written from scratch in C. The demo is compiled to <a
-          href="https://webassembly.org/">webassembly</a> using <a href="https://emscripten.org/">emscripten</a>
-      </p>
-      <p>
-        The first game you see (blockoban) is a nes game written by me in 6502 assembly
-      </p>
-      <p>
-        The source code for the emulator and my game is publicly available on my <a href="https://github.com/junnys6018/NES-Emulator">github</a>. If you are
-        interested, a version that runs natively on windows is available for <a
-          href="https://github.com/junnys6018/NES-Emulator/releases">download</a>.
-      </p>
-      <h3>Controls</h3>
-      <p style="white-space: pre;">Arrow keys for gamepad
+	<div class="side-panel">
+		<h3>About</h3>
+		<p>
+		This is a demo of my Nes Emulator written from scratch in C. The demo is compiled to <a
+			href="https://webassembly.org/">webassembly</a> using <a href="https://emscripten.org/">emscripten</a>
+		</p>
+		<p>
+		The first game you see (blockoban) is a nes game written by me in 6502 assembly
+		</p>
+		<p>
+		The source code for the emulator and my game is publicly available on my <a href="https://github.com/junnys6018/NES-Emulator">github</a>. If you are
+		interested, a version that runs natively on windows is available for <a
+			href="https://github.com/junnys6018/NES-Emulator/releases">download</a>.
+		</p>
+		<h3>Controls</h3>
+		<p style="white-space: pre;">Arrow keys for gamepad
 X     - A button
 Z     - B button
 Enter - Start
 Q     - Select</p>
-      <h3>Choose a game</h3>
-      <select name="rom" id="rom-select" onchange="changeRom()">
-        <option value="package/blockoban.nes">Blockoban</option>
-        <option value="package/Yoshi.nes">Yoshi</option>
-        <option value="package/Dr.Mario.nes">Dr. Mario</option>
-        <option value="package/LegendofZelda.nes">Legend of Zelda</option>
-        <option value="package/Tetris.nes">Tetris</option>
-        <option value="package/SuperMarioBros.nes">Super Mario Bros</option>
-        <option value="package/alter_ego.nes">Alter Ego</option>
-      </select>
-    </div>
-    <canvas id="nes" width="256" height="240"></canvas>
+		<h3>Choose a game</h3>
+		<select name="rom" id="rom-select" class="form-select" style="width: fit-content;" onchange="changeRom()">
+		<option value="package/blockoban.nes">Blockoban</option>
+		<option value="package/Yoshi.nes">Yoshi</option>
+		<option value="package/Dr.Mario.nes">Dr. Mario</option>
+		<option value="package/LegendofZelda.nes">Legend of Zelda</option>
+		<option value="package/Tetris.nes">Tetris</option>
+		<option value="package/SuperMarioBros.nes">Super Mario Bros</option>
+		<option value="package/alter_ego.nes">Alter Ego</option>
+		</select>
+	</div>
+	<div class="canvas-wrap">
+		<canvas id="nes" width="256" height="240"></canvas>
+		<div id="overlay"></div>
+	</div>
 
 		<button onclick="printTime()" style="display: none;">Print time</button>
 		<button onclick="resetTime()" style="display: none;">Reset</button>
