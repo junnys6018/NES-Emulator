@@ -72,13 +72,12 @@ Module.onRuntimeInitialized = async _ => {
 		GetAudioBuffer: Module.cwrap('GetAudioBuffer', 'number'),
 		FlushAudioSamples: Module.cwrap('FlushAudioSamples', 'number'),
 	});
-	api.LoadRom("package/SuperMarioBros.nes");
+	api.LoadRom("package/blockoban.nes");
 	console.log("loaded emu");
 
 	ready = true;
 
 	setInterval(Frame, 16);
-
 };
 
 function Benchmark() {
