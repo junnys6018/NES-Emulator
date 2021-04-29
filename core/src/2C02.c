@@ -649,7 +649,7 @@ void power_on_2C02(State2C02* ppu)
 
 	ppu->total_cycles = 0;
 	ppu->frame_count = 0;
-	memset(ppu->pixels, 255, sizeof(ppu->pixels));
+	memset(ppu->pixels, 0, sizeof(ppu->pixels));
 	ppu->back_buffer = 0;
 	ppu->ppustatus_read_early = false;
 	ppu->ppustatus_read_late = false;
