@@ -180,15 +180,14 @@ void ShutdownOpengl()
 void InitApplication(char* rom)
 {
 	cc.nes = malloc(sizeof(Nes));
-	if (InitNES(cc.nes, rom, SetPatternTable) == 1)
+	int result = InitNES(cc.nes, rom, SetPatternTable);
+	if (rom && result == 0)
 	{
-		cc.m_settings.mode = MODE_NOT_RUNNING;
-		InitNES(cc.nes, NULL, SetPatternTable);
-		printf("failed to load %s", rom);
+		cc.m_settings.mode = MODE_PLAY;
 	}
 	else
 	{
-		cc.m_settings.mode = MODE_PLAY;
+		cc.m_settings.mode = MODE_NOT_RUNNING;
 	}
 	cc.m_palette.pal = cc.nes->ppu_bus.palette;
 
