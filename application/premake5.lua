@@ -55,7 +55,7 @@ project "NES-Emulator"
 
 	filter "system:linux"
 		defines { "PLATFORM_LINUX" }
-		links { "m" } -- Link with math library
+		links { "m", "dl" }
 
 	filter {"system:linux", "configurations:Release"}
 		postbuildcommands

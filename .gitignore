@@ -9,6 +9,9 @@ Resources
 *.exe
 /roms
 /Makefile
+application/Makefile
+core/Makefile
+tests/Makefile
 *.make
 *.out
 
