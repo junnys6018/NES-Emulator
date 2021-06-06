@@ -4,6 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 
+typedef enum
+{
+	EVENT_NONE = 0,
+	EVENT_NEW_FRAME = 1,
+	EVENT_AUDIO_BUFFER_FULL = 2,
+	EVENT_UNTIL_TICKS = 4
+} EmulatorEvent;
+
 Nes nes;
 bool first_load = true;
 
@@ -24,10 +32,44 @@ void LoadRom(char* rom)
 	InitNES(&nes, rom, NULL);
 }
 
-EMSCRIPTEN_KEEPALIVE
-void EmulateFrame()
+inline bool FrameReady()
 {
-	clock_nes_frame(&nes);
+	return nes.ppu.scanline == 242 && nes.ppu.cycles == 0;
+}
+
+inline bool AudioReady()
+{
+	return nes.apu.audio_pos >= 512;
+}
+
+EMSCRIPTEN_KEEPALIVE
+EmulatorEvent EmulateUntil(size_t ppu_cycle)
+{
+	do 
+	{
+		clock_nes_cycle(&nes);
+	} while (!FrameReady() && !AudioReady() && nes.system_clock < ppu_cycle);
+
+	EmulatorEvent event = EVENT_NONE;
+	if (FrameReady(nes))
+	{
+		event |= EVENT_NEW_FRAME;
+	}
+	if (AudioReady(nes))
+	{
+		event |= EVENT_AUDIO_BUFFER_FULL;
+	}
+	if (nes.system_clock == ppu_cycle)
+	{
+		event |= EVENT_UNTIL_TICKS;
+	}
+	return event;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint32_t GetTotalPPUCycles()
+{
+	return nes.system_clock;
 }
 
 EMSCRIPTEN_KEEPALIVE

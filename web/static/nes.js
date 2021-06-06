@@ -1,91 +1,118 @@
-importScripts("emu.js", "message.js");
+const PPU_CLOCK_FREQENCY = 5369318
+const EMULATION_EVENT = Object.freeze({
+	EVENT_NEW_FRAME: 1,
+	EVENT_AUDIO_BUFFER_FULL: 2,
+	EVENT_UNTIL_TICKS: 4
+});
+const KEY_MAP = Object.freeze({
+	"x": 0, "X": 0,
+	"z": 1, "Z": 1,
+	"q": 2, "Q": 2,
+	"Enter": 3,
+	"ArrowUp": 4,
+	"ArrowDown": 5,
+	"ArrowLeft": 6,
+	"ArrowRight": 7
+});
 
 let api;
-let ready = false;
-
 let keys = new Uint8Array(8);
 keys.fill(0);
+const canvas = document.getElementById("nes");
+const canvasContext = canvas.getContext("2d");
+const audioContext = new AudioContext();
+let startTime = audioContext.currentTime;
+audioContext.suspend();
 
-function Frame() {
-	let t1 = performance.now();
-
-	api.SetKeys(keys);
-	api.EmulateFrame();
-	
-	let pixelPtr = api.GetFrameBuffer();
-	let pixelView = new Uint8ClampedArray(Module.HEAPU8.buffer, pixelPtr, 240 * 256 * 4);
-	let pixelData = new ImageData(pixelView, 256, 240);
-
-	let numSamples = api.FlushAudioSamples();
-	let audioBufPtr = api.GetAudioBuffer();
-	if (numSamples !== 0) {
-		let sampleView = new Float32Array(Module.HEAPF32.buffer, audioBufPtr, numSamples); // view of wasm memory
-		postMessage({ type: MESSAGE_TYPE.SEND_AUDIO, audio: new Float32Array(sampleView) }); // we pass a copy of the view
+// Input 
+window.addEventListener("keyup", (e) => {
+	if (e.key in KEY_MAP) {
+		keys[KEY_MAP[e.key]] = 0;
 	}
+});
 
-	let t2 = performance.now();
-	totalTime += t2 - t1;
-	numFrames++;
-	postMessage({type: MESSAGE_TYPE.SEND_PIXELS, pixels: pixelData});
+window.addEventListener("keydown", (e) => {
+	if (e.key in KEY_MAP) {
+		keys[KEY_MAP[e.key]] = 1;
+	}
+});
+
+document.getElementById("rom-select").onchange = (e) => {
+	api.LoadRom(e.target.value);
 }
 
-onmessage = function (e) {
-	if (ready) {
-		switch (e.data.type) {
-		case MESSAGE_TYPE.KEY_UP:
-			keys[e.data.key] = 0;
-			break;
-		case MESSAGE_TYPE.KEY_DOWN:
-			keys[e.data.key] = 1;
-			break;
-		case MESSAGE_TYPE.LOAD_ROM:
-			api.LoadRom(e.data.rom);
-				break;
-		case MESSAGE_TYPE.PRINT_TIME:
-			printTime();
-			break;
-		case MESSAGE_TYPE.RESET_TIME:
-			resetTime();
+document.getElementById("audio").onchange = (e) => {
+	if (e.target.checked) {
+		audioContext.suspend();
+	}
+	else {
+		audioContext.resume();
+		startTime = audioContext.currentTime;
+	}
+}
+
+let lastTimestamp;
+function RAFCallback(timestamp) {
+	requestAnimationFrame(RAFCallback);
+	api.SetKeys(keys);
+
+	const deltaTime = (timestamp - (lastTimestamp || timestamp));
+	const cycles = Math.min(deltaTime, 100) * PPU_CLOCK_FREQENCY / 1000;
+	if (cycles > 0) {
+		EmulateUntil(api.GetTotalPPUCycles() + cycles);
+	}
+	lastTimestamp = timestamp;
+}
+
+function EmulateUntil(cycle) {
+	while (true) {
+		const event = api.EmulateUntil(cycle);
+		if (event & EMULATION_EVENT.EVENT_NEW_FRAME) {
+			const pixelPtr = api.GetFrameBuffer();
+			const pixelView = new Uint8ClampedArray(Module.HEAPU8.buffer, pixelPtr, 240 * 256 * 4);
+			const pixelData = new ImageData(pixelView, 256, 240);
+			canvasContext.putImageData(pixelData, 0, 0);
+		}
+		if (event & EMULATION_EVENT.EVENT_AUDIO_BUFFER_FULL) {
+			const numSamples = api.FlushAudioSamples();
+			if (numSamples !== 0 && audioContext.state === 'running') {
+				const audioBufPtr = api.GetAudioBuffer();
+				const samples = new Float32Array(Module.HEAPF32.buffer, audioBufPtr, numSamples);
+				const audioBuffer = audioContext.createBuffer(1, samples.length, 44100);
+				audioBuffer.copyToChannel(samples, 0);
+				
+				const audioBufferSourceNode = audioContext.createBufferSource();
+				audioBufferSourceNode.buffer = audioBuffer;
+				audioBufferSourceNode.connect(audioContext.destination);
+				if (startTime < audioContext.currentTime) {
+					console.log(`Resetting audio, ${((audioContext.currentTime - startTime) * 1000).toFixed(2)}ms behind`);
+					startTime = audioContext.currentTime + 0.1;
+				}
+				else if (startTime > audioContext.currentTime + 0.5) {
+					console.log(`Audio Desync, ${((startTime - audioContext.currentTime) * 1000).toFixed(2)}ms ahead`);
+				}
+				audioBufferSourceNode.start(startTime);
+				startTime += samples.length / 44100;
+			}
+		}
+		if (event & EMULATION_EVENT.EVENT_UNTIL_TICKS) {
 			break;
 		}
 	}
-};
-
-let totalTime = 0;
-let numFrames = 0;
-
-function printTime() {
-	console.log(`${numFrames} frames took ${totalTime}ms (avg: ${totalTime / numFrames})`);
-}
-
-function resetTime() {
-	totalTime = 0;
-	numFrames = 0;
 }
 
 Module.onRuntimeInitialized = async _ => {
 	api = Object.freeze({
 		LoadRom: Module.cwrap('LoadRom', null, ['string']),
-		EmulateFrame: Module.cwrap('EmulateFrame', null),
+		EmulateUntil: Module.cwrap('EmulateUntil', 'number', ['number']),
 		GetFrameBuffer: Module.cwrap('GetFrameBuffer', 'number'),
 		SetKeys: Module.cwrap('SetKeys', null, ['array']),
 		GetAudioBuffer: Module.cwrap('GetAudioBuffer', 'number'),
 		FlushAudioSamples: Module.cwrap('FlushAudioSamples', 'number'),
+		GetTotalPPUCycles: Module.cwrap('GetTotalPPUCycles', 'number'),
 	});
 	api.LoadRom("package/blockoban.nes");
 	console.log("loaded emu");
 
-	ready = true;
-
-	setInterval(Frame, 16);
+	requestAnimationFrame(RAFCallback);
 };
-
-function Benchmark() {
-	let frames = 20000;
-	let t1 = performance.now();
-	for (let i = 0; i < frames; i++) {
-		api.EmulateFrame();
-	}
-	let t2 = performance.now();
-	console.log(`emulated ${frames} frames in ${t2 - t1}ms (avg: ${(t2 - t1) / frames}ms)`);
-}

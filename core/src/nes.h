@@ -38,7 +38,16 @@ void clock_nes_instruction(Nes* nes);
 // Emulate a whole frame
 void clock_nes_frame(Nes* nes);
 
-// Emulate one master clock cycle
-void clock_nes_cycle(Nes* nes);
+// Emulate one PPU cycle
+inline void clock_nes_cycle(Nes* nes)
+{
+	nes->system_clock++;
+	if (nes->system_clock % 3 == 0)
+		clock_6502(&nes->cpu);
+
+	clock_2C02(&nes->ppu);
+	clock_2A03(&nes->apu);
+}
+
 
 #endif // !NES_H

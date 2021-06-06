@@ -13,7 +13,7 @@ INCLUDES += -I../core/src
 FORCE_INCLUDE +=
 ALL_CFLAGS += $(DEFINES) $(INCLUDES) -O3 -w
 LINKCMD = $(CC) $(OBJECTS) -O3 -o $(TARGET) --preload-file package -s\
-EXPORTED_FUNCTIONS='["_LoadRom", "_EmulateFrame", "_GetFrameBuffer", "_SetKeys", "_GetAudioBuffer", "_FlushAudioSamples"]' -s EXPORTED_RUNTIME_METHODS='["cwrap"]'
+EXPORTED_FUNCTIONS='["_LoadRom", "_EmulateUntil", "_GetFrameBuffer", "_SetKeys", "_GetAudioBuffer", "_FlushAudioSamples", "_GetTotalPPUCycles"]' -s EXPORTED_RUNTIME_METHODS='["cwrap"]'
 define PREBUILDCMDS
 endef
 define PRELINKCMDS

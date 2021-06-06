@@ -94,21 +94,6 @@ void clock_nes_frame(Nes* nes)
 {
 	do
 	{
-		nes->system_clock++;
-		if (nes->system_clock % 3 == 0)
-			clock_6502(&nes->cpu);
-
-		clock_2C02(&nes->ppu);
-		clock_2A03(&nes->apu);
+		clock_nes_cycle(nes);
 	} while (!(nes->ppu.scanline == 242 && nes->ppu.cycles == 0));
-}
-
-void clock_nes_cycle(Nes* nes)
-{
-	nes->system_clock++;
-	if (nes->system_clock % 3 == 0)
-		clock_6502(&nes->cpu);
-
-	clock_2C02(&nes->ppu);
-	clock_2A03(&nes->apu);
 }
