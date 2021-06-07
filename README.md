@@ -18,8 +18,8 @@ Video demo can be found [here](https://youtu.be/fevGlhVMHI8)
 ## Installation 
 - Clone repo with `git clone --recursive https://github.com/junnys6018/NES-Emulator.git`
 - If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules
-- This project uses **premake** to build. For convenience, scripts are provided to generate visual studio project files for Windows and make files for Linux
-- Binarys are generated in the `bin` directory.
+- Run `cd Nes-Emulator/scripts`, then run `./GenerateLinuxProjects.sh` or `./GenerateWindowsProjects.bat`
+- Build with make on linux or msvc on windows. 
 - Make sure you build with optimisations turned on, otherwise the emulation will not run in real time. On visual studio, build in release. If your building with make, run `make config=release`
 
 ## Dependencies
