@@ -45,7 +45,7 @@ gamepad_poll:
 	; calculate gamepad_press
 	lda curr_press
 	bne @on_press ; branch if we are "tracking" a button press
-		; if we are net tracking a button, check if a button has been pressed for us to start tracking
+		; if we are not tracking a button, check if a button has been pressed for us to start tracking
 		lda gamepad_new
 		bne :+ ; no button press, rts
 			rts
