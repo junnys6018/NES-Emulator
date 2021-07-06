@@ -8,10 +8,18 @@
 struct State6502;
 void NMI(struct State6502* cpu);
 
-typedef struct
+typedef union
 {
-	uint8_t r, g, b;
+	struct RGB
+	{
+		uint8_t r;
+		uint8_t g;
+		uint8_t b;
+		uint8_t pad;
+	} rgb;
+	uint32_t c;
 } color;
+
 extern color PALETTE_MAP[64];
 
 typedef struct
@@ -147,11 +155,8 @@ typedef struct
 	uint64_t total_cycles;
 	uint32_t frame_count;
 
-#ifdef __EMSCRIPTEN__
-	uint8_t pixels[2][256 * 240 * 4];
-#else
-	uint8_t pixels[2][256 * 240 * 3];
-#endif
+	uint32_t pixels[2][256 * 240];
+
 	int back_buffer;
 	Bus2C02* bus;
 	struct State6502* cpu;
@@ -170,5 +175,5 @@ void reset_2C02(State2C02* ppu);
 void power_on_2C02(State2C02* ppu);
 void ppu_write(State2C02* ppu, uint16_t addr, uint8_t data);
 uint8_t ppu_read(State2C02* ppu, uint16_t addr);
-uint8_t* get_framebuffer(State2C02* ppu);
+uint32_t* get_framebuffer(State2C02* ppu);
 #endif // !_2C02_H

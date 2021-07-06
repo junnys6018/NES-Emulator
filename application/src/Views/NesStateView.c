@@ -172,8 +172,8 @@ void DrawPaletteData(int xoff, int yoff, PaletteDataModel pal)
 		rect.x = xoff;
 		for (int x = 0; x < 4; x++)
 		{
-			color c = PALETTE_MAP[pal.pal[y * 4 + x] & 0x3F];
-			SubmitColoredQuad(&rect, c.r, c.g, c.b);
+			struct RGB rgb = PALETTE_MAP[pal.pal[y * 4 + x] & 0x3F].rgb;
+			SubmitColoredQuad(&rect, rgb.r, rgb.g, rgb.b);
 			rect.x += len;
 		}
 		rect.y += len + padding;
@@ -183,12 +183,12 @@ void DrawPaletteData(int xoff, int yoff, PaletteDataModel pal)
 // Draws the pattern table to an OpenGL texture
 void RendererRasterizePatternTable(int side, NameTableModel* nt, PaletteDataModel pal)
 {
+	static uint32_t pixels[128 * 128];
+
 	GLuint target = (side == 0 ? nt->left_nametable.handle : nt->right_nametable.handle);
 	uint8_t* table_data = (side == 0 ? nt->left_nt_data : nt->right_nt_data);
 	if (!table_data)
 		return;
-	uint8_t* pixels = malloc(128 * 128 * 3);
-	assert(pixels);
 
 	for (int y = 0; y < 128; y++)
 	{
@@ -206,16 +206,11 @@ void RendererRasterizePatternTable(int side, NameTableModel* nt, PaletteDataMode
 			uint8_t pal_low = (table_data[table_addr] & bit_mask) > 0;
 			uint8_t pal_high = (table_data[table_addr | 1 << 3] & bit_mask) > 0;
 			uint8_t palette_index = pal_low | (pal_high << 1);
-			color c = PALETTE_MAP[pal.pal[palette_index]];
 
-			pixels[3 * (y * 128 + x)] = c.r;
-			pixels[3 * (y * 128 + x) + 1] = c.g;
-			pixels[3 * (y * 128 + x) + 2] = c.b;
+			pixels[y * 128 + x] = PALETTE_MAP[pal.pal[palette_index]].c;
 		}
 	}
-	glTextureSubImage2D(target, 0, 0, 0, 128, 128, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-
-	free(pixels);
+	glTextureSubImage2D(target, 0, 0, 0, 128, 128, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 }
 
 void DrawNESState(NameTableModel* nt, PaletteDataModel pal)

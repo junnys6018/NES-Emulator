@@ -316,8 +316,8 @@ void DrawViews()
 	BeginBatch();
 	BeginLines();
 
-	uint8_t* pixels = get_framebuffer(&cc.nes->ppu);
-	glTextureSubImage2D(cc.m_nes_screen.scr.handle, 0, 0, 0, 256, 240, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+	uint32_t* pixels = get_framebuffer(&cc.nes->ppu);
+	glTextureSubImage2D(cc.m_nes_screen.scr.handle, 0, 0, 0, 256, 240, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 	DrawNes(cc.m_nes_screen, &cc.m_settings);
 
 	if (cc.draw_debug_view)

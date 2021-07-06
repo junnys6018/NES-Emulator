@@ -173,11 +173,7 @@ void TransitionSpriteStateMachine(State2C02* ppu)
 void SwapFrameBuffers(State2C02* ppu)
 {
 	ppu->back_buffer = 1 - ppu->back_buffer;
-#ifdef __EMSCRIPTEN__
-	memset(ppu->pixels[ppu->back_buffer], 0, 256 * 240 * 4);
-#else
-	memset(ppu->pixels[ppu->back_buffer], 0, 256 * 240 * 3);
-#endif
+	memset(ppu->pixels[ppu->back_buffer], 0, 256 * 240 * sizeof(uint32_t));
 }
 
 void OnBackgroundPreRenderLine(State2C02* ppu)
@@ -231,21 +227,15 @@ uint8_t DrawBackgroundPixel(State2C02* ppu)
 		uint16_t palatte_addr = 0x3F00 | palatte << 2 | bg_pal_index;
 		color = ppu_bus_read(ppu->bus, palatte_addr) & 0x3F;
 	}
-#ifdef __EMSCRIPTEN__
-	int index = 4 * (ppu->scanline * 256 + ppu->cycles - 1);
-#else
-	int index = 3 * (ppu->scanline * 256 + ppu->cycles - 1);
-#endif
+
+	int index = ppu->scanline * 256 + ppu->cycles - 1;
+
 	if (ppu->PPUMASK.flags.g)
 	{
 		color &= 0x30;
 	}
-	ppu->pixels[ppu->back_buffer][index + 0] = PALETTE_MAP[color].r;
-	ppu->pixels[ppu->back_buffer][index + 1] = PALETTE_MAP[color].g;
-	ppu->pixels[ppu->back_buffer][index + 2] = PALETTE_MAP[color].b;
-#ifdef __EMSCRIPTEN__
-	ppu->pixels[ppu->back_buffer][index + 3] = 255;
-#endif
+	ppu->pixels[ppu->back_buffer][index] = PALETTE_MAP[color].c;
+
 	Shift(ppu);
 	FetchDataAndIncV(ppu);
 
@@ -345,19 +335,12 @@ void DrawSpritePixel(State2C02* ppu, uint8_t bg_pal_index, int i, uint8_t spr_pa
 		{
 			color &= 0x30;
 		}
-#ifdef __EMSCRIPTEN__
-		int index = 4 * (ppu->scanline * 256 + ppu->cycles - 1);
-#else
-		int index = 3 * (ppu->scanline * 256 + ppu->cycles - 1);
-#endif
-		ppu->pixels[ppu->back_buffer][index + 0] = PALETTE_MAP[color].r;
-		ppu->pixels[ppu->back_buffer][index + 1] = PALETTE_MAP[color].g;
-		ppu->pixels[ppu->back_buffer][index + 2] = PALETTE_MAP[color].b;
-#ifdef __EMSCRIPTEN__
-		ppu->pixels[ppu->back_buffer][index + 3] = 255;
-#endif
+
+		int index = ppu->scanline * 256 + ppu->cycles - 1;
+
+		ppu->pixels[ppu->back_buffer][index] = PALETTE_MAP[color].c;
+
 	}
-	return true;
 }
 
 void SpriteDot(State2C02* ppu, uint8_t bg_pal_index)
@@ -899,7 +882,7 @@ uint8_t ppu_read(State2C02* ppu, uint16_t addr)
 	return 0;
 }
 
-uint8_t* get_framebuffer(State2C02* ppu)
+uint32_t* get_framebuffer(State2C02* ppu)
 {
 	return &ppu->pixels[1 - ppu->back_buffer][0];
 }
