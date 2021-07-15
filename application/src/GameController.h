@@ -7,9 +7,11 @@
 typedef struct
 {
 	SDL_GameController* sdl_game_controller;
+	int device_index;
 } GameController;
 
 void TryOpenGameController(GameController* game_controller);
+bool OpenGameController(GameController* game_controller, int device_index);
 void CloseGameController(GameController* game_controller);
 inline bool IsGameControllerOpen(GameController* game_controller)
 {

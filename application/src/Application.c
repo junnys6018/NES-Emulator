@@ -257,6 +257,8 @@ void ShutdownApplication()
 	GuiShutdown();
 
 	free(ac.nes);
+
+	CloseGameController(&ac.game_controller);
 }
 
 ///////////////////////////
@@ -388,6 +390,29 @@ void DrawViews()
 	SDL_GL_SwapWindow(ac.win);
 }
 
+///////////////////////////
+//
+// Section: Application Stuff
+//
+///////////////////////////
+
+void OnControllerDeviceAdded(SDL_ControllerDeviceEvent* e)
+{
+	if (!IsGameControllerOpen(&ac.game_controller))
+	{
+		OpenGameController(&ac.game_controller, e->which);
+	}
+}
+
+void OnControllerDeviceRemoved(SDL_ControllerDeviceEvent* e)
+{
+	SDL_GameController* gc = SDL_GameControllerFromInstanceID(e->which);
+	if (gc == ac.game_controller.sdl_game_controller) // Current Controller was disconnected
+	{
+		CloseGameController(&ac.game_controller);
+	}
+}
+
 void SetNesKeys()
 {
 	static const int8_t* state = NULL;
@@ -444,7 +469,15 @@ void ApplicationGameLoop()
 		while (SDL_PollEvent(&event) != 0)
 		{
 			GuiDispatchEvent(&event);
-			if (ac.m_settings.mode == MODE_STEP_THROUGH && event.type == SDL_KEYDOWN)
+			if (event.type == SDL_CONTROLLERDEVICEADDED)
+			{
+				OnControllerDeviceAdded(&event.cdevice);
+			}
+			else if (event.type == SDL_CONTROLLERDEVICEREMOVED)
+			{
+				OnControllerDeviceRemoved(&event.cdevice);
+			}
+			else if (event.type == SDL_KEYDOWN && ac.m_settings.mode == MODE_STEP_THROUGH)
 			{
 				switch (event.key.keysym.sym)
 				{

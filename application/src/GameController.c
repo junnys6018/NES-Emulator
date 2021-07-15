@@ -5,22 +5,33 @@ void TryOpenGameController(GameController* game_controller)
 {
 	game_controller->sdl_game_controller = NULL;
 	for (int i = 0; i < SDL_NumJoysticks(); i++)
-	{
 		if (SDL_IsGameController(i))
-		{
-			game_controller->sdl_game_controller = SDL_GameControllerOpen(i);
-			if (game_controller->sdl_game_controller)
+			if (OpenGameController(game_controller, i))
 				break;
-			else
-				printf("Could not open gamecontroller %i: %s\n", i, SDL_GetError());
-		}
+}
+
+bool OpenGameController(GameController* game_controller, int device_index)
+{
+	game_controller->sdl_game_controller = SDL_GameControllerOpen(device_index);
+	if (game_controller->sdl_game_controller)
+	{
+		printf("Opened game controller %i: %s\n", device_index, SDL_GameControllerNameForIndex(device_index));
+		game_controller->device_index = device_index;
+		return true;
 	}
+	else
+		printf("Could not open game controller %i: %s\n", device_index, SDL_GetError());
+
+	return false;
 }
 
 void CloseGameController(GameController* game_controller)
 {
+	printf("Close game controller %i: %s\n", game_controller->device_index, SDL_GameControllerName(game_controller->sdl_game_controller));
 	if (IsGameControllerOpen(game_controller))
 		SDL_GameControllerClose(game_controller->sdl_game_controller);
+
+	game_controller->sdl_game_controller = NULL;
 }
 
 Keys PollGameController(GameController* game_controller)
