@@ -55,3 +55,8 @@ Keys PollGameController(GameController* game_controller)
 
 	return ret;
 }
+
+SDL_GameControllerType GetControllerType(GameController* game_controller)
+{
+	return SDL_GameControllerTypeForIndex(game_controller->device_index);
+}

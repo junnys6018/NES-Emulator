@@ -19,5 +19,6 @@ inline bool IsGameControllerOpen(GameController* game_controller)
 }
 
 Keys PollGameController(GameController* game_controller);
+SDL_GameControllerType GetControllerType(GameController* game_controller);
 
 #endif

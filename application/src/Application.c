@@ -368,7 +368,7 @@ void DrawViews()
 			DrawMemoryView();
 			break;
 		case TARGET_ABOUT:
-			DrawAbout();
+			DrawAbout(GetControllerType(&ac.game_controller));
 			break;
 		case TARGET_SETTINGS:
 			DrawSettings(&ac.m_channel_enable, &ac.m_nes_screen, &ac.m_settings);

@@ -48,6 +48,7 @@ Currently the following mappers have been implemented
 There are plans to implement mappers 7 and 9 in the future, which covers most of the games on the NES
 
 ## Controls
+### Keyboard
 Button | Key         
 -------|-------------
 A      | X           
@@ -59,7 +60,18 @@ Down   | Down arrow
 Left   | Left arrow  
 Right  | Right arrow 
 
-There are plans to support controller input in the future.  
+### Controller
+Other controllers may work but are untested
+Button | Key (PS4)   | Key (Xbox)  
+-------|-------------|-------------
+A      | X           | A           
+B      | O           | B           
+Start  | Options     | Start       
+Select | Share       | Back        
+Up     | D-pad Up    | D-pad Up    
+Down   | D-pad Down  | D-pad Down  
+Left   | D-pad Left  | D-pad Left  
+Right  | D-pad Right | D-pad Right 
   
 This emulator has the abilty to pause the emulation and step through it, here are the controls 
 Key    | Action         
