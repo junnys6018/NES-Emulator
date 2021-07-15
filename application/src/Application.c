@@ -12,6 +12,7 @@
 #include "ColorDefs.h"
 #include "Util/timer.h"
 #include "Audio.h"
+#include "GameController.h"
 
 #include "OpenGL/Debug.h"
 #include "OpenGL/Scanline.h"
@@ -62,6 +63,7 @@ typedef struct
 	DrawTarget target;
 
 	Nes* nes;
+	GameController game_controller;
 
 	// Models
 	ChannelEnableModel m_channel_enable;
@@ -70,9 +72,9 @@ typedef struct
 	NesScreenModel m_nes_screen;
 	SettingsModel m_settings;
 
-} ControllerContext;
+} ApplicationContext;
 
-static ControllerContext cc;
+static ApplicationContext ac;
 
 ///////////////////////////
 //
@@ -83,57 +85,57 @@ static ControllerContext cc;
 void CalculateWindowMetrics(int w, int h)
 {
 	glViewport(0, 0, w, h);
-	cc.draw_debug_view = true;
+	ac.draw_debug_view = true;
 
-	cc.wm.width = w;
-	cc.wm.height = h;
+	ac.wm.width = w;
+	ac.wm.height = h;
 
-	cc.wm.padding = lroundf(0.0045f * (w + h));
+	ac.wm.padding = lroundf(0.0045f * (w + h));
 
 	if ((float)w / h >= 256.0f / 240.0f)
 	{
-		cc.wm.nes_x = cc.wm.padding;
-		cc.wm.nes_y = cc.wm.padding;
+		ac.wm.nes_x = ac.wm.padding;
+		ac.wm.nes_y = ac.wm.padding;
 
-		cc.wm.nes_h = h - 2 * cc.wm.padding;
-		cc.wm.nes_w = lroundf(cc.wm.nes_h * 256.0f / 240.0f); // maintain aspect ratio
+		ac.wm.nes_h = h - 2 * ac.wm.padding;
+		ac.wm.nes_w = lroundf(ac.wm.nes_h * 256.0f / 240.0f); // maintain aspect ratio
 	}
 	else
 	{
-		cc.wm.nes_w = w - 2 * cc.wm.padding;
-		cc.wm.nes_h = lroundf(cc.wm.nes_w * 240.0f / 256.0f);
+		ac.wm.nes_w = w - 2 * ac.wm.padding;
+		ac.wm.nes_h = lroundf(ac.wm.nes_w * 240.0f / 256.0f);
 
-		cc.wm.nes_x = cc.wm.padding;
-		cc.wm.nes_y = (h - cc.wm.nes_h) / 2;
-		cc.draw_debug_view = false;
+		ac.wm.nes_x = ac.wm.padding;
+		ac.wm.nes_y = (h - ac.wm.nes_h) / 2;
+		ac.draw_debug_view = false;
 	}
 
-	cc.wm.db_x = 2 * cc.wm.padding + cc.wm.nes_w;
-	cc.wm.db_y = cc.wm.padding;
+	ac.wm.db_x = 2 * ac.wm.padding + ac.wm.nes_w;
+	ac.wm.db_y = ac.wm.padding;
 
 
-	cc.wm.db_w = w - 3 * cc.wm.padding - cc.wm.nes_w;
-	cc.wm.db_h = h - 2 * cc.wm.padding;
+	ac.wm.db_w = w - 3 * ac.wm.padding - ac.wm.nes_w;
+	ac.wm.db_h = h - 2 * ac.wm.padding;
 
 	const int min_db_w = 200, min_db_h = 400;
-	if (cc.wm.db_w < min_db_w || cc.wm.db_h < min_db_h)
+	if (ac.wm.db_w < min_db_w || ac.wm.db_h < min_db_h)
 	{
-		cc.draw_debug_view = false;
+		ac.draw_debug_view = false;
 
 		// Center the nes screen to take up the space cleared from not drawing debug screen
-		cc.wm.nes_x = (w - cc.wm.nes_w) / 2;
-		cc.wm.nes_y = (h - cc.wm.nes_h) / 2;
+		ac.wm.nes_x = (w - ac.wm.nes_w) / 2;
+		ac.wm.nes_y = (h - ac.wm.nes_h) / 2;
 	}
 
-	cc.wm.button_h = lroundf(0.03f * h);
-	cc.wm.pattern_table_len = lroundf(0.096f * (w + h));
+	ac.wm.button_h = lroundf(0.03f * h);
+	ac.wm.pattern_table_len = lroundf(0.096f * (w + h));
 
-	cc.wm.menu_button_w = (float)cc.wm.db_w / 5.0f;
-	cc.wm.menu_button_h = lroundf(0.0406f * h);
+	ac.wm.menu_button_w = (float)ac.wm.db_w / 5.0f;
+	ac.wm.menu_button_h = lroundf(0.0406f * h);
 
-	cc.wm.palette_visual_len = lroundf(0.004f * (w + h));
+	ac.wm.palette_visual_len = lroundf(0.004f * (w + h));
 
-	cc.wm.apu_osc_height = lroundf(0.1355f * h);
+	ac.wm.apu_osc_height = lroundf(0.1355f * h);
 }
 
 void InitOpengl(SDL_Window* window) 
@@ -149,7 +151,7 @@ void InitOpengl(SDL_Window* window)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	cc.gl_context = SDL_GL_CreateContext(window);
+	ac.gl_context = SDL_GL_CreateContext(window);
 	int success = gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
 	if (!success)
 	{
@@ -174,85 +176,87 @@ void ShutdownOpengl()
 	ShutdownTextRenderer();
 	ShutdownLineRenderer();
 	ShutdownScanlineEffect();
-	SDL_GL_DeleteContext(cc.gl_context);
+	SDL_GL_DeleteContext(ac.gl_context);
 }
 
 void InitApplication(char* rom)
 {
-	cc.nes = malloc(sizeof(Nes));
-	int result = InitNES(cc.nes, rom, SetPatternTable);
+	ac.nes = malloc(sizeof(Nes));
+	int result = InitNES(ac.nes, rom, SetPatternTable);
 	if (rom && result == 0)
 	{
-		cc.m_settings.mode = MODE_PLAY;
+		ac.m_settings.mode = MODE_PLAY;
 	}
 	else
 	{
-		cc.m_settings.mode = MODE_NOT_RUNNING;
+		ac.m_settings.mode = MODE_NOT_RUNNING;
 	}
-	cc.m_palette.pal = cc.nes->ppu_bus.palette;
+	ac.m_palette.pal = ac.nes->ppu_bus.palette;
 
 	StartupOptions* opt = GetStartupOptions();
 	const int starting_w = opt->startup_width, starting_h = opt->startup_height;
 
+	// Attempt to open a game controller
+	TryOpenGameController(&ac.game_controller);
 
 	// Create a window
 	Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
-	cc.m_settings.fullscreen = opt->fullscreen_on_startup;
+	ac.m_settings.fullscreen = opt->fullscreen_on_startup;
 	if (opt->fullscreen_on_startup)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 	
-	cc.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, flags);
-	if (!cc.win)
+	ac.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, flags);
+	if (!ac.win)
 	{
 		printf("Could not create window");
 	}
 
-	InitOpengl(cc.win);
+	InitOpengl(ac.win);
 	CalculateWindowMetrics(starting_w, starting_h);
 
 	// Create nametable textures
-	GenerateTexture(&cc.m_nametable.left_nametable, 128, 128, NULL, GL_NEAREST, GL_RGB);
-	ClearTexture(&cc.m_nametable.left_nametable);
+	GenerateTexture(&ac.m_nametable.left_nametable, 128, 128, NULL, GL_NEAREST, GL_RGB);
+	ClearTexture(&ac.m_nametable.left_nametable);
 
-	GenerateTexture(&cc.m_nametable.right_nametable, 128, 128, NULL, GL_NEAREST, GL_RGB);
-	ClearTexture(&cc.m_nametable.right_nametable);
+	GenerateTexture(&ac.m_nametable.right_nametable, 128, 128, NULL, GL_NEAREST, GL_RGB);
+	ClearTexture(&ac.m_nametable.right_nametable);
 
 	// And main screen 
-	GenerateTexture(&cc.m_nes_screen.scr, 256, 240, NULL, GL_NEAREST, GL_RGB);
-	ClearTexture(&cc.m_nes_screen.scr);
+	GenerateTexture(&ac.m_nes_screen.scr, 256, 240, NULL, GL_NEAREST, GL_RGB);
+	ClearTexture(&ac.m_nes_screen.scr);
 
 	// Enable sound channels
-	cc.m_channel_enable.SQ1 = true;
-	cc.m_channel_enable.SQ2 = true;
-	cc.m_channel_enable.TRI = true;
-	cc.m_channel_enable.NOISE = true;
-	cc.m_channel_enable.DMC = true;
+	ac.m_channel_enable.SQ1 = true;
+	ac.m_channel_enable.SQ2 = true;
+	ac.m_channel_enable.TRI = true;
+	ac.m_channel_enable.NOISE = true;
+	ac.m_channel_enable.DMC = true;
 
 	// GUI
-	cc.gm.scroll_bar_width = 18;
-	cc.gm.checkbox_size = 18;
-	cc.gm.font_size = opt->font_size;
-	cc.gm.padding = cc.wm.padding;
-	GuiInit(&cc.gm);
+	ac.gm.scroll_bar_width = 18;
+	ac.gm.checkbox_size = 18;
+	ac.gm.font_size = opt->font_size;
+	ac.gm.padding = ac.wm.padding;
+	GuiInit(&ac.gm);
 
-	cc.target = TARGET_NES_STATE;
+	ac.target = TARGET_NES_STATE;
 }
 
 void ShutdownApplication()
 {
 	ShutdownOpengl();
 
-	DeleteTexture(&cc.m_nametable.left_nametable);
-	DeleteTexture(&cc.m_nametable.right_nametable);
-	DeleteTexture(&cc.m_nes_screen.scr);
+	DeleteTexture(&ac.m_nametable.left_nametable);
+	DeleteTexture(&ac.m_nametable.right_nametable);
+	DeleteTexture(&ac.m_nes_screen.scr);
 
-	SDL_DestroyWindow(cc.win);
+	SDL_DestroyWindow(ac.win);
 
 	GuiShutdown();
 
-	free(cc.nes);
+	free(ac.nes);
 }
 
 ///////////////////////////
@@ -263,17 +267,17 @@ void ShutdownApplication()
 
 WindowMetrics* GetWindowMetrics()
 {
-	return &cc.wm;
+	return &ac.wm;
 }
 
 Nes* GetApplicationNes()
 {
-	return cc.nes;
+	return ac.nes;
 }
 
 void SetFullScreen(bool b)
 {
-	SDL_SetWindowFullscreen(cc.win, b ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+	SDL_SetWindowFullscreen(ac.win, b ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 }
 
 // Whenever a pattern table has been bank switched, the pointer the renderer has to the pattern table
@@ -282,17 +286,17 @@ void SetPatternTable(uint8_t* table_data, int side)
 {
 	if (side == 0)
 	{
-		cc.m_nametable.left_nt_data = table_data;
+		ac.m_nametable.left_nt_data = table_data;
 	}
 	else
 	{
-		cc.m_nametable.right_nt_data = table_data;
+		ac.m_nametable.right_nt_data = table_data;
 	}
 }
 
 void GetWindowSize(int* w, int* h)
 {
-	SDL_GetWindowSize(cc.win, w, h);
+	SDL_GetWindowSize(ac.win, w, h);
 }
 
 ///////////////////////////
@@ -303,11 +307,11 @@ void GetWindowSize(int* w, int* h)
 
 void DrawViews()
 {
-	assert(cc.nes); // Nes must be bound for rendering
+	assert(ac.nes); // Nes must be bound for rendering
 
 	int w, h;
-	SDL_GetWindowSize(cc.win, &w, &h);
-	if (w != cc.wm.width || h != cc.wm.height)
+	SDL_GetWindowSize(ac.win, &w, &h);
+	if (w != ac.wm.width || h != ac.wm.height)
 	{
 		CalculateWindowMetrics(w, h);
 	}
@@ -316,47 +320,47 @@ void DrawViews()
 	BeginBatch();
 	BeginLines();
 
-	uint32_t* pixels = get_framebuffer(&cc.nes->ppu);
-	glTextureSubImage2D(cc.m_nes_screen.scr.handle, 0, 0, 0, 256, 240, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-	DrawNes(cc.m_nes_screen, &cc.m_settings);
+	uint32_t* pixels = get_framebuffer(&ac.nes->ppu);
+	glTextureSubImage2D(ac.m_nes_screen.scr.handle, 0, 0, 0, 256, 240, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	DrawNes(ac.m_nes_screen, &ac.m_settings);
 
-	if (cc.draw_debug_view)
+	if (ac.draw_debug_view)
 	{
-		SDL_Rect r_DebugView = {.x = cc.wm.db_x, .y = cc.wm.db_y, .w = cc.wm.db_w, .h = cc.wm.db_h};
+		SDL_Rect r_DebugView = {.x = ac.wm.db_x, .y = ac.wm.db_y, .w = ac.wm.db_w, .h = ac.wm.db_h};
 		SubmitColoredQuad(&r_DebugView, 16, 16, 16);
 
 		char* button_names[] = {"NES State", "APU Wave", "Memory", "About", "Settings"};
 		DrawTarget targets[] = {TARGET_NES_STATE, TARGET_APU_OSC, TARGET_MEMORY, TARGET_ABOUT, TARGET_SETTINGS};
 		int button_positions[6];
 
-		button_positions[0] = cc.wm.db_x;
-		button_positions[5] = cc.wm.db_x + cc.wm.db_w;
+		button_positions[0] = ac.wm.db_x;
+		button_positions[5] = ac.wm.db_x + ac.wm.db_w;
 		for (int i = 1; i <= 4; i++)
 		{
-			button_positions[i] = lroundf(cc.wm.db_x + i * cc.wm.menu_button_w);
+			button_positions[i] = lroundf(ac.wm.db_x + i * ac.wm.menu_button_w);
 		}
 
 		for (int i = 0; i < 5; i++)
 		{
 			SDL_Rect span;
-			span.y = cc.wm.padding;
-			span.h = cc.wm.menu_button_h;
+			span.y = ac.wm.padding;
+			span.h = ac.wm.menu_button_h;
 			span.x = button_positions[i];
 			span.w = button_positions[i + 1] - span.x;
 
 			if (GuiAddButton(button_names[i], &span))
 			{
-				cc.target = targets[i];
+				ac.target = targets[i];
 			}
 		}
 
-		switch (cc.target)
+		switch (ac.target)
 		{
 		case TARGET_NES_STATE:
-			DrawNESState(&cc.m_nametable, cc.m_palette);
+			DrawNESState(&ac.m_nametable, ac.m_palette);
 			break;
 		case TARGET_APU_OSC:
-			DrawAPUOsc(&cc.m_channel_enable);
+			DrawAPUOsc(&ac.m_channel_enable);
 			break;
 		case TARGET_MEMORY:
 			DrawMemoryView();
@@ -365,14 +369,14 @@ void DrawViews()
 			DrawAbout();
 			break;
 		case TARGET_SETTINGS:
-			DrawSettings(&cc.m_channel_enable, &cc.m_nes_screen, &cc.m_settings);
+			DrawSettings(&ac.m_channel_enable, &ac.m_nes_screen, &ac.m_settings);
 			break;
 		}
 
 		// Draw FPS
-		SetTextOrigin(cc.wm.db_x + cc.wm.padding, cc.wm.db_y + cc.wm.db_h - GetStartupOptions()->font_size - cc.wm.padding);
+		SetTextOrigin(ac.wm.db_x + ac.wm.padding, ac.wm.db_y + ac.wm.db_h - GetStartupOptions()->font_size - ac.wm.padding);
 		char buf[64];
-		sprintf(buf, "%.3f ms/frame", cc.m_settings.ms_per_frame);
+		sprintf(buf, "%.3f ms/frame", ac.m_settings.ms_per_frame);
 		RenderText(buf, white);
 	}
 
@@ -381,7 +385,7 @@ void DrawViews()
 	EndLines();
 
 	// Swap framebuffers
-	SDL_GL_SwapWindow(cc.win);
+	SDL_GL_SwapWindow(ac.win);
 }
 
 void SetNesKeys()
@@ -394,18 +398,21 @@ void SetNesKeys()
 
 	StartupOptions* opt = GetStartupOptions();
 
-	Keys keys;
+	Keys keyboard_keys, controller_keys, keys;
 
-	keys.keys.A = state[opt->key_A];
-	keys.keys.B = state[opt->key_B];
-	keys.keys.Start = state[opt->key_start]; // Enter key
-	keys.keys.Select = state[opt->key_select];
-	keys.keys.Up = state[opt->key_up];
-	keys.keys.Down = state[opt->key_down];
-	keys.keys.Left = state[opt->key_left];
-	keys.keys.Right = state[opt->key_right];
+	keyboard_keys.keys.A = state[opt->key_A];
+	keyboard_keys.keys.B = state[opt->key_B];
+	keyboard_keys.keys.Start = state[opt->key_start]; // Enter key
+	keyboard_keys.keys.Select = state[opt->key_select];
+	keyboard_keys.keys.Up = state[opt->key_up];
+	keyboard_keys.keys.Down = state[opt->key_down];
+	keyboard_keys.keys.Left = state[opt->key_left];
+	keyboard_keys.keys.Right = state[opt->key_right];
 
-	poll_keys(&cc.nes->pad, keys);
+	controller_keys = PollGameController(&ac.game_controller);
+
+	keys.reg = keyboard_keys.reg | controller_keys.reg;
+	poll_keys(&ac.nes->pad, keys);
 }
 
 void ApplicationGameLoop()
@@ -422,13 +429,13 @@ void ApplicationGameLoop()
 		GetTime(&beg);
 		SetNesKeys();
 
-		if (cc.m_settings.mode == MODE_PLAY)
+		if (ac.m_settings.mode == MODE_PLAY)
 		{
-			clock_nes_frame(cc.nes);
-			if (cc.nes->apu.audio_pos != 0)
+			clock_nes_frame(ac.nes);
+			if (ac.nes->apu.audio_pos != 0)
 			{
-				WriteSamples(cc.nes->apu.audio_buffer, cc.nes->apu.audio_pos);
-				cc.nes->apu.audio_pos = 0;
+				WriteSamples(ac.nes->apu.audio_buffer, ac.nes->apu.audio_pos);
+				ac.nes->apu.audio_pos = 0;
 			}
 		}
 
@@ -437,18 +444,18 @@ void ApplicationGameLoop()
 		while (SDL_PollEvent(&event) != 0)
 		{
 			GuiDispatchEvent(&event);
-			if (cc.m_settings.mode == MODE_STEP_THROUGH && event.type == SDL_KEYDOWN)
+			if (ac.m_settings.mode == MODE_STEP_THROUGH && event.type == SDL_KEYDOWN)
 			{
 				switch (event.key.keysym.sym)
 				{
 				case SDLK_SPACE:
-					clock_nes_instruction(cc.nes);
+					clock_nes_instruction(ac.nes);
 					break;
 				case SDLK_f:
-					clock_nes_frame(cc.nes);
+					clock_nes_frame(ac.nes);
 					break;
 				case SDLK_p:
-					clock_nes_cycle(cc.nes);
+					clock_nes_cycle(ac.nes);
 					break;
 				}
 			}
@@ -463,7 +470,7 @@ void ApplicationGameLoop()
 		curr_frame++;
 		if (curr_frame == window)
 		{
-			cc.m_settings.ms_per_frame = total_time / window;
+			ac.m_settings.ms_per_frame = total_time / window;
 
 			total_time = 0.0f;
 			curr_frame = 0;
