@@ -1,8 +1,6 @@
-WASM
 NSF Files
 Open bus behaviour 
 Second controller
-controller input
 APU testing
 more mappers
 CI
