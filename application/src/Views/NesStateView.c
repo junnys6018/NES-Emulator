@@ -1,14 +1,14 @@
 #include "NesStateView.h"
 #include "Common.h"
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
 void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 {
 	int padding = GetWindowMetrics()->padding;
 
 	SetTextOrigin(xoff + padding, yoff + padding);
-	RenderText("Status:  ", white);
+	RenderText("Status: ", white);
 	SameLine();
 	char flags[] = "NV-BDIZC";
 	for (int i = 0; i < 8; i++)
@@ -213,14 +213,32 @@ void RendererRasterizePatternTable(int side, NameTableModel* nt, PaletteDataMode
 	glTextureSubImage2D(target, 0, 0, 0, 128, 128, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 }
 
+void DrawInputButtons(int xoff, int yoff, Keys keys)
+{
+	int padding = GetWindowMetrics()->padding;
+
+	SetTextOrigin(xoff + padding, yoff + padding);
+	RenderText("Gamepad: ", cyan);
+	SameLine();
+	char buttons[] = "ABUVUDLR";
+	for (int i = 0; i < 8; i++)
+	{
+		// We are drawing the flags from high bits to low bits
+		bool set = keys.reg & (1 << i);
+		RenderChar(buttons[i], set ? green : red);
+	}
+}
+
 void DrawNESState(NameTableModel* nt, PaletteDataModel pal)
 {
 	WindowMetrics* wm = GetWindowMetrics();
 	int xoff = wm->db_x;
 	int yoff = wm->db_y + wm->menu_button_h;
 	int padding = wm->padding;
-	State6502* cpu = &GetApplicationNes()->cpu;
-	State2C02* ppu = &GetApplicationNes()->ppu;
+	Nes* nes = GetApplicationNes();
+	State6502* cpu = &nes->cpu;
+	State2C02* ppu = &nes->ppu;
+	Keys keys = nes->pad.current_input;
 
 	DrawProgramView(xoff, yoff, cpu);
 	xoff += TextBounds("$0000: ORA ($00,X)").w + padding;
@@ -228,6 +246,7 @@ void DrawNESState(NameTableModel* nt, PaletteDataModel pal)
 	xoff += TextBounds("$0000: $00 ").w + padding;
 	DrawCPUStatus(xoff, yoff, cpu);
 	DrawPPUStatus(wm->db_x, wm->db_y + wm->menu_button_h + TextHeight(8) + padding, ppu);
+	DrawInputButtons(wm->db_x + TextBounds("PPUMASK   ($2001): BGRsbMmG").w + padding, wm->db_y + wm->menu_button_h + TextHeight(14) + 2 * padding, keys);
 
 	int x = padding + wm->db_x;
 	int y = wm->db_y + wm->menu_button_h + TextHeight(18) + padding;
