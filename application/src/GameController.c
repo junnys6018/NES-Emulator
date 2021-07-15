@@ -27,9 +27,11 @@ bool OpenGameController(GameController* game_controller, int device_index)
 
 void CloseGameController(GameController* game_controller)
 {
-	printf("Close game controller %i: %s\n", game_controller->device_index, SDL_GameControllerName(game_controller->sdl_game_controller));
 	if (IsGameControllerOpen(game_controller))
+	{
+		printf("Close game controller %i: %s\n", game_controller->device_index, SDL_GameControllerName(game_controller->sdl_game_controller));
 		SDL_GameControllerClose(game_controller->sdl_game_controller);
+	}
 
 	game_controller->sdl_game_controller = NULL;
 }
@@ -58,5 +60,10 @@ Keys PollGameController(GameController* game_controller)
 
 SDL_GameControllerType GetControllerType(GameController* game_controller)
 {
-	return SDL_GameControllerTypeForIndex(game_controller->device_index);
+	if (IsGameControllerOpen(game_controller))
+	{
+		return SDL_GameControllerTypeForIndex(game_controller->device_index);
+	}
+
+	return SDL_CONTROLLER_TYPE_UNKNOWN;
 }

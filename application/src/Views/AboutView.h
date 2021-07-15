@@ -1,6 +1,6 @@
 #ifndef ABOUT_VIEW_H
 #define ABOUT_VIEW_H
-
-void DrawAbout();
+#include <SDL_gamecontroller.h>
+void DrawAbout(SDL_GameControllerType type);
 
 #endif

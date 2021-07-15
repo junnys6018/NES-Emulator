@@ -63,14 +63,14 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 		NESReset(nes);
 		SetAPUChannels(ch); // Configue APU channels to current settings
 	}
-	span.y += padding + wm->button_h;
-	if (GuiAddButton("Save Game", &span))
-	{
-	}
-	span.y += padding + wm->button_h;
-	if (GuiAddButton("Restore Game", &span))
-	{
-	}
+	//span.y += padding + wm->button_h;
+	//if (GuiAddButton("Save Game", &span))
+	//{
+	//}
+	//span.y += padding + wm->button_h;
+	//if (GuiAddButton("Restore Game", &span))
+	//{
+	//}
 	span.y += padding + wm->button_h;
 
 	GuiAddCheckbox("Draw Grid", span.x, span.y, &settings->draw_grid);
