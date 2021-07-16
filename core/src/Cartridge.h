@@ -7,7 +7,7 @@ typedef uint8_t (*CPU_READ_BYTE)(struct Cartridge* cart, uint16_t addr, bool* re
 typedef void (*CPU_WRITE_BYTE)(struct Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote);
 typedef uint8_t (*PPU_READ_BYTE)(struct Cartridge* cart, uint16_t addr);
 typedef void (*PPU_WRITE_BYTE)(struct Cartridge* cart, uint16_t addr, uint8_t data);
-typedef void (*UPDATE_PATTERN_TABLE_CB)(void* table, int side);
+typedef void (*UPDATE_PATTERN_TABLE_CB)(uint8_t* table, int side);
 
 typedef struct
 {

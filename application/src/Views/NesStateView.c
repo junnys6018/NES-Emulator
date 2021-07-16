@@ -37,7 +37,7 @@ void DrawCPUStatus(int xoff, int yoff, State6502* cpu)
 	RenderText(line, white);
 
 	// Total cycles
-	sprintf(line, "cycles: %lli", cpu->total_cycles);
+	sprintf(line, "cycles: %lu", cpu->total_cycles);
 	RenderText(line, white);
 }
 
