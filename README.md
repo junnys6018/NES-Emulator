@@ -15,7 +15,7 @@ https://junnys6018.github.io/nes/
 This emulator has a real time waveform visualisation of each channel, (square 1 and 2, triangle and noise channel).
 Video demo can be found [here](https://youtu.be/fevGlhVMHI8)
 
-## Installation 
+## Building 
 - Clone repo with `git clone --recursive https://github.com/junnys6018/NES-Emulator.git`
 - If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules
 - Run `cd Nes-Emulator/scripts`, then run `./GenerateLinuxProjects.sh` or `./GenerateWindowsProjects.bat`
