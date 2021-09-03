@@ -62,6 +62,7 @@ Right  | Right arrow
 
 ### Controller
 Other controllers may work but are untested
+
 Button | Key (PS4)   | Key (Xbox)  
 -------|-------------|-------------
 A      | X           | A           
@@ -74,6 +75,7 @@ Left   | D-pad Left  | D-pad Left
 Right  | D-pad Right | D-pad Right 
   
 This emulator has the abilty to pause the emulation and step through it, here are the controls 
+
 Key    | Action         
 -------|-----------------------------
 Space  | Emulate one CPU instruction           
