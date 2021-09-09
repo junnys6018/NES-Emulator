@@ -1,4 +1,4 @@
-#include "Mapper_002.h"
+#include "Mapper002.h"
 
 uint8_t m002_cpu_read_cartridge(Cartridge* cart, uint16_t addr, bool* read)
 {

@@ -1,4 +1,4 @@
-#include "Mapper_JUN.h"
+#include "MapperJUN.h"
 #include <stdlib.h>
 #include <assert.h>
 

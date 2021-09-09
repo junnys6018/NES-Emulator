@@ -1,7 +1,7 @@
-#include "test_6502.h"
-#include "nes.h"
-#include "timer.h"
-#include "test_util.h"
+#include "Test6502.h"
+#include "Nes.h"
+#include "Timer.h"
+#include "TestUtil.h"
 
 #include <stdio.h>
 #include <stdbool.h>

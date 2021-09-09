@@ -1,9 +1,9 @@
-#include "test_util.h"
+#include "TestUtil.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "nes.h"
+#include "Nes.h"
 
 void emulate_until_halt(Nes* nes)
 {

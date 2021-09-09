@@ -1,6 +1,6 @@
 #ifndef _2C02_H
 #define _2C02_H
-#include "2C02_Bus.h"
+#include "2C02Bus.h"
 
 #include <stdbool.h>
 

@@ -1,4 +1,4 @@
-#include "2C02_Bus.h"
+#include "2C02Bus.h"
 
 uint8_t ppu_bus_read(Bus2C02* bus, uint16_t addr)
 {

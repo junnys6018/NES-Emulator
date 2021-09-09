@@ -2,9 +2,9 @@
 #define NES_H
 
 #include "6502.h"
-#include "6502_Bus.h"
+#include "6502Bus.h"
 #include "2C02.h"
-#include "2C02_Bus.h"
+#include "2C02Bus.h"
 #include "2A03.h"
 #include "Cartridge.h"
 #include "Gamepad.h"

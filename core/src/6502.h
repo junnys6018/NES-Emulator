@@ -1,6 +1,6 @@
 #ifndef _6502_H
 #define _6502_H
-#include "6502_Bus.h"
+#include "6502Bus.h"
 
 typedef struct State6502
 {

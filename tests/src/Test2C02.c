@@ -1,6 +1,6 @@
-#include "test_2C02.h"
-#include "nes.h"
-#include "test_util.h"
+#include "test2C02.h"
+#include "Nes.h"
+#include "TestUtil.h"
 
 #include <stdio.h>
 

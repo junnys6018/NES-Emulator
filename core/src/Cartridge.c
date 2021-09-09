@@ -1,11 +1,11 @@
 #include "Cartridge.h"
-#include "Mappers/Mapper_000.h"
-#include "Mappers/Mapper_001.h"
-#include "Mappers/Mapper_002.h"
-#include "Mappers/Mapper_003.h"
-#include "Mappers/Mapper_004.h"
-#include "Mappers/Mapper_JUN.h"
-#include "nes.h"
+#include "Mappers/Mapper000.h"
+#include "Mappers/Mapper001.h"
+#include "Mappers/Mapper002.h"
+#include "Mappers/Mapper003.h"
+#include "Mappers/Mapper004.h"
+#include "Mappers/MapperJUN.h"
+#include "Nes.h"
 
 #include <stdio.h>
 #include <stdlib.h>

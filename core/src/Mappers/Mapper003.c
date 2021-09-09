@@ -1,4 +1,4 @@
-#include "Mapper_003.h"
+#include "Mapper003.h"
 #include <string.h>
 
 uint8_t m003_cpu_read_cartridge(Cartridge* cart, uint16_t addr, bool* read)
