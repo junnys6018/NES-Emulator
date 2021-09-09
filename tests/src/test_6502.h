@@ -1,6 +1,6 @@
 #ifndef TEST_6520_H
 #define TEST_6520_H
 
-void RunAll6502Tests();
+void run_all_6502_tests();
 
 #endif // !TEST_H

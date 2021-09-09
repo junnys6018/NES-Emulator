@@ -6,7 +6,7 @@
 
 // Forward declaration to avoid circular dependency
 struct State6502;
-void NMI(struct State6502* cpu);
+void nmi(struct State6502* cpu);
 
 typedef union
 {

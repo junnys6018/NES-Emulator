@@ -8,12 +8,12 @@
 #include <stdlib.h>
 
 
-int Run_6502_Functional_Test()
+int run_6502_functional_test()
 {
 	Nes nes;
-	InitNES(&nes, "roms/6502_functional_test.bin", NULL);
+	initialize_nes(&nes, "roms/6502_functional_test.bin", NULL);
 
-	EmulateUntilHalt(&nes);
+	emulate_until_halt(&nes);
 
 	// Check for success or failure
 	uint8_t success_opcode_pattern[] = { 0x4C, 0xBA, 0xEA, 0xBA, 0xEA };
@@ -32,15 +32,15 @@ int Run_6502_Functional_Test()
 		printf("Failed Functional Test\n");
 
 	
-	NESDestroy(&nes);
+	destroy_nes(&nes);
 
 	return passed ? 0 : 1;
 }
 
-int Run_6502_Interrupt_Test()
+int run_6502_interrupt_test()
 {
 	Nes nes;
-	InitNES(&nes, "roms/6502_interrupt_test.bin", NULL);
+	initialize_nes(&nes, "roms/6502_interrupt_test.bin", NULL);
 
 	const uint16_t feedback_register_addr = 0xBFFC; // Location of register used to feed interrupts into the cpu
 	uint8_t old_nmi = 0; // Used to detect a level change
@@ -53,15 +53,15 @@ int Run_6502_Interrupt_Test()
 		uint8_t I_src = cpu_bus_read(&nes.cpu_bus, feedback_register_addr);
 		if (I_src & 0x02 && old_nmi == 0) // NMI - Detected on rising edge
 		{
-			NMI(&nes.cpu);
+			nmi(&nes.cpu);
 		}
 		if (I_src & 0x01) // IRQ - level detected
 		{
-			IRQ_Set(&nes.cpu, 7);
+			irq_set(&nes.cpu, 7);
 		}
 		else
 		{
-			IRQ_Clear(&nes.cpu, 7);
+			irq_clear(&nes.cpu, 7);
 		}
 
 		old_nmi = I_src & 0x02; // Mask out NMI bit
@@ -89,21 +89,21 @@ int Run_6502_Interrupt_Test()
 		old_PC = nes.cpu.PC;
 	}
 
-	NESDestroy(&nes);
+	destroy_nes(&nes);
 	return passed ? 0 : 1;
 }
 
 
-void RunAll6502Tests()
+void run_all_6502_tests()
 {
 	const int num_tests = 5;
 	int num_failed = 0;
-	num_failed += Run_6502_Interrupt_Test();
-	num_failed += Run_6502_Functional_Test();
+	num_failed += run_6502_interrupt_test();
+	num_failed += run_6502_functional_test();
 
-	num_failed += TestBlarggRom("roms/blargg_tests/branch_timing_tests/1.Branch_Basics.nes", 0xF8);
-	num_failed += TestBlarggRom("roms/blargg_tests/branch_timing_tests/2.Backward_Branch.nes", 0xF8);
-	num_failed += TestBlarggRom("roms/blargg_tests/branch_timing_tests/3.Forward_Branch.nes", 0xF8);
+	num_failed += test_blargg_rom("roms/blargg_tests/branch_timing_tests/1.Branch_Basics.nes", 0xF8);
+	num_failed += test_blargg_rom("roms/blargg_tests/branch_timing_tests/2.Backward_Branch.nes", 0xF8);
+	num_failed += test_blargg_rom("roms/blargg_tests/branch_timing_tests/3.Forward_Branch.nes", 0xF8);
 
 	printf("[6502 TESTS] Passed: %i; Failed %i\n", num_tests - num_failed, num_failed);
 }

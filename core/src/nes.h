@@ -23,14 +23,14 @@ typedef struct
 } Nes;
 
 // Passing NULL as filepath loads the nes into a "dummy state"
-// Each successful call to NESInit() must be paired with a NESDestroy() to free resources
-// If NESInit() fails (returns non zero) then NESDestroy() should NOT be called
+// Each successful call to NESInit() must be paired with a destroy_nes() to free resources
+// If NESInit() fails (returns non zero) then destroy_nes() should NOT be called
 // Returns 0 on success; non zero on failure
-int InitNES(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback);
-void NESDestroy(Nes* nes);
+int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback);
+void destroy_nes(Nes* nes);
 
 // Reset button on the NES
-void NESReset(Nes* nes);
+void reset_nes(Nes* nes);
 
 // Emulate one cpu instruction
 void clock_nes_instruction(Nes* nes);

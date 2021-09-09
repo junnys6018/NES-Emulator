@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-uint8_t m001CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
+uint8_t m001_cpu_read_cartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = (addr >= 0x4020 && addr <= 0xFFFF);
 
@@ -53,7 +53,7 @@ uint8_t m001CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 	return 0;
 }
 
-void UpdateRendererPatternTable(Mapper001* mapper, UPDATE_PATTERN_TABLE_CB callback)
+void update_renderer_patter_table(Mapper001* mapper, UPDATE_PATTERN_TABLE_CB callback)
 {
 	if (mapper->control.bits.C)
 	{
@@ -68,7 +68,7 @@ void UpdateRendererPatternTable(Mapper001* mapper, UPDATE_PATTERN_TABLE_CB callb
 	}
 }
 
-void m001CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
+void m001_cpu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
@@ -118,13 +118,13 @@ void m001CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* w
 
 			if (update_pattern_table && cart->updatePatternTableCB)
 			{
-				UpdateRendererPatternTable(map001, cart->updatePatternTableCB);
+				update_renderer_patter_table(map001, cart->updatePatternTableCB);
 			}
 		}
 	}
 }
 
-uint8_t m001PPUReadCartridge(Cartridge* cart, uint16_t addr)
+uint8_t m001_ppu_read_cartridge(Cartridge* cart, uint16_t addr)
 {
 	Mapper001* map001 = (Mapper001*)cart->mapper;
 	switch (map001->control.bits.C)
@@ -150,7 +150,7 @@ uint8_t m001PPUReadCartridge(Cartridge* cart, uint16_t addr)
 	return 0;
 }
 
-void m001PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
+void m001_ppu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
 	Mapper001* map001 = (Mapper001*)cart->mapper;
 	switch (map001->control.bits.C)
@@ -177,25 +177,25 @@ void m001PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 	}
 }
 
-NametableIndex m001PPUMirrorNametable(void* mapper, uint16_t addr)
+NametableIndex m001_ppu_mirror_nametable(void* mapper, uint16_t addr)
 {
 	Mapper001* map001 = (Mapper001*)mapper;
 	switch (map001->control.bits.M)
 	{
 	case ONE_SCREEN_LOWER:
-		return MirrorOneScreenLower(addr);
+		return mirror_one_screen_lower(addr);
 	case ONE_SCREEN_UPPER: 
-		return MirrorOneScreenUpper(addr);
+		return mirror_one_screen_upper(addr);
 	case VERTICAL: 
-		return MirrorVertical(addr);
+		return mirror_vertical(addr);
 	case HORIZONTAL:
-		return MirrorHorizontal(addr);
+		return mirror_horizontal(addr);
 	default:
 		printf("[ERROR] Unreachable code in mapper_001.c\n");
 	}
 }
 
-void m001Free(Mapper001* mapper)
+void m001_free(Mapper001* mapper)
 {
 	free(mapper->PRG_ROM);
 	free(mapper->PRG_RAM);
@@ -203,16 +203,16 @@ void m001Free(Mapper001* mapper)
 	free(mapper);
 }
 
-void m001LoadFromFile(Header* header, Cartridge* cart, FILE* file)
+void m001_load_from_file(Header* header, Cartridge* cart, FILE* file)
 {
-	cart->CPUReadCartridge = m001CPUReadCartridge;
-	cart->CPUWriteCartridge = m001CPUWriteCartridge;
+	cart->CPUReadCartridge = m001_cpu_read_cartridge;
+	cart->CPUWriteCartridge = m001_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = m001PPUReadCartridge;
-	cart->PPUPeakCartridge = m001PPUReadCartridge;
-	cart->PPUWriteCartridge = m001PPUWriteCartridge;
+	cart->PPUReadCartridge = m001_ppu_read_cartridge;
+	cart->PPUPeakCartridge = m001_ppu_write_cartridge;
+	cart->PPUWriteCartridge = m001_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = m001PPUMirrorNametable;
+	cart->PPUMirrorNametable = m001_ppu_mirror_nametable;
 
 	Mapper001* map = malloc(sizeof(Mapper001));
 	assert(map);

@@ -16,7 +16,7 @@ color PALETTE_MAP[64] =
 	{236, 238, 236}, {168, 204, 236}, {188, 188, 236}, {212, 178, 236}, {236, 174, 236}, {236, 174, 212}, {236, 180, 176}, {228, 196, 144}, {204, 210, 120}, {180, 222, 120}, {168, 226, 144}, {152, 226, 180}, {160, 214, 228}, {160, 162, 160}, {  0,   0,   0}, {  0,   0,   0}
 };
 
-uint16_t CoarseXInc(uint16_t v)
+uint16_t coarse_x_inc(uint16_t v)
 {
 	// if coarse X == 31
 	if ((v & 0x001F) == 31)
@@ -36,7 +36,7 @@ uint16_t CoarseXInc(uint16_t v)
 	return v;
 }
 
-uint16_t FineYInc(uint16_t v)
+uint16_t fine_y_inc(uint16_t v)
 {
 	// if fine Y < 7
 	if ((v & 0x7000) != 0x7000)
@@ -73,31 +73,31 @@ uint16_t FineYInc(uint16_t v)
 	return v;
 }
 
-uint16_t GetNameTableAddr(uint16_t v)
+uint16_t get_name_table_addr(uint16_t v)
 {
 	return 0x2000 | (v & 0x0FFF);
 }
 
-uint16_t GetAttribTableAddr(uint16_t v)
+uint16_t get_attrib_table_addr(uint16_t v)
 {
 	return 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
 }
 
-void FetchDataAndIncV(State2C02* ppu)
+void fetch_data_and_inc_v(State2C02* ppu)
 {
 	switch (ppu->cycles % 8)
 	{
 	case 1:
 	{
 		// NT byte
-		uint16_t name_tbl_addr = GetNameTableAddr(ppu->v);
+		uint16_t name_tbl_addr = get_name_table_addr(ppu->v);
 		ppu->name_tbl_byte = ppu_bus_read(ppu->bus, name_tbl_addr);
 		break;
 	}
 	case 3:
 	{
 		// AT byte
-		uint16_t attrib_tbl_addr = GetAttribTableAddr(ppu->v);
+		uint16_t attrib_tbl_addr = get_attrib_table_addr(ppu->v);
 		uint8_t attrib_tbl_byte = ppu_bus_read(ppu->bus, attrib_tbl_addr); // Get palette attribute
 		uint8_t shift = 2 * ((ppu->v >> 1) & 0x01) + 4 * ((ppu->v >> 6) & 0x01); // Calculate which palette to use
 		uint8_t palatteID = (attrib_tbl_byte >> shift) & 0x03;
@@ -126,11 +126,11 @@ void FetchDataAndIncV(State2C02* ppu)
 	{
 		if (ppu->cycles == 256)
 		{
-			ppu->v = FineYInc(ppu->v);
+			ppu->v = fine_y_inc(ppu->v);
 		}
 		else
 		{
-			ppu->v = CoarseXInc(ppu->v);
+			ppu->v = coarse_x_inc(ppu->v);
 		}
 		break;
 	}
@@ -138,7 +138,7 @@ void FetchDataAndIncV(State2C02* ppu)
 }
 
 // Load new bytes into shift registers
-void FeedShiftRegisters(State2C02* ppu)
+void feed_shift_registers(State2C02* ppu)
 {
 	ppu->pt_shift_low = (ppu->pt_shift_low & 0xFF00) | (uint16_t)ppu->pt_latch_low;
 	ppu->pt_shift_high = (ppu->pt_shift_high & 0xFF00) | (uint16_t)ppu->pt_latch_high;
@@ -146,7 +146,7 @@ void FeedShiftRegisters(State2C02* ppu)
 	ppu->pa_shift_high = (ppu->pa_shift_high & 0xFF00) | (uint16_t)ppu->pa_latch_high;
 }
 
-void Shift(State2C02* ppu)
+void shift(State2C02* ppu)
 {
 	ppu->pt_shift_low <<= 1;
 	ppu->pt_shift_high <<= 1;
@@ -154,7 +154,7 @@ void Shift(State2C02* ppu)
 	ppu->pa_shift_high <<= 1;
 }
 
-void TransitionSpriteStateMachine(State2C02* ppu)
+void transition_sprite_state_machine(State2C02* ppu)
 {
 	if (ppu->OAMADDR == 0) // Overflow
 	{
@@ -170,23 +170,23 @@ void TransitionSpriteStateMachine(State2C02* ppu)
 	}
 }
 
-void SwapFrameBuffers(State2C02* ppu)
+void swap_framebuffers(State2C02* ppu)
 {
 	ppu->back_buffer = 1 - ppu->back_buffer;
 	memset(ppu->pixels[ppu->back_buffer], 0, 256 * 240 * sizeof(uint32_t));
 }
 
-void OnBackgroundPreRenderLine(State2C02* ppu)
+void on_background_prerender_line(State2C02* ppu)
 {
 	if (ppu->cycles % 8 == 1 && ((ppu->cycles >= 9 && ppu->cycles <= 257) || (ppu->cycles >= 321 && ppu->cycles <= 337)))
 	{
-		FeedShiftRegisters(ppu);
+		feed_shift_registers(ppu);
 	}
 
 	if (ppu->cycles >= 1 && ppu->cycles < 257)
 	{
-		Shift(ppu);
-		FetchDataAndIncV(ppu);
+		shift(ppu);
+		fetch_data_and_inc_v(ppu);
 	}
 	else if (ppu->cycles == 257)
 	{
@@ -200,12 +200,12 @@ void OnBackgroundPreRenderLine(State2C02* ppu)
 	}
 	else if (ppu->cycles >= 321 && ppu->cycles < 337)
 	{
-		Shift(ppu);
-		FetchDataAndIncV(ppu);
+		shift(ppu);
+		fetch_data_and_inc_v(ppu);
 	}
 }
 
-uint8_t DrawBackgroundPixel(State2C02* ppu)
+uint8_t draw_background_pixel(State2C02* ppu)
 {
 	uint16_t bit_mask = 0x8000 >> ppu->x;
 
@@ -236,30 +236,30 @@ uint8_t DrawBackgroundPixel(State2C02* ppu)
 	}
 	ppu->pixels[ppu->back_buffer][index] = PALETTE_MAP[color].c;
 
-	Shift(ppu);
-	FetchDataAndIncV(ppu);
+	shift(ppu);
+	fetch_data_and_inc_v(ppu);
 
 	return bg_pal_index;
 }
 
-uint8_t BackgroundDot(State2C02* ppu)
+uint8_t background_dot(State2C02* ppu)
 {
 	// Pre render line
 	if (ppu->scanline == -1)
 	{
-		OnBackgroundPreRenderLine(ppu);
+		on_background_prerender_line(ppu);
 	}
 	// Visible Scanlines
 	else if (ppu->scanline >= 0 && ppu->scanline < 240)
 	{
 		if (ppu->cycles % 8 == 1 && ((ppu->cycles >= 9 && ppu->cycles <= 257) || (ppu->cycles >= 321 && ppu->cycles <= 337)))
 		{
-			FeedShiftRegisters(ppu);
+			feed_shift_registers(ppu);
 		}
 
 		if (ppu->cycles >= 1 && ppu->cycles < 257)
 		{
-			return DrawBackgroundPixel(ppu);
+			return draw_background_pixel(ppu);
 		}
 		else if (ppu->cycles == 257)
 		{
@@ -268,14 +268,14 @@ uint8_t BackgroundDot(State2C02* ppu)
 		}
 		else if (ppu->cycles >= 321 && ppu->cycles < 337)
 		{
-			Shift(ppu);
-			FetchDataAndIncV(ppu);
+			shift(ppu);
+			fetch_data_and_inc_v(ppu);
 		}
 	}
 	return 0;
 }
 
-void TestActiveSprite(State2C02* ppu)
+void test_active_sprite(State2C02* ppu)
 {
 	// For each sprite on the current scanline
 	for (int i = 0; i < 8; i++)
@@ -289,7 +289,7 @@ void TestActiveSprite(State2C02* ppu)
 	}
 }
 
-uint8_t GetSpritePalIndex(State2C02* ppu, int i)
+uint8_t get_sprite_pal_index(State2C02* ppu, int i)
 {
 	uint8_t spr_pal_index;
 	// Get the shade of the active sprite
@@ -308,7 +308,7 @@ uint8_t GetSpritePalIndex(State2C02* ppu, int i)
 	return spr_pal_index;
 }
 
-void DrawSpritePixel(State2C02* ppu, uint8_t bg_pal_index, int i, uint8_t spr_pal_index)
+void draw_sprite_pixel(State2C02* ppu, uint8_t bg_pal_index, int i, uint8_t spr_pal_index)
 {
 	// Check for sprite 0 hit
 	if (i == 0 && ppu->sprite_zero_on_current_scanline && bg_pal_index != 0 && ppu->PPUMASK.flags.b && !ppu->PPUSTATUS.flags.S)
@@ -343,13 +343,13 @@ void DrawSpritePixel(State2C02* ppu, uint8_t bg_pal_index, int i, uint8_t spr_pa
 	}
 }
 
-void SpriteDot(State2C02* ppu, uint8_t bg_pal_index)
+void sprite_dot(State2C02* ppu, uint8_t bg_pal_index)
 {
 	if (ppu->scanline >= 1 && ppu->scanline < 240)
 	{
 		if (ppu->cycles >= 1 && ppu->cycles < 257)
 		{
-			TestActiveSprite(ppu);
+			test_active_sprite(ppu);
 
 			bool drawn = false;
 
@@ -358,11 +358,11 @@ void SpriteDot(State2C02* ppu, uint8_t bg_pal_index)
 			{
 				if (ppu->active_sprites & (1 << i))
 				{
-					uint8_t spr_pal_index = GetSpritePalIndex(ppu, i);
+					uint8_t spr_pal_index = get_sprite_pal_index(ppu, i);
 					// If we havent drawn a sprite pixel on the current dot, and the sprite isnt transparent
 					if (!drawn && spr_pal_index != 0)
 					{
-						DrawSpritePixel(ppu, bg_pal_index, i, spr_pal_index);
+						draw_sprite_pixel(ppu, bg_pal_index, i, spr_pal_index);
 						drawn = true;
 					}
 				}
@@ -376,7 +376,7 @@ void SpriteDot(State2C02* ppu, uint8_t bg_pal_index)
 	}
 }
 
-void ClearOAM(State2C02* ppu)
+void clear_oam(State2C02* ppu)
 {
 	memset(ppu->bus->secondary_OAM, 0xFF, 32);
 
@@ -388,7 +388,7 @@ void ClearOAM(State2C02* ppu)
 	ppu->sprite_zero_on_next_scanline = false;
 }
 
-void LoadIntoSecondaryOAM(State2C02* ppu)
+void load_into_secondary_oam(State2C02* ppu)
 {
 	ppu->OAMDATA = ppu->bus->OAM[ppu->OAMADDR];
 	ppu->OAMADDR++;
@@ -396,7 +396,7 @@ void LoadIntoSecondaryOAM(State2C02* ppu)
 	ppu->sprite_eval_state.secondary_oam_free_slot++;
 }
 
-void AdvanceSpriteStateMachine(State2C02* ppu)
+void advance_sprite_state_machine(State2C02* ppu)
 {
 	if (ppu->sprite_eval_state.remaining == 0)
 	{
@@ -420,13 +420,13 @@ void AdvanceSpriteStateMachine(State2C02* ppu)
 				ppu->sprite_eval_state.secondary_oam_free_slot++;
 
 				// Copy tile index byte into secondary OAM
-				LoadIntoSecondaryOAM(ppu);
+				load_into_secondary_oam(ppu);
 
 				// Copy attribute byte into secondary OAM
-				LoadIntoSecondaryOAM(ppu);
+				load_into_secondary_oam(ppu);
 
 				// Copy x position byte into secondary OAM
-				LoadIntoSecondaryOAM(ppu);
+				load_into_secondary_oam(ppu);
 
 				// Do nothing for 7 cycles
 				ppu->sprite_eval_state.remaining = 8;
@@ -439,7 +439,7 @@ void AdvanceSpriteStateMachine(State2C02* ppu)
 				// goto next sprite
 				ppu->OAMADDR += 3;
 			}
-			TransitionSpriteStateMachine(ppu);
+			transition_sprite_state_machine(ppu);
 			break;
 		}
 		case OVERFLOW_CHECK:
@@ -498,7 +498,7 @@ void AdvanceSpriteStateMachine(State2C02* ppu)
 	}
 }
 
-void LoadSpriteTiles(State2C02* ppu)
+void load_sprite_tiles(State2C02* ppu)
 {
 	ppu->OAMADDR = 0;
 	ppu->sprite_zero_on_current_scanline = ppu->sprite_zero_on_next_scanline;
@@ -550,23 +550,23 @@ void LoadSpriteTiles(State2C02* ppu)
 	}
 }
 
-void DoRendering(State2C02* ppu)
+void render(State2C02* ppu)
 {
 	uint8_t bg_pal_index = 0;
 	// Background rendering
 	if (ppu->PPUMASK.flags.b)
 	{
-		bg_pal_index = BackgroundDot(ppu);
+		bg_pal_index = background_dot(ppu);
 	}
 
 	// Sprite rendering
 	if (ppu->PPUMASK.flags.s)
 	{
-		SpriteDot(ppu, bg_pal_index);
+		sprite_dot(ppu, bg_pal_index);
 	}
 }
 
-void EvaluateSprites(State2C02* ppu)
+void evaluate_sprites(State2C02* ppu)
 {
 	// Sprite evaluation, only occurs if rendering is enabled
 	if (ppu->PPUMASK.flags.b || ppu->PPUMASK.flags.s)
@@ -579,23 +579,23 @@ void EvaluateSprites(State2C02* ppu)
 			// Clear OAM
 			if (ppu->cycles == 1) // during cycles 1..64, secondary OAM is cleared to 0xFF, we clear all of it at cycle 1
 			{
-				ClearOAM(ppu);
+				clear_oam(ppu);
 			}
 			// Sprite Evaluation state machine is run from cycles 65..256
 			else if (ppu->cycles >= 65 && ppu->cycles < 257)
 			{
-				AdvanceSpriteStateMachine(ppu);
+				advance_sprite_state_machine(ppu);
 			}
 			// Sprite tile loading is normally done during dots 257..320, but we load all the data at once
 			else if (ppu->cycles == 257)
 			{
-				LoadSpriteTiles(ppu);
+				load_sprite_tiles(ppu);
 			}
 		}
 	}
 }
 
-void ResetFlags(State2C02* ppu)
+void reset_flags(State2C02* ppu)
 {
 	// TODO: figure out if VBL is cleared at dot 0 or dot 1. For now clear at dot 0
 	if (ppu->scanline == -1 && ppu->cycles == 0)
@@ -610,7 +610,7 @@ void ResetFlags(State2C02* ppu)
 	}
 }
 
-void IncrementCycleScanlineCounter(State2C02* ppu)
+void increment_cycle_scanline_counter(State2C02* ppu)
 {
 	ppu->cycles++;
 
@@ -633,7 +633,7 @@ void IncrementCycleScanlineCounter(State2C02* ppu)
 	}
 }
 
-void SetVBlankFlag(State2C02* ppu)
+void set_vblank_flag(State2C02* ppu)
 {
 	if (!ppu->ppustatus_read_early && !ppu->ppustatus_read_late)
 	{
@@ -645,13 +645,13 @@ void SetVBlankFlag(State2C02* ppu)
 	ppu->ppustatus_read_late = false;
 }
 
-void SetNMILine(State2C02* ppu)
+void set_nmi_line(State2C02* ppu)
 {
 	// Pull the nmi line low if we are in vertical blanking and nmi's are enabled
 	ppu->nmi_line = (ppu->nmi_line << 1) | !(ppu->PPUCTRL.flags.V && ppu->PPUSTATUS.flags.V);
 }
 
-void CheckForNMI(State2C02* ppu)
+void check_nmi(State2C02* ppu)
 {
 	// Emulate 9 ppu cycles of propagation delay TODO: figure out this exact timing
 	const int delay = 9;
@@ -659,30 +659,30 @@ void CheckForNMI(State2C02* ppu)
 	// NMI is triggered on falling edge. the line must be low for at least 2 ppu cycles, otherwise the cpu wont detect the edge
 	if (((ppu->nmi_line & (0x7 << delay)) >> delay) == 0x4)
 	{
-		NMI(ppu->cpu);
+		nmi(ppu->cpu);
 	}
 }
 
 void clock_2C02(State2C02* ppu)
 {
-	DoRendering(ppu);
+	render(ppu);
 
-	EvaluateSprites(ppu);
+	evaluate_sprites(ppu);
 
-	ResetFlags(ppu);
+	reset_flags(ppu);
 
 	// Start of vertical blanking
 	if (ppu->scanline == 241 && ppu->cycles == 1)
 	{
-		SetVBlankFlag(ppu);
-		SwapFrameBuffers(ppu);
+		set_vblank_flag(ppu);
+		swap_framebuffers(ppu);
 	}
 
-	SetNMILine(ppu);
+	set_nmi_line(ppu);
 
-	CheckForNMI(ppu);
+	check_nmi(ppu);
 
-	IncrementCycleScanlineCounter(ppu);
+	increment_cycle_scanline_counter(ppu);
 
 	// Increment global cycle counter, for debugging
 	ppu->total_cycles++;

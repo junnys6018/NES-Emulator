@@ -6,7 +6,7 @@
 
 // TODO: four screen
 
-void clock_IRQ(Mapper004* map)
+void clock_irq(Mapper004* map)
 {
 	if (map->IRQ_counter == 0 || map->IRQ_reload)
 	{
@@ -20,11 +20,11 @@ void clock_IRQ(Mapper004* map)
 
 	if (map->IRQ_counter == 0 && map->IRQ_enable)
 	{
-		IRQ_Set(map->cpu, 2);
+		irq_set(map->cpu, 2);
 	}
 }
 
-uint8_t m004CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
+uint8_t m004_cpu_read_cartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = (addr >= 0x4020 && addr <= 0xFFFF);
 	if (!*read)
@@ -68,7 +68,7 @@ uint8_t m004CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 	return map->PRG_ROM[(bank_index << 13) | (addr & 0x1FFF)];
 }
 
-void m004CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
+void m004_cpu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
@@ -153,12 +153,12 @@ void m004CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* w
 		map->IRQ_enable = addr & 1;
 		if (!map->IRQ_enable)
 		{
-			IRQ_Clear(map->cpu, 2);
+			irq_clear(map->cpu, 2);
 		}
 	}
 }
 
-uint8_t m004PPUPeekCartridge(Cartridge* cart, uint16_t addr)
+uint8_t m004_ppu_peek_cartridge(Cartridge* cart, uint16_t addr)
 {
 	Mapper004* map = (Mapper004*)cart->mapper;
 
@@ -213,32 +213,32 @@ uint8_t m004PPUReadCartridge(Cartridge* cart, uint16_t addr)
 	bool PPU_A12 = (addr & 0x1000) > 0;
 	if (!map->old_PPU_A12 && PPU_A12)
 	{
-		clock_IRQ(map);
+		clock_irq(map);
 	}
 	map->old_PPU_A12 = PPU_A12;
 
-	return m004PPUPeekCartridge(cart, addr);
+	return m004_ppu_peek_cartridge(cart, addr);
 }
 
-void m004PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
+void m004_ppu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
 	// Do nothing, CHR is a rom
 }
 
-NametableIndex m004PPUMirrorNametable(void* mapper, uint16_t addr)
+NametableIndex m004_ppu_mirror_nametable(void* mapper, uint16_t addr)
 {
 	Mapper004* map = (Mapper004*)mapper;
 	if (map->mirroring)
 	{
-		return MirrorHorizontal(addr);
+		return mirror_horizontal(addr);
 	}
 	else
 	{
-		return MirrorVertical(addr);
+		return mirror_vertical(addr);
 	}
 }
 
-void m004Free(Mapper004* mapper)
+void m004_free(Mapper004* mapper)
 {
 	Mapper004* map = (Mapper004*)mapper;
 	free(map->PRG_ROM);
@@ -246,7 +246,7 @@ void m004Free(Mapper004* mapper)
 	free(mapper);
 }
 
-void m004LoadFromFile(Header* header, Cartridge* cart, FILE* file, State6502* cpu)
+void m004_load_from_file(Header* header, Cartridge* cart, FILE* file, State6502* cpu)
 {
 	if (header->FourScreen)
 	{
@@ -254,14 +254,14 @@ void m004LoadFromFile(Header* header, Cartridge* cart, FILE* file, State6502* cp
 		return;
 	}
 
-	cart->CPUReadCartridge = m004CPUReadCartridge;
-	cart->CPUWriteCartridge = m004CPUWriteCartridge;
+	cart->CPUReadCartridge = m004_cpu_read_cartridge;
+	cart->CPUWriteCartridge = m004_cpu_write_cartridge;
 
 	cart->PPUReadCartridge = m004PPUReadCartridge;
-	cart->PPUPeakCartridge = m004PPUPeekCartridge;
-	cart->PPUWriteCartridge = m004PPUWriteCartridge;
+	cart->PPUPeakCartridge = m004_ppu_peek_cartridge;
+	cart->PPUWriteCartridge = m004_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = m004PPUMirrorNametable;
+	cart->PPUMirrorNametable = m004_ppu_mirror_nametable;
 
 	Mapper004* map = malloc(sizeof(Mapper004));
 	assert(map);

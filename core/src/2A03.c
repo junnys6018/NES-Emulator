@@ -32,7 +32,7 @@ float sinc(float x)
 	return 1.0f;
 }
 
-void AudioPrecompute()
+void precompute_audio()
 {
 	// Low pass filter:	https://rjeschke.tumblr.com/post/8382596050/fir-filters-in-practice
 	const float cutoff_freq = SAMPLE_RATE / 2.0f;
@@ -186,7 +186,7 @@ void apu_dmc_read_byte(State2A03* apu)
 			}
 			else if (apu->DMC_FREQ.flags.I)
 			{
-				IRQ_Set(apu->cpu, 0);
+				irq_set(apu->cpu, 0);
 				apu->DMC_IRQ_flag = true;
 			}
 		}
@@ -292,7 +292,7 @@ void clock_frame_counter(State2A03* apu)
 		{
 			if (!apu->FRAME_COUNTER.flags.I)
 			{
-				IRQ_Set(apu->cpu, 1);
+				irq_set(apu->cpu, 1);
 				apu->frame_counter_IRQ_flag = true;
 			}
 			apu->frame_count = 0;
@@ -416,10 +416,10 @@ void clock_2A03(State2A03* apu)
 			if (apu->audio_pos < 4095)
 				apu->audio_pos++;
 #if !defined(__EMSCRIPTEN__)
-			WindowAddSample(&apu->SQ1_win, apu->channel_enable & CHANNEL_SQ1 ? PULSE_LUT[apu->channel_out.pulse1] : 0.0f);
-			WindowAddSample(&apu->SQ2_win, apu->channel_enable & CHANNEL_SQ2 ? PULSE_LUT[apu->channel_out.pulse2] : 0.0f);
-			WindowAddSample(&apu->TRI_win, tri_en ? TND_LUT[3 * apu->channel_out.triangle] : 0.0f);
-			WindowAddSample(&apu->NOISE_win, apu->channel_enable & CHANNEL_NOISE ? TND_LUT[2 * apu->channel_out.noise] : 0.0f);
+			window_add_sample(&apu->SQ1_win, apu->channel_enable & CHANNEL_SQ1 ? PULSE_LUT[apu->channel_out.pulse1] : 0.0f);
+			window_add_sample(&apu->SQ2_win, apu->channel_enable & CHANNEL_SQ2 ? PULSE_LUT[apu->channel_out.pulse2] : 0.0f);
+			window_add_sample(&apu->TRI_win, tri_en ? TND_LUT[3 * apu->channel_out.triangle] : 0.0f);
+			window_add_sample(&apu->NOISE_win, apu->channel_enable & CHANNEL_NOISE ? TND_LUT[2 * apu->channel_out.noise] : 0.0f);
 #endif
 		}
 	}
@@ -453,10 +453,10 @@ void power_on_2A03(State2A03* apu)
 	apu->NOISE_LFSR = 1;
 	apu->DMC_LOAD_COUNTER = 0;
 
-	WindowInit(&apu->SQ1_win);
-	WindowInit(&apu->SQ2_win);
-	WindowInit(&apu->TRI_win);
-	WindowInit(&apu->NOISE_win);
+	initialize_window(&apu->SQ1_win);
+	initialize_window(&apu->SQ2_win);
+	initialize_window(&apu->TRI_win);
+	initialize_window(&apu->NOISE_win);
 }
 
 void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
@@ -598,7 +598,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		apu->DMC_timer.period = DMC_RATE_LUT[apu->DMC_FREQ.flags.Frequency];
 		if (!apu->DMC_FREQ.flags.I)
 		{
-			IRQ_Clear(apu->cpu, 0);
+			irq_clear(apu->cpu, 0);
 			apu->DMC_IRQ_flag = false;
 		}
 
@@ -647,7 +647,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 			}
 		}
 
-		IRQ_Clear(apu->cpu, 0);
+		irq_clear(apu->cpu, 0);
 		apu->DMC_IRQ_flag = false;
 
 		break;
@@ -658,7 +658,7 @@ void apu_write(State2A03* apu, uint16_t addr, uint8_t data)
 		apu->FRAME_COUNTER.reg = data;
 		if (apu->FRAME_COUNTER.flags.I)
 		{
-			IRQ_Clear(apu->cpu, 1);
+			irq_clear(apu->cpu, 1);
 			apu->frame_counter_IRQ_flag = false;
 		}
 		apu->frame_count = 0;
@@ -701,7 +701,7 @@ uint8_t apu_read(State2A03* apu, uint16_t addr)
 		ret.bits.F = apu->frame_counter_IRQ_flag;
 		ret.bits.I = apu->DMC_IRQ_flag;
 
-		IRQ_Clear(apu->cpu, 1);
+		irq_clear(apu->cpu, 1);
 		apu->frame_counter_IRQ_flag = false;
 
 		return ret.reg;
@@ -740,12 +740,12 @@ void reload_divider(divider* div)
 	div->counter = div->period;
 }
 
-void WindowInit(AudioWindow* win)
+void initialize_window(AudioWindow* win)
 {
 	memset(win, 0, sizeof(AudioWindow));
 }
 
-void WindowAddSample(AudioWindow* win, float sample)
+void window_add_sample(AudioWindow* win, float sample)
 {
 	float filtered = sample - win->last_sample + 0.995f * win->last_filter;
 	win->last_sample = sample;

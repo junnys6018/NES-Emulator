@@ -1,6 +1,6 @@
 #include "MapperUtils.h"
 
-NametableIndex MirrorVertical(uint16_t addr)
+NametableIndex mirror_vertical(uint16_t addr)
 {
 	NametableIndex ret;
 	ret.addr = addr & 0x3FF;
@@ -19,7 +19,7 @@ NametableIndex MirrorVertical(uint16_t addr)
 	return ret;
 }
 
-NametableIndex MirrorHorizontal(uint16_t addr)
+NametableIndex mirror_horizontal(uint16_t addr)
 {
 	NametableIndex ret;
 	ret.addr = addr & 0x3FF;
@@ -38,7 +38,7 @@ NametableIndex MirrorHorizontal(uint16_t addr)
 	return ret;
 }
 
-NametableIndex MirrorOneScreenLower(uint16_t addr)
+NametableIndex mirror_one_screen_lower(uint16_t addr)
 {
 	NametableIndex ret;
 	ret.addr = addr & 0x3FF;
@@ -46,7 +46,7 @@ NametableIndex MirrorOneScreenLower(uint16_t addr)
 	return ret;
 }
 
-NametableIndex MirrorOneScreenUpper(uint16_t addr)
+NametableIndex mirror_one_screen_upper(uint16_t addr)
 {
 	NametableIndex ret;
 	ret.addr = addr & 0x3FF;

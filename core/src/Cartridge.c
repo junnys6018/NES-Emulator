@@ -36,19 +36,19 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 		switch (mapperID)
 		{
 		case 0:
-			m000LoadFromFile(&header, cart, file);
+			m000_load_from_file(&header, cart, file);
 			break;
 		case 1:
-			m001LoadFromFile(&header, cart, file);
+			m001_load_from_file(&header, cart, file);
 			break;
 		case 2:
-			m002LoadFromFile(&header, cart, file);
+			m002_load_from_file(&header, cart, file);
 			break;
 		case 3:
-			m003LoadFromFile(&header, cart, file);
+			m003_load_from_file(&header, cart, file);
 			break;
 		case 4:
-			m004LoadFromFile(&header, cart, file, &((Nes*)nes)->cpu);
+			m004_load_from_file(&header, cart, file, &((Nes*)nes)->cpu);
 			break;
 		default:
 			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);
@@ -59,7 +59,7 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 	// My custom rom format, for now this format has a 16 byte header, then 64KB of data for cpu memory
 	else if (c[0] == 'J' && c[1] == 'U' && c[2] == 'N' && c[3] == 0x1A)
 	{
-		mJUNLoadFromFile(cart, file);
+		mjun_load_from_file(cart, file);
 	}
 	else
 	{
@@ -77,19 +77,19 @@ void free_cartridge(Cartridge* cart)
 	switch (cart->mapperID)
 	{
 	case 0:
-		m000Free(cart->mapper);
+		m000_free(cart->mapper);
 		break;
 	case 1:
-		m001Free(cart->mapper);
+		m001_free(cart->mapper);
 		break;
 	case 2:
-		m002Free(cart->mapper);
+		m002_free(cart->mapper);
 		break;
 	case 3:
-		m003Free(cart->mapper);
+		m003_free(cart->mapper);
 		break;
 	case 4:
-		m004Free(cart->mapper);
+		m004_free(cart->mapper);
 		break;
 	case 767:
 		free(cart->mapper);

@@ -22,10 +22,10 @@ typedef struct timeval timepoint;
 
 #include <stdint.h>
 
-void GetTime(timepoint* tp);
-float GetElapsedTimeMicro(timepoint* beg, timepoint* end);
-float GetElapsedTimeMilli(timepoint* beg, timepoint* end);
+void get_time(timepoint* tp);
+float get_elapsed_time_micro(timepoint* beg, timepoint* end);
+float get_elapsed_time_milli(timepoint* beg, timepoint* end);
 
-void SleepMicro(uint64_t usec);
+void sleep_micro(uint64_t usec);
 
 #endif // ! TIMER_H

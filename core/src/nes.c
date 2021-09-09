@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-int InitNES(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
+int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
 {
 	memset(nes, 0, sizeof(Nes));
 	if (filepath)
@@ -20,14 +20,14 @@ int InitNES(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
 		memset(&nes->cart, 0, sizeof(nes->cart));
 		nes->cart.mapperID = 767;
 
-		nes->cart.CPUReadCartridge = mJUNCPUReadCartridge;
-		nes->cart.CPUWriteCartridge = mJUNCPUWriteCartridge;
+		nes->cart.CPUReadCartridge = mjun_cpu_read_cartridge;
+		nes->cart.CPUWriteCartridge = mjun_cpu_write_cartridge;
 
-		nes->cart.PPUReadCartridge = mJUNPPUReadCartridge;
-		nes->cart.PPUPeakCartridge = mJUNPPUReadCartridge;
-		nes->cart.PPUWriteCartridge = mJUNPPUWriteCartridge;
+		nes->cart.PPUReadCartridge = mjun_ppu_read_cartridge;
+		nes->cart.PPUPeakCartridge = mjun_ppu_read_cartridge;
+		nes->cart.PPUWriteCartridge = mjun_ppu_write_cartridge;
 
-		nes->cart.PPUMirrorNametable = mJUNPPUMirrorNametable;
+		nes->cart.PPUMirrorNametable = mjun_ppu_mirror_nametable;
 
 		MapperJUN* map = malloc(sizeof(MapperJUN));
 		assert(map);
@@ -50,18 +50,18 @@ int InitNES(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
 
 	nes->apu.cpu = &nes->cpu;
 
-	NESReset(nes);
+	reset_nes(nes);
 
 	return 0;
 }
 
-void NESDestroy(Nes* nes)
+void destroy_nes(Nes* nes)
 {
 	free_cartridge(&nes->cart);
 	memset(nes, 0, sizeof(Nes));
 }
 
-void NESReset(Nes* nes)
+void reset_nes(Nes* nes)
 {
 	nes->system_clock = 0;
 

@@ -41,7 +41,7 @@ typedef struct
 	uint16_t CHR_banks;
 } Mapper001;
 
-void m001Free(Mapper001* mapper);
-void m001LoadFromFile(Header* header, Cartridge* cart, FILE* file);
+void m001_free(Mapper001* mapper);
+void m001_load_from_file(Header* header, Cartridge* cart, FILE* file);
 
-#endif // !MAPPER_001_H
+#endif

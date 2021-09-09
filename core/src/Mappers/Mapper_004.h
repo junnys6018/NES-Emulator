@@ -90,7 +90,7 @@ typedef struct
 	uint8_t right_pt[4096];
 } Mapper004;
 
-void m004Free(Mapper004* mapper);
-void m004LoadFromFile(Header* header, Cartridge* cart, FILE* file, State6502* cpu);
+void m004_free(Mapper004* mapper);
+void m004_load_from_file(Header* header, Cartridge* cart, FILE* file, State6502* cpu);
 
-#endif // !MAPPER_004_H
+#endif

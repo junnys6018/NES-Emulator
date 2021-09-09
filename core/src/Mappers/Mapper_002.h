@@ -22,7 +22,7 @@ typedef struct
 	bool chr_is_ram;
 } Mapper002;
 
-void m002Free(Mapper002* mapper);
-void m002LoadFromFile(Header* header, Cartridge* cart, FILE* file);
+void m002_free(Mapper002* mapper);
+void m002_load_from_file(Header* header, Cartridge* cart, FILE* file);
 
-#endif // !MAPPER_002_H
+#endif

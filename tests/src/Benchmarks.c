@@ -4,76 +4,76 @@
 #include <timer.h>
 #include <stdio.h>
 
-void Run6502Benchmark()
+void run_6502_benchmark()
 {
 	Nes nes;
-	InitNES(&nes, "roms/6502_functional_test.bin", NULL);
+	initialize_nes(&nes, "roms/6502_functional_test.bin", NULL);
 
 	int NUM = 100000000;
 	timepoint beg, end;
-	GetTime(&beg);
+	get_time(&beg);
 	for (int i = 0; i < NUM; i++)
 	{
 		clock_6502(&nes.cpu);
 	}
-	GetTime(&end);
-	float time = GetElapsedTimeMicro(&beg, &end);
+	get_time(&end);
+	float time = get_elapsed_time_micro(&beg, &end);
 	float frequency_MHZ = (float)NUM / time;
 
 	printf("[6502 BENCHMARK] Max clock speed: %.5f MHz (1.789773 MHz Required)\n", frequency_MHZ);
 
-	NESDestroy(&nes);
+	destroy_nes(&nes);
 }
 
-void Run2C02Benchmark()
+void run_2C02_benchmark()
 {
 	Nes nes;
-	InitNES(&nes, "roms/palette.nes", NULL);
+	initialize_nes(&nes, "roms/palette.nes", NULL);
 
 	nes.ppu.PPUMASK.reg = 0x18; // enable all rendering
 
 	int NUM = 100000000;
 	timepoint beg, end;
-	GetTime(&beg);
+	get_time(&beg);
 	for (int i = 0; i < NUM; i++)
 	{
 		clock_2C02(&nes.ppu);
 	}
-	GetTime(&end);
-	float time = GetElapsedTimeMicro(&beg, &end);
+	get_time(&end);
+	float time = get_elapsed_time_micro(&beg, &end);
 	float frequency_MHZ = (float)NUM / time;
 
 	printf("[2C02 BENCHMARK] Max clock speed: %.5f MHz (5.36931 MHz Required)\n", frequency_MHZ);
 
-	NESDestroy(&nes);
+	destroy_nes(&nes);
 }
 
-void RunNESBenchmark()
+void run_nes_benchmark()
 {
 	Nes nes;
-	InitNES(&nes, "roms/SuperMarioBros.nes", NULL);
+	initialize_nes(&nes, "roms/SuperMarioBros.nes", NULL);
 
 	int NUM = 100000000;
 	timepoint beg, end;
-	GetTime(&beg);
+	get_time(&beg);
 	for (int i = 0; i < NUM; i++)
 	{
 		clock_nes_cycle(&nes);
 	}
-	GetTime(&end);
-	float time = GetElapsedTimeMicro(&beg, &end);
+	get_time(&end);
+	float time = get_elapsed_time_micro(&beg, &end);
 	float frequency_MHZ = (float)NUM / time;
 
 	printf("[NES BENCHMARK] Max clock speed: %.5f MHz (5.36931 MHz Required)\n", frequency_MHZ);
 
 
-	NESDestroy(&nes);
+	destroy_nes(&nes);
 }
 
 
-void RunAllBenchmarks()
+void run_all_benchmarks()
 {
-	Run6502Benchmark();
-	Run2C02Benchmark();
-	RunNESBenchmark();
+	run_6502_benchmark();
+	run_2C02_benchmark();
+	run_nes_benchmark();
 }

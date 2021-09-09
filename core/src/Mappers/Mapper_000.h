@@ -21,7 +21,7 @@ typedef struct
 	uint16_t PRG_ROM_Banks;
 } Mapper000;
 
-void m000Free(Mapper000* mapper);
-void m000LoadFromFile(Header* header, Cartridge* cart, FILE* file);
+void m000_free(Mapper000* mapper);
+void m000_load_from_file(Header* header, Cartridge* cart, FILE* file);
 
-#endif // !MAPPER_000_H
+#endif

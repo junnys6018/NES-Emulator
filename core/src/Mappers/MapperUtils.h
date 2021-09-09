@@ -7,9 +7,9 @@ typedef enum
 	ONE_SCREEN_LOWER, ONE_SCREEN_UPPER, VERTICAL, HORIZONTAL, FOUR_SCREEN
 } MirrorMode;
 
-NametableIndex MirrorVertical(uint16_t addr);
-NametableIndex MirrorHorizontal(uint16_t addr);
-NametableIndex MirrorOneScreenLower(uint16_t addr);
-NametableIndex MirrorOneScreenUpper(uint16_t addr);
+NametableIndex mirror_vertical(uint16_t addr);
+NametableIndex mirror_horizontal(uint16_t addr);
+NametableIndex mirror_one_screen_lower(uint16_t addr);
+NametableIndex mirror_one_screen_upper(uint16_t addr);
 
-#endif // !MAPPER_UTILS_H
+#endif

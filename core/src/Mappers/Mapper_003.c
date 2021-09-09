@@ -1,7 +1,7 @@
 #include "Mapper_003.h"
 #include <string.h>
 
-uint8_t m003CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
+uint8_t m003_cpu_read_cartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = (addr >= 0x4020 && addr <= 0xFFFF);
 
@@ -15,7 +15,7 @@ uint8_t m003CPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 	return 0;
 }
 
-void m003CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
+void m003_cpu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = (addr >= 0x4020 && addr <= 0xFFFF);
 
@@ -32,7 +32,7 @@ void m003CPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* w
 	}
 }
 
-uint8_t m003PPUReadCartridge(Cartridge* cart, uint16_t addr)
+uint8_t m003_ppu_read_cartridge(Cartridge* cart, uint16_t addr)
 {
 	Mapper003* map003 = (Mapper003*)cart->mapper;
 
@@ -40,7 +40,7 @@ uint8_t m003PPUReadCartridge(Cartridge* cart, uint16_t addr)
 	return map003->CHR[index];
 }
 
-void m003PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
+void m003_ppu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
 	Mapper003* map003 = (Mapper003*)cart->mapper;
 	if (map003->chr_is_ram)
@@ -50,35 +50,35 @@ void m003PPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 	}
 }
 
-NametableIndex m003PPUMirrorNametable(void* mapper, uint16_t addr)
+NametableIndex m003_ppu_mirror_nametable(void* mapper, uint16_t addr)
 {
 	Mapper003* map003 = (Mapper003*)mapper;
 	switch (map003->mirrorMode)
 	{
 	case HORIZONTAL:
-		return MirrorHorizontal(addr);
+		return mirror_horizontal(addr);
 	case VERTICAL:
-		return MirrorVertical(addr);
+		return mirror_vertical(addr);
 	}
 }
 
-void m003Free(Mapper003* mapper)
+void m003_free(Mapper003* mapper)
 {
 	free(mapper->PRG_ROM);
 	free(mapper->CHR);
 	free(mapper);
 }
 
-void m003LoadFromFile(Header* header, Cartridge* cart, FILE* file)
+void m003_load_from_file(Header* header, Cartridge* cart, FILE* file)
 {
-	cart->CPUReadCartridge = m003CPUReadCartridge;
-	cart->CPUWriteCartridge = m003CPUWriteCartridge;
+	cart->CPUReadCartridge = m003_cpu_read_cartridge;
+	cart->CPUWriteCartridge = m003_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = m003PPUReadCartridge;
-	cart->PPUPeakCartridge = m003PPUReadCartridge;
-	cart->PPUWriteCartridge = m003PPUWriteCartridge;
+	cart->PPUReadCartridge = m003_ppu_read_cartridge;
+	cart->PPUPeakCartridge = m003_ppu_read_cartridge;
+	cart->PPUWriteCartridge = m003_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = m003PPUMirrorNametable;
+	cart->PPUMirrorNametable = m003_ppu_mirror_nametable;
 
 	Mapper003* map = malloc(sizeof(Mapper003));
 	assert(map);

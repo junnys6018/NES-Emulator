@@ -20,8 +20,8 @@ typedef struct
 	int push_index;
 } CheatCodeSystem;
 
-void PushCheatCode(CheatCodeSystem* sys, char* code);
-void RemoveCheatCode(CheatCodeSystem* sys, int index);
-uint8_t CheatCodeReadSystem(CheatCodeSystem* sys, uint16_t addr, uint8_t compare, bool* read);
+void push_cheat_code(CheatCodeSystem* sys, char* code);
+void remove_cheat_code(CheatCodeSystem* sys, int index);
+uint8_t cheat_code_read_system(CheatCodeSystem* sys, uint16_t addr, uint8_t compare, bool* read);
 
-#endif // !CHEAT_CODE_H
+#endif

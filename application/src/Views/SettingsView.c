@@ -30,14 +30,14 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 		char file[256];
 		if (OpenFileDialog(file, 256) == 0)
 		{
-			NESDestroy(nes);
-			if (InitNES(nes, file, SetPatternTable) != 0)
+			destroy_nes(nes);
+			if (initialize_nes(nes, file, SetPatternTable) != 0)
 			{
 				// Failed to load rom
 				settings->mode = MODE_NOT_RUNNING;
 
 				// ...so load a dummy one
-				InitNES(nes, NULL, SetPatternTable);
+				initialize_nes(nes, NULL, SetPatternTable);
 			}
 			// Successfully loaded rom
 			else if (settings->mode == MODE_NOT_RUNNING)
@@ -60,7 +60,7 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 	if (GuiAddButton("Reset", &span))
 	{
 		ClearTexture(&scr->scr);
-		NESReset(nes);
+		reset_nes(nes);
 		SetAPUChannels(ch); // Configue APU channels to current settings
 	}
 	//span.y += padding + wm->button_h;

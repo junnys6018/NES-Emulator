@@ -9,8 +9,8 @@
 
 // Forward declaration to avoid circular dependency
 struct State6502;
-void IRQ_Set(struct State6502* cpu, int index);
-void IRQ_Clear(struct State6502* cpu, int index);
+void irq_set(struct State6502* cpu, int index);
+void irq_clear(struct State6502* cpu, int index);
 
 enum
 {
@@ -99,8 +99,8 @@ typedef struct
 	float last_filter;
 } AudioWindow;
 
-void WindowInit(AudioWindow* win);
-void WindowAddSample(AudioWindow* win, float sample);
+void initialize_window(AudioWindow* win);
+void window_add_sample(AudioWindow* win, float sample);
 
 // "2A03" APU implementation
 typedef struct
@@ -300,6 +300,6 @@ uint8_t apu_read(State2A03* apu, uint16_t addr);
 
 void apu_channel_set(State2A03* apu, int channel, bool en);
 
-void AudioPrecompute();
+void precompute_audio();
 
 #endif

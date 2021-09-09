@@ -161,18 +161,18 @@ void power_on_6502(State6502* cpu)
 	cpu->dma_transfer_cycles = 0;
 }
 
-void NMI(State6502* cpu)
+void nmi(State6502* cpu)
 {
 	cpu->nmi_interrupt = true;
 }
 
-void IRQ_Set(State6502* cpu, int index)
+void irq_set(State6502* cpu, int index)
 {
 	assert(index < 8);
 	cpu->irq_interrupt |= (1 << index);
 }
 
-void IRQ_Clear(State6502* cpu, int index)
+void irq_clear(State6502* cpu, int index)
 {
 	assert(index < 8);
 	cpu->irq_interrupt &= ~(1 << index);

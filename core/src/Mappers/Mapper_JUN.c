@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-uint8_t mJUNCPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
+uint8_t mjun_cpu_read_cartridge(Cartridge* cart, uint16_t addr, bool* read)
 {
 	*read = true;
 	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
@@ -10,7 +10,7 @@ uint8_t mJUNCPUReadCartridge(Cartridge* cart, uint16_t addr, bool* read)
 	return mapJUN->PRG_RAM[addr];
 }
 
-void mJUNCPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
+void mjun_cpu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* wrote)
 {
 	*wrote = true;
 	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
@@ -18,36 +18,36 @@ void mJUNCPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool* w
 	mapJUN->PRG_RAM[addr] = data;
 }
 
-uint8_t mJUNPPUReadCartridge(Cartridge* cart, uint16_t addr)
+uint8_t mjun_ppu_read_cartridge(Cartridge* cart, uint16_t addr)
 {
 	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
 	return mapJUN->CHR[addr];
 }
 
-void mJUNPPUWriteCartridge(Cartridge* cart, uint16_t addr, uint8_t data)
+void mjun_ppu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 {
 	MapperJUN* mapJUN = (MapperJUN*)cart->mapper;
 	mapJUN->CHR[addr] = data;
 }
 
 // Fixed horizontal mirroing
-NametableIndex mJUNPPUMirrorNametable(void* mapper, uint16_t addr)
+NametableIndex mjun_ppu_mirror_nametable(void* mapper, uint16_t addr)
 {
-	return MirrorHorizontal(addr);
+	return mirror_horizontal(addr);
 }
 
-void mJUNLoadFromFile(Cartridge* cart, FILE* file)
+void mjun_load_from_file(Cartridge* cart, FILE* file)
 {
 	cart->mapperID = 767; // Assign mapperID 767 to my format
 
-	cart->CPUReadCartridge = mJUNCPUReadCartridge;
-	cart->CPUWriteCartridge = mJUNCPUWriteCartridge;
+	cart->CPUReadCartridge = mjun_cpu_read_cartridge;
+	cart->CPUWriteCartridge = mjun_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = mJUNPPUReadCartridge;
-	cart->PPUPeakCartridge = mJUNPPUReadCartridge;
-	cart->PPUWriteCartridge = mJUNPPUWriteCartridge;
+	cart->PPUReadCartridge = mjun_ppu_read_cartridge;
+	cart->PPUPeakCartridge = mjun_ppu_read_cartridge;
+	cart->PPUWriteCartridge = mjun_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = mJUNPPUMirrorNametable;
+	cart->PPUMirrorNametable = mjun_ppu_mirror_nametable;
 
 	MapperJUN* map = malloc(sizeof(MapperJUN));
 	assert(map);

@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
 	// Initialize all the things
 	LoadStartupOptions();
-	AudioPrecompute();
+	precompute_audio();
 	InitSDLAudio();
 
 	

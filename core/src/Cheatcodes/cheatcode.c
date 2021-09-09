@@ -1,7 +1,7 @@
 #include "cheatcode.h"
 #include <string.h>
 
-uint8_t CheatCodeLUT(char ch)
+uint8_t cheat_code_lut(char ch)
 {
 	switch (ch)
 	{
@@ -42,7 +42,7 @@ uint8_t CheatCodeLUT(char ch)
 	}
 }
 
-int InitCheatCode(CheatCode* cheat, char* code)
+int initialize_cheat_code(CheatCode* cheat, char* code)
 {
 	int len = strlen(code);
 
@@ -59,7 +59,7 @@ int InitCheatCode(CheatCode* cheat, char* code)
 	for (int i = 0; i < len; i++)
 	{
 		cheat->code[i] = code[i];
-		n[i] = CheatCodeLUT(code[i]);
+		n[i] = cheat_code_lut(code[i]);
 		if (n[i] == 0x10)
 			return 1; // failed
 	}
@@ -79,25 +79,25 @@ int InitCheatCode(CheatCode* cheat, char* code)
 	return 0;
 }
 
-uint8_t CheatCodeRead(CheatCode* cheat, uint16_t addr, uint8_t compare, bool* read)
+uint8_t cheat_code_read(CheatCode* cheat, uint16_t addr, uint8_t compare, bool* read)
 {
 	*read = (cheat->addr == addr) && (!cheat->use_compare || cheat->compare == compare);
 	
 	return cheat->data;
 }
 
-void PushCheatCode(CheatCodeSystem* sys, char* code)
+void push_cheat_code(CheatCodeSystem* sys, char* code)
 {
 	if (sys->push_index <= 16)
 	{
-		if (InitCheatCode(&sys->codes[sys->push_index], code) == 0)
+		if (initialize_cheat_code(&sys->codes[sys->push_index], code) == 0)
 		{
 			sys->push_index++;
 		}
 	}
 }
 
-void RemoveCheatCode(CheatCodeSystem* sys, int index)
+void remove_cheat_code(CheatCodeSystem* sys, int index)
 {
 	if (index >= 0 && index < sys->push_index)
 	{
@@ -109,12 +109,12 @@ void RemoveCheatCode(CheatCodeSystem* sys, int index)
 	}
 }
 
-uint8_t CheatCodeReadSystem(CheatCodeSystem* sys, uint16_t addr, uint8_t compare, bool* read)
+uint8_t cheat_code_read_system(CheatCodeSystem* sys, uint16_t addr, uint8_t compare, bool* read)
 {
 	*read = false;
 	for (int i = 0; i < sys->push_index; i++)
 	{
-		int data = CheatCodeRead(&sys->codes[i], addr, compare, read);
+		int data = cheat_code_read(&sys->codes[i], addr, compare, read);
 		if (*read)
 			return data;
 	}

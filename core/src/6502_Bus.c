@@ -86,7 +86,7 @@ uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 		}
 	}
 
-	uint8_t cheat_read_byte = CheatCodeReadSystem(&bus->cheats, addr, ret, &read);
+	uint8_t cheat_read_byte = cheat_code_read_system(&bus->cheats, addr, ret, &read);
 	if (read)
 		return cheat_read_byte;
 

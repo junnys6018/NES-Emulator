@@ -76,9 +76,9 @@ typedef struct State6502
 int clock_6502(State6502* cpu);
 void reset_6502(State6502* cpu);
 void power_on_6502(State6502* cpu);
-void NMI(State6502* cpu);
-void IRQ_Set(State6502* cpu, int index);
-void IRQ_Clear(State6502* cpu, int index);
+void nmi(State6502* cpu);
+void irq_set(State6502* cpu, int index);
+void irq_clear(State6502* cpu, int index);
 
 void dissassemble(State6502* cpu, uint16_t addr, int* size, char line[128]);
 

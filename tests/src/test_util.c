@@ -5,7 +5,7 @@
 
 #include "nes.h"
 
-void EmulateUntilHalt(Nes* nes)
+void emulate_until_halt(Nes* nes)
 {
 	// Used to detect if cpu has halted
 	uint16_t old_PC[32];
@@ -31,30 +31,30 @@ void EmulateUntilHalt(Nes* nes)
 	}
 }
 
-char* GetFileName(const char* filepath)
+char* get_file_name(const char* filepath)
 {
 	return strrchr(filepath, '/') + 1;
 }
 
-int TestBlarggRom(const char* name, uint16_t result_addr)
+int test_blargg_rom(const char* name, uint16_t result_addr)
 {
 	Nes nes;
-	InitNES(&nes, name, NULL);
+	initialize_nes(&nes, name, NULL);
 
-	EmulateUntilHalt(&nes);
+	emulate_until_halt(&nes);
 
 	// Check for success or failure
 	uint8_t result = cpu_bus_read(&nes.cpu_bus, result_addr);
 	if (result == 1)
 	{
-		printf("Passed %s Test\n", GetFileName(name));
+		printf("Passed %s Test\n", get_file_name(name));
 	}
 	else
 	{
-		printf("Failed %s Test [%i]\n", GetFileName(name), result);
+		printf("Failed %s Test [%i]\n", get_file_name(name), result);
 	}
 
-	NESDestroy(&nes);
+	destroy_nes(&nes);
 
 	return result == 1 ? 0 : 1;
 }

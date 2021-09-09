@@ -183,7 +183,7 @@ void ShutdownOpengl()
 void InitApplication(char* rom)
 {
 	ac.nes = malloc(sizeof(Nes));
-	int result = InitNES(ac.nes, rom, SetPatternTable);
+	int result = initialize_nes(ac.nes, rom, SetPatternTable);
 	if (rom && result == 0)
 	{
 		ac.m_settings.mode = MODE_PLAY;
@@ -452,7 +452,7 @@ void ApplicationGameLoop()
 	bool running = true;
 	while (running)
 	{
-		GetTime(&beg);
+		get_time(&beg);
 		SetNesKeys();
 
 		if (ac.m_settings.mode == MODE_PLAY)
@@ -499,8 +499,8 @@ void ApplicationGameLoop()
 			}
 		}
 
-		GetTime(&end);
-		total_time += GetElapsedTimeMilli(&beg, &end);
+		get_time(&end);
+		total_time += get_elapsed_time_milli(&beg, &end);
 		curr_frame++;
 		if (curr_frame == window)
 		{
@@ -510,10 +510,10 @@ void ApplicationGameLoop()
 			curr_frame = 0;
 		}
 
-		float elapsed = GetElapsedTimeMicro(&beg, &end);
+		float elapsed = get_elapsed_time_micro(&beg, &end);
 		if (elapsed < 16666) // 60 FPS
 		{
-			SleepMicro((uint64_t)(16666 - elapsed));
+			sleep_micro((uint64_t)(16666 - elapsed));
 		}
 	}
 }

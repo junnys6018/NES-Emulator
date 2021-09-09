@@ -4,7 +4,7 @@
 
 int main(int argc, char** argv)
 {
-	RunAll6502Tests();
-	RunAll2C02Tests();
-	RunAllBenchmarks();
+	run_all_6502_tests();
+	run_all_2C02_tests();
+	run_all_benchmarks();
 }
