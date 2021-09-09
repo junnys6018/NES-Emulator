@@ -15,7 +15,7 @@ https://junnys6018.github.io/nes/
 This emulator has a real time waveform visualisation of each channel, (square 1 and 2, triangle and noise channel).
 Video demo can be found [here](https://youtu.be/fevGlhVMHI8)
 
-## Installation 
+## Building 
 - Clone repo with `git clone --recursive https://github.com/junnys6018/NES-Emulator.git`
 - If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules
 - Run `cd Nes-Emulator/scripts`, then run `./GenerateLinuxProjects.sh` or `./GenerateWindowsProjects.bat`
@@ -62,6 +62,7 @@ Right  | Right arrow
 
 ### Controller
 Other controllers may work but are untested
+
 Button | Key (PS4)   | Key (Xbox)  
 -------|-------------|-------------
 A      | X           | A           
@@ -74,6 +75,7 @@ Left   | D-pad Left  | D-pad Left
 Right  | D-pad Right | D-pad Right 
   
 This emulator has the abilty to pause the emulation and step through it, here are the controls 
+
 Key    | Action         
 -------|-----------------------------
 Space  | Emulate one CPU instruction           
