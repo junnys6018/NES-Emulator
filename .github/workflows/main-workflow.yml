@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Download test artifact
         uses: actions/download-artifact@v2.0.9
