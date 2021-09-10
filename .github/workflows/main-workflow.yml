@@ -1,0 +1,103 @@
+name: CI
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      
+      - name: Generate Project files
+        run: scripts/GenerateWindowsProjects.bat
+        
+      - name: Build
+        run: cmake --build build --config ${{matrix.configuration}}
+        
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-${{matrix.configuration}}-tests
+          path: ./build/tests/${{matrix.configuration}}/tests.exe
+      
+  test-win:
+    needs: build-win
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Download test artifact
+        uses: actions/download-artifact@v2.0.9
+        with:
+          name: windows-${{matrix.configuration}}-tests
+          path: tests
+      
+      - name: show files
+        run: dir tests
+
+      - name: Run Tests
+        run: .\tests.exe
+        working-directory: tests
+
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       configuration: [Debug, Release]
+    
+  #   steps:
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v2
+  #       with:
+  #         submodules: recursive
+      
+  #     - name: Generate Project files
+  #       run: scripts/GenerateLinuxProjects.sh
+        
+  #     - name: Build
+  #       run: cmake --build build/${{matrix.configuration}}
+        
+  #     - name: Upload test artifact
+  #       uses: actions/upload-artifact@v2
+  #       with:
+  #         name: linux-${{matrix.configuration}}-tests
+  #         path: ./build/${{matrix.configuration}}/tests/tests
+
+  # test-linux:
+  #   needs: build-linux
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       configuration: [Debug, Release]
+        
+  #   steps:
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v2
+
+  #     - name: Download test artifact
+  #       uses: actions/download-artifact@v2.0.9
+  #       with:
+  #         name: linux-${{matrix.configuration}}-tests
+  #         path: tests
+
+  #     - run: ls -laR tests
+
+  #     - name: Make test executable
+  #       run: chmod +x tests
+  #       working-directory: tests
+
+  #     - name: Run Tests
+  #       run: ./tests
+  #       working-directory: tests

@@ -46,6 +46,7 @@ if (WIN32)
 else()
     add_custom_command(TARGET application POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E $<$<CONFIG:Debug>:echo> cp $<TARGET_FILE:application> ${CMAKE_CURRENT_SOURCE_DIR}/NES-Emulator)
+    target_link_libraries(application PUBLIC m dl)
 endif()
 
 # set working dir when debugging on visual studio
