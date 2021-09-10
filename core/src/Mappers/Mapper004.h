@@ -92,5 +92,7 @@ typedef struct
 
 void m004_free(Mapper004* mapper);
 void m004_load_from_file(Header* header, Cartridge* cart, FILE* file, State6502* cpu);
+int m004_save_game(Cartridge* cart, const char* savefile, char error_string[256]);
+int m004_load_save(Cartridge* cart, const char* savefile, char error_string[256]);
 
 #endif
