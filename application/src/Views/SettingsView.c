@@ -17,6 +17,7 @@ void SetAPUChannels(ChannelEnableModel* ch)
 void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* settings)
 {
 	Nes* nes = GetApplicationNes();
+	Cartridge* cart = &nes->cart;
 	GuiMetrics* gm = GetGuiMetrics();
 	WindowMetrics* wm = GetWindowMetrics();
 	int xoff = wm->db_x;
@@ -30,9 +31,10 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 		char file[256];
 		if (OpenFileDialog(file, 256) == 0)
 		{
-			destroy_nes(nes);
-			char error_string[256];
+			if (settings->mode != MODE_NOT_RUNNING)
+				destroy_nes(nes);
 
+			char error_string[256];
 			if (initialize_nes(nes, file, SetPatternTable, error_string) != 0)
 			{
 				printf("[ERROR]: %s\n", error_string);
@@ -67,14 +69,41 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 		reset_nes(nes);
 		SetAPUChannels(ch); // Configue APU channels to current settings
 	}
-	//span.y += padding + wm->button_h;
-	//if (GuiAddButton("Save Game", &span))
-	//{
-	//}
-	//span.y += padding + wm->button_h;
-	//if (GuiAddButton("Restore Game", &span))
-	//{
-	//}
+
+	span.y += padding + wm->button_h;
+	if (GuiAddButton("Save Game", &span))
+	{
+		if (settings->mode != MODE_NOT_RUNNING)
+		{
+			char error_string[256];
+			char* save_location = get_default_save_location(cart->cartridge_file);
+			int result = save_game(cart, save_location, error_string);
+			if (result == 0)
+				printf("[INFO]: saved to %s\n", save_location);
+			else if (result == 1)
+				printf("[ERROR]: %s\n", error_string);
+
+			free(save_location);
+		}
+	}
+
+	span.y += padding + wm->button_h;
+	if (GuiAddButton("Load Save...", &span))
+	{
+		if (settings->mode != MODE_NOT_RUNNING)
+		{
+			char file[256];
+			if (OpenFileDialog(file, 256) == 0)
+			{
+				char error_string[256];
+				if (load_save(cart, file, error_string) == 0)
+					reset_nes(nes);
+				else
+					printf("[ERROR]: %s\n", error_string);
+			}
+		}
+	}
+
 	span.y += padding + wm->button_h;
 
 	GuiAddCheckbox("Draw Grid", span.x, span.y, &settings->draw_grid);
@@ -96,10 +125,10 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 
 	SetTextOrigin(xoff + padding, span.y);
 	RenderText("ROM Infomation", cyan);
-	Header header = nes->cart.header;
+	Header header = cart->header;
 	char buf[64];
 
-	sprintf(buf, "Mapper        - %u", nes->cart.mapper_id);
+	sprintf(buf, "Mapper        - %u", cart->mapper_id);
 	RenderText(buf, white);
 
 	int PRG_banks = ((uint16_t)header.PRGROM_MSB << 8) | (uint16_t)header.PRGROM_LSB;

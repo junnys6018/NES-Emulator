@@ -250,3 +250,47 @@ void m001_load_from_file(Header* header, Cartridge* cart, FILE* file)
 	// Set the mirror mode
 	map->control.bits.M = header->mirror_type == 1 ? VERTICAL : HORIZONTAL;
 }
+
+int m001_save_game(Cartridge* cart, const char* savefile, char error_string[256])
+{
+	FILE* file = fopen(savefile, "wb");
+	if (!file)
+	{
+		if (error_string)
+			sprintf(error_string, "failed to open %s", savefile);
+		return 1;
+	}
+	Mapper001* map = (Mapper001*)cart->mapper;
+	fwrite(map->PRG_RAM, 8 * 1024, 1, file);
+	fclose(file);
+	return 0;
+}
+
+int m001_load_save(Cartridge* cart, const char* savefile, char error_string[256])
+{
+	FILE* file = fopen(savefile, "rb");
+	if (!file)
+	{
+		if (error_string)
+			sprintf(error_string, "failed to open %s", savefile);
+		return 1;
+	}
+
+	// get size of file
+	fseek(file, 0, SEEK_END);
+	long size = ftell(file);
+	if (size != 8 * 1024)
+	{
+		fclose(file);
+		if (error_string)
+			sprintf(error_string, "invalid save file: %s", savefile);
+		return 1;
+	}
+	fseek(file, 0, SEEK_SET);
+
+	Mapper001* map = (Mapper001*)cart->mapper;
+	fread(map->PRG_RAM, 8 * 1024, 1, file);
+	fclose(file);
+	return 0;
+}
+

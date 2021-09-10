@@ -22,7 +22,6 @@ typedef struct
 	uint64_t system_clock;
 } Nes;
 
-// Passing NULL as filepath loads the nes into a "dummy state"
 // Each successful call to NESInit() must be paired with a destroy_nes() to free resources
 // If NESInit() fails (returns non zero) then destroy_nes() should NOT be called
 // Returns 0 on success; non zero on failure

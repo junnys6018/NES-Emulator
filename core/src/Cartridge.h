@@ -80,12 +80,18 @@ typedef struct
 	UPDATE_PATTERN_TABLE_CB update_pattern_table_cb;
 
 	void* mapper;
+	char* cartridge_file;
 } Cartridge;
 
 // Returns 0 on success; non zero on failure
 struct Nes;
 int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256]);
 void free_cartridge(Cartridge* cart);
+
+#define SAVE_NOT_SUPPORTED 2
+int save_game(Cartridge* cart, const char* savefile, char error_string[256]);
+int load_save(Cartridge* cart, const char* savefile, char error_string[256]);
+char* get_default_save_location(const char* rom_location);
 
 
 // Header utility functions

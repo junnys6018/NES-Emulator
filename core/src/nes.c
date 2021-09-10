@@ -1,8 +1,8 @@
 #include "nes.h"
 #include "Mappers/MapperJUN.h"
-#include <string.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
 {

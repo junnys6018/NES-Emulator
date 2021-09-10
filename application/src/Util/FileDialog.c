@@ -14,7 +14,7 @@ int OpenFileDialog(char* filepath, int size)
 	// use the contents of szFile to initialize itself.
 	ofn.lpstrFile[0] = '\0';
 	ofn.nMaxFile = size;
-	ofn.lpstrFilter = "All\0*.*\0Nes (.nes)\0*.nes\0";
+	ofn.lpstrFilter = "All\0*.*\0nes/sav\0*.nes;*.sav\0";
 	ofn.nFilterIndex = 2;
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 

@@ -1,37 +1,38 @@
 #include "Application.h"
 
-#include <SDL.h> 
 #include <glad/glad.h>
+
+#include <SDL.h>
 #include <SDL_opengl.h>
 
-#include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <stdio.h>
 
+#include "Audio.h"
+#include "ColorDefs.h"
+#include "GameController.h"
 #include "Gui.h"
 #include "StartupOptions.h"
-#include "ColorDefs.h"
 #include "Util/timer.h"
-#include "Audio.h"
-#include "GameController.h"
 
-#include "OpenGL/Debug.h"
-#include "OpenGL/Scanline.h"
 #include "OpenGL/BatchRenderer.h"
-#include "OpenGL/TextRenderer.h"
+#include "OpenGL/Debug.h"
 #include "OpenGL/LineRenderer.h"
+#include "OpenGL/Scanline.h"
+#include "OpenGL/TextRenderer.h"
 
 #include "Views/AboutView.h"
 #include "Views/ApuWaveView.h"
 #include "Views/MemoryView.h"
 #include "Views/NesStateView.h"
-#include "Views/SettingsView.h"
 #include "Views/NesView.h"
+#include "Views/SettingsView.h"
 
 #include "Models/ChannelEnableModel.h"
 #include "Models/NameTableModel.h"
-#include "Models/PaletteDataModel.h"
 #include "Models/NesScreenModel.h"
+#include "Models/PaletteDataModel.h"
 #include "Models/SettingsModel.h"
 
 ///////////////////////////
@@ -114,7 +115,6 @@ void CalculateWindowMetrics(int w, int h)
 	ac.wm.db_x = 2 * ac.wm.padding + ac.wm.nes_w;
 	ac.wm.db_y = ac.wm.padding;
 
-
 	ac.wm.db_w = w - 3 * ac.wm.padding - ac.wm.nes_w;
 	ac.wm.db_h = h - 2 * ac.wm.padding;
 
@@ -139,7 +139,7 @@ void CalculateWindowMetrics(int w, int h)
 	ac.wm.apu_osc_height = lroundf(0.1355f * h);
 }
 
-void InitOpengl(SDL_Window* window) 
+void InitOpengl(SDL_Window* window)
 {
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
@@ -184,19 +184,21 @@ void InitApplication(char* rom)
 {
 	char error_string[256];
 	ac.nes = malloc(sizeof(Nes));
+
 	int result = initialize_nes(ac.nes, rom, SetPatternTable, error_string);
-
 	if (result != 0)
-		printf("[ERROR]: %s\n", error_string);
-
-	if (rom && result == 0)
 	{
-		ac.m_settings.mode = MODE_PLAY;
+		printf("[ERROR]: %s\n", error_string);
+		ac.m_settings.mode = MODE_NOT_RUNNING;
 	}
 	else
 	{
-		ac.m_settings.mode = MODE_NOT_RUNNING;
+		ac.m_settings.mode = MODE_PLAY;
 	}
+
+	if (!rom)
+		ac.m_settings.mode = MODE_NOT_RUNNING;
+
 	ac.m_palette.pal = ac.nes->ppu_bus.palette;
 
 	StartupOptions* opt = GetStartupOptions();
@@ -212,7 +214,7 @@ void InitApplication(char* rom)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
-	
+
 	ac.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, flags);
 	if (!ac.win)
 	{
@@ -229,7 +231,7 @@ void InitApplication(char* rom)
 	GenerateTexture(&ac.m_nametable.right_nametable, 128, 128, NULL, GL_NEAREST, GL_RGB);
 	ClearTexture(&ac.m_nametable.right_nametable);
 
-	// And main screen 
+	// And main screen
 	GenerateTexture(&ac.m_nes_screen.scr, 256, 240, NULL, GL_NEAREST, GL_RGB);
 	ClearTexture(&ac.m_nes_screen.scr);
 

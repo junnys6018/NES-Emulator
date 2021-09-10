@@ -7,16 +7,28 @@
 #include "Mappers/MapperJUN.h"
 #include "Nes.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
+#include <sys/stat.h>
 
 // TODO: error handling for each mapper loading function
 
 int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
 {
 	Cartridge* cart = &((Nes*)nes)->cart;
+
+	cart->cartridge_file = malloc(strlen(filepath) + 1);
+	if (!cart->cartridge_file)
+	{
+		if (error_string)
+			sprintf(error_string, "%s", "memory allocation failed");
+
+		return 1;
+	}
+	strcpy(cart->cartridge_file, filepath);
+
 	cart->update_pattern_table_cb = callback;
 	FILE* file = fopen(filepath, "rb");
 	if (!file)
@@ -25,7 +37,7 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 			sprintf(error_string, "failed to open %s", filepath);
 		return 1;
 	}
-	
+
 	fread(&cart->header, sizeof(Header), 1, file);
 	Header header = cart->header;
 
@@ -73,11 +85,25 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 	}
 
 	fclose(file);
+
+	// check if a save file exists in the same location as the rom
+	char* save_location = get_default_save_location(filepath);
+	struct stat buffer;
+	if (stat(save_location, &buffer) == 0)
+	{
+		if (load_save(cart, save_location, NULL) == 0)
+		{
+			printf("[INFO]: loaded save file %s\n", save_location);
+		}
+	}
+
+	free(save_location);
 	return 0;
 }
 
 void free_cartridge(Cartridge* cart)
 {
+	free(cart->cartridge_file);
 	switch (cart->mapper_id)
 	{
 	case 0:
@@ -99,11 +125,77 @@ void free_cartridge(Cartridge* cart)
 		free(cart->mapper);
 		break;
 	default:
-		printf("[ERROR] Unknown mapper id, %i", cart->mapper_id);
+		printf("[ERROR] unknown mapper id %i", cart->mapper_id);
 		break;
 	}
 
 	memset(cart, 0, sizeof(Cartridge));
+}
+
+int save_game(Cartridge* cart, const char* savefile, char error_string[256])
+{
+	switch (cart->mapper_id)
+	{
+	// mappers without save states are captured here
+	case 0:
+	case 2:
+	case 3:
+	case 4:
+	case 767:
+		return SAVE_NOT_SUPPORTED;
+	case 1:
+		return m001_save_game(cart, savefile, error_string);
+	default:
+		if (error_string)
+			sprintf(error_string, "unknown mapper id %i", cart->mapper_id);
+		return 1;
+	}
+}
+
+int load_save(Cartridge* cart, const char* savefile, char error_string[256])
+{
+	switch (cart->mapper_id)
+	{
+	// mappers without save states are captured here
+	case 0:
+	case 2:
+	case 3:
+	case 4:
+	case 767:
+		return 0;
+	case 1:
+		return m001_load_save(cart, savefile, error_string);
+	default:
+		if (error_string)
+			sprintf(error_string, "unknown mapper id %i", cart->mapper_id);
+		return 1;
+	}
+}
+
+// path/to/file.nes     -> path/to/file.sav
+// path/to/file         -> path/to/file.sav
+// path.dir/to/file.nes -> path.dir/to/file.sav
+// path.dir/to/file     -> path.dir/to/file.sav
+// file.nes             -> file.sav
+// file                 -> file.sav
+char* get_default_save_location(const char* rom_location)
+{
+	int len = strlen(rom_location);
+	int idx = len - 1;
+	while (idx >= 0 && rom_location[idx] != '/' && rom_location[idx] != '\\' && rom_location[idx] != '.')
+		idx--;
+
+	int count;
+	if (rom_location[idx] == '/' || rom_location[idx] == '//' || idx == -1)
+		count = len;
+	else
+		count = idx;
+
+	char* save_location = malloc(count + 5); // 5 characters to append .sav\0
+	strncpy(save_location, rom_location, count);
+	strcpy(save_location + count, ".sav");
+
+	return save_location;
 }
 
 int ines_file_format(Header* header)
