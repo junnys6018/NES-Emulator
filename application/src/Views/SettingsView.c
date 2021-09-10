@@ -31,13 +31,17 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 		if (OpenFileDialog(file, 256) == 0)
 		{
 			destroy_nes(nes);
-			if (initialize_nes(nes, file, SetPatternTable) != 0)
+			char error_string[256];
+
+			if (initialize_nes(nes, file, SetPatternTable, error_string) != 0)
 			{
+				printf("[ERROR]: %s\n", error_string);
+
 				// Failed to load rom
 				settings->mode = MODE_NOT_RUNNING;
 
 				// ...so load a dummy one
-				initialize_nes(nes, NULL, SetPatternTable);
+				initialize_nes(nes, NULL, SetPatternTable, NULL);
 			}
 			// Successfully loaded rom
 			else if (settings->mode == MODE_NOT_RUNNING)

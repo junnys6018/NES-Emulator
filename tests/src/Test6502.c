@@ -11,7 +11,7 @@
 int run_6502_functional_test()
 {
 	Nes nes;
-	initialize_nes(&nes, "roms/6502_functional_test.bin", NULL);
+	initialize_nes(&nes, "roms/6502_functional_test.bin", NULL, NULL);
 
 	emulate_until_halt(&nes);
 
@@ -40,7 +40,7 @@ int run_6502_functional_test()
 int run_6502_interrupt_test()
 {
 	Nes nes;
-	initialize_nes(&nes, "roms/6502_interrupt_test.bin", NULL);
+	initialize_nes(&nes, "roms/6502_interrupt_test.bin", NULL, NULL);
 
 	const uint16_t feedback_register_addr = 0xBFFC; // Location of register used to feed interrupts into the cpu
 	uint8_t old_nmi = 0; // Used to detect a level change

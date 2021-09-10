@@ -4,12 +4,12 @@
 #include <assert.h>
 #include <stdlib.h>
 
-int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
+int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
 {
 	memset(nes, 0, sizeof(Nes));
 	if (filepath)
 	{
-		if (load_cartridge_from_file(nes, filepath, callback) != 0)
+		if (load_cartridge_from_file(nes, filepath, callback, error_string) != 0)
 		{
 			// Loading cart failed
 			return 1;

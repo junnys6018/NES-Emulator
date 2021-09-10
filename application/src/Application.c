@@ -182,8 +182,13 @@ void ShutdownOpengl()
 
 void InitApplication(char* rom)
 {
+	char error_string[256];
 	ac.nes = malloc(sizeof(Nes));
-	int result = initialize_nes(ac.nes, rom, SetPatternTable);
+	int result = initialize_nes(ac.nes, rom, SetPatternTable, error_string);
+
+	if (result != 0)
+		printf("[ERROR]: %s\n", error_string);
+
 	if (rom && result == 0)
 	{
 		ac.m_settings.mode = MODE_PLAY;

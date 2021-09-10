@@ -26,7 +26,7 @@ typedef struct
 // Each successful call to NESInit() must be paired with a destroy_nes() to free resources
 // If NESInit() fails (returns non zero) then destroy_nes() should NOT be called
 // Returns 0 on success; non zero on failure
-int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback);
+int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256]);
 void destroy_nes(Nes* nes);
 
 // Reset button on the NES

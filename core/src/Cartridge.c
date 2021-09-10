@@ -14,13 +14,15 @@
 
 // TODO: error handling for each mapper loading function
 
-int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
+int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
 {
 	Cartridge* cart = &((Nes*)nes)->cart;
 	cart->update_pattern_table_cb = callback;
 	FILE* file = fopen(filepath, "rb");
 	if (!file)
 	{
+		if (error_string)
+			sprintf(error_string, "failed to open %s", filepath);
 		return 1;
 	}
 	
@@ -51,7 +53,8 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 			m004_load_from_file(&header, cart, file, &((Nes*)nes)->cpu);
 			break;
 		default:
-			printf("[ERROR] Not Yet implemented mapper id %i\n", mapper_id);
+			if (error_string)
+				sprintf(error_string, "cannot load cartridge with mapper id %i", mapper_id);
 			fclose(file);
 			return 1;
 		}
@@ -63,7 +66,8 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 	}
 	else
 	{
-		printf("[ERROR] File %s unknown format\n", filepath);
+		if (error_string)
+			sprintf(error_string, "invalid header");
 		fclose(file);
 		return 1;
 	}

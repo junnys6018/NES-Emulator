@@ -39,7 +39,10 @@ char* get_file_name(const char* filepath)
 int test_blargg_rom(const char* name, uint16_t result_addr)
 {
 	Nes nes;
-	initialize_nes(&nes, name, NULL);
+	char error_string[256];
+
+	if (initialize_nes(&nes, name, NULL, error_string) != 0)
+		printf("[ERROR]: %s\n", error_string);
 
 	emulate_until_halt(&nes);
 

@@ -7,7 +7,7 @@
 void run_6502_benchmark()
 {
 	Nes nes;
-	initialize_nes(&nes, "roms/6502_functional_test.bin", NULL);
+	initialize_nes(&nes, "roms/6502_functional_test.bin", NULL, NULL);
 
 	int NUM = 100000000;
 	timepoint beg, end;
@@ -28,7 +28,7 @@ void run_6502_benchmark()
 void run_2C02_benchmark()
 {
 	Nes nes;
-	initialize_nes(&nes, "roms/palette.nes", NULL);
+	initialize_nes(&nes, "roms/palette.nes", NULL, NULL);
 
 	nes.ppu.PPUMASK.reg = 0x18; // enable all rendering
 
@@ -51,7 +51,7 @@ void run_2C02_benchmark()
 void run_nes_benchmark()
 {
 	Nes nes;
-	initialize_nes(&nes, "roms/SuperMarioBros.nes", NULL);
+	initialize_nes(&nes, "roms/SuperMarioBros.nes", NULL, NULL);
 
 	int NUM = 100000000;
 	timepoint beg, end;
