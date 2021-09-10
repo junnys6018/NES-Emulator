@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 
-void run_all_2C02_tests()
+int run_all_2C02_tests()
 {
 	const int num_tests = 26;
 	int num_failed = 0;
@@ -40,4 +40,5 @@ void run_all_2C02_tests()
 	num_failed += test_blargg_rom("roms/blargg_tests/sprite_hit_tests_2005.10.05/11.edge_timing.nes", 0xF8);
 
 	printf("[2C02 TESTS] Passed %i; Failed %i\n", num_tests - num_failed, num_failed);
+	return num_failed;
 }

@@ -4,7 +4,8 @@
 
 int main(int argc, char** argv)
 {
-	run_all_6502_tests();
-	run_all_2C02_tests();
+	int num_failed = run_all_6502_tests();
+	num_failed += run_all_2C02_tests();
 	run_all_benchmarks();
+	return num_failed > 0 ? 0 : 1;
 }

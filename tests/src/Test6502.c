@@ -94,7 +94,7 @@ int run_6502_interrupt_test()
 }
 
 
-void run_all_6502_tests()
+int run_all_6502_tests()
 {
 	const int num_tests = 5;
 	int num_failed = 0;
@@ -106,4 +106,5 @@ void run_all_6502_tests()
 	num_failed += test_blargg_rom("roms/blargg_tests/branch_timing_tests/3.Forward_Branch.nes", 0xF8);
 
 	printf("[6502 TESTS] Passed: %i; Failed %i\n", num_tests - num_failed, num_failed);
+	return num_failed;
 }
