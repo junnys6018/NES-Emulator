@@ -1,4 +1,6 @@
 # NES-Emulator
+![ci badge](https://github.com/junnys6018/NES-Emulator/actions/workflows/main-workflow.yml/badge.svg)
+
 NES Emulator written from scratch in C.  
   
 Can be built for Linux, Windows and webassembly!
