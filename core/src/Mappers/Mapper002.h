@@ -1,6 +1,6 @@
 #ifndef MAPPER_002_H
 #define MAPPER_002_H
-#include "../Cartridge.h"
+#include "Cartridge.h"
 #include "MapperUtils.h"
 #include <stdint.h>
 #include <stdio.h>

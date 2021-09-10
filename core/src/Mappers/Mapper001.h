@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
-#include "../Cartridge.h"
+#include "Cartridge.h"
 
 typedef struct
 {

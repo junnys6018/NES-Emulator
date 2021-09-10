@@ -1,7 +1,7 @@
 #ifndef MAPPER_004_H
 #define MAPPER_004_H
-#include "../Cartridge.h"
-#include "../6502.h"
+#include "Cartridge.h"
+#include "6502.h"
 
 #include <assert.h>
 #include <stdint.h>

@@ -2,7 +2,7 @@
 #define MAPPER_JUN_H
 #include <stdint.h>
 #include <stdio.h>
-#include "../Cartridge.h"
+#include "Cartridge.h"
 #include "MapperUtils.h"
 
 typedef struct

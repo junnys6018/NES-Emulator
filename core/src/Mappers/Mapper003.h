@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
-#include "../Cartridge.h"
+#include "Cartridge.h"
 #include "MapperUtils.h"
 
 typedef struct

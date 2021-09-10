@@ -1,19 +1,10 @@
-.vs
 .vscode
-bin
-bin-int
-*.sln
-*.vcxproj*
 Resources
 *.bak
 *.exe
+*.aps
 /roms
-/Makefile
-application/Makefile
-core/Makefile
-tests/Makefile
-*.make
-*.out
+build
 
 application/settings.json
 
