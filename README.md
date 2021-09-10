@@ -18,11 +18,13 @@ This emulator has a real time waveform visualisation of each channel, (square 1 
 Video demo can be found [here](https://youtu.be/fevGlhVMHI8)
 
 ## Building 
-- Clone repo with `git clone --recursive https://github.com/junnys6018/NES-Emulator.git`
-- If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules
-- Run `cd Nes-Emulator/scripts`, then run `./GenerateLinuxProjects.sh` or `./GenerateWindowsProjects.bat`
+- This project uses cmake as its build system.
+- Clone repo with `git clone --recursive https://github.com/junnys6018/NES-Emulator.git`.
+- If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules.
+- Run `./scripts/GenerateLinuxProjects.sh` or `./scripts/GenerateWindowsProjects.bat`.
+- Build files are in the `build/` directory.
 - Build with make on linux or msvc on windows. 
-- Make sure you build with optimisations turned on, otherwise the emulation will not run in real time. On visual studio, build in release. If your building with make, run `make config=release`
+- Make sure you build in release, otherwise the emulation will not run in real time.
 
 ## Dependencies
 The only dependency this project has is SDL. On windows the library is prebuilt in the repo, so you dont have to download and install SDL yourself.  
