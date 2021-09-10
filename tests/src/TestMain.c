@@ -31,5 +31,5 @@ int main(int argc, char** argv)
 	num_failed += run_all_2C02_tests();
 	run_all_benchmarks();
 
-	return num_failed > 0 ? 0 : 1;
+	return num_failed > 0 ? 1 : 0;
 }
