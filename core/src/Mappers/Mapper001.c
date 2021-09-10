@@ -116,9 +116,9 @@ void m001_cpu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool
 			}
 			map001->shift_register = 0b10000;
 
-			if (update_pattern_table && cart->updatePatternTableCB)
+			if (update_pattern_table && cart->update_pattern_table_cb)
 			{
-				update_renderer_patter_table(map001, cart->updatePatternTableCB);
+				update_renderer_patter_table(map001, cart->update_pattern_table_cb);
 			}
 		}
 	}
@@ -205,14 +205,14 @@ void m001_free(Mapper001* mapper)
 
 void m001_load_from_file(Header* header, Cartridge* cart, FILE* file)
 {
-	cart->CPUReadCartridge = m001_cpu_read_cartridge;
-	cart->CPUWriteCartridge = m001_cpu_write_cartridge;
+	cart->cpu_read_cartridge = m001_cpu_read_cartridge;
+	cart->cpu_write_cartridge = m001_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = m001_ppu_read_cartridge;
-	cart->PPUPeakCartridge = m001_ppu_write_cartridge;
-	cart->PPUWriteCartridge = m001_ppu_write_cartridge;
+	cart->ppu_read_cartridge = m001_ppu_read_cartridge;
+	cart->ppu_peak_cartridge = m001_ppu_write_cartridge;
+	cart->ppu_write_cartridge = m001_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = m001_ppu_mirror_nametable;
+	cart->ppu_mirror_nametable = m001_ppu_mirror_nametable;
 
 	Mapper001* map = malloc(sizeof(Mapper001));
 	assert(map);
@@ -223,7 +223,7 @@ void m001_load_from_file(Header* header, Cartridge* cart, FILE* file)
 	map->control.bits.P = 3;
 
 	// Skip trainer if present
-	if (header->Trainer)
+	if (header->trainer)
 	{
 		fseek(file, 512, SEEK_CUR);
 	}
@@ -248,5 +248,5 @@ void m001_load_from_file(Header* header, Cartridge* cart, FILE* file)
 	fread(map->CHR, (size_t)map->CHR_banks * 8 * 1024, 1, file);
 
 	// Set the mirror mode
-	map->control.bits.M = header->MirrorType == 1 ? VERTICAL : HORIZONTAL;
+	map->control.bits.M = header->mirror_type == 1 ? VERTICAL : HORIZONTAL;
 }

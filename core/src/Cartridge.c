@@ -17,7 +17,7 @@
 int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback)
 {
 	Cartridge* cart = &((Nes*)nes)->cart;
-	cart->updatePatternTableCB = callback;
+	cart->update_pattern_table_cb = callback;
 	FILE* file = fopen(filepath, "rb");
 	if (!file)
 	{
@@ -31,9 +31,9 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 	char* c = header.idstring;
 	if (c[0] == 'N' && c[1] == 'E' && c[2] == 'S' && c[3] == 0x1A)
 	{
-		uint16_t mapperID = ((uint16_t)header.MapperID3 << 8) | ((uint16_t)header.MapperID2 << 4) | (uint16_t)header.MapperID1;
-		cart->mapperID = mapperID;
-		switch (mapperID)
+		uint16_t mapper_id = ((uint16_t)header.mapper_id3 << 8) | ((uint16_t)header.mapper_id2 << 4) | (uint16_t)header.mapper_id1;
+		cart->mapper_id = mapper_id;
+		switch (mapper_id)
 		{
 		case 0:
 			m000_load_from_file(&header, cart, file);
@@ -51,7 +51,7 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 			m004_load_from_file(&header, cart, file, &((Nes*)nes)->cpu);
 			break;
 		default:
-			printf("[ERROR] Not Yet implemented mapper id %i\n", mapperID);
+			printf("[ERROR] Not Yet implemented mapper id %i\n", mapper_id);
 			fclose(file);
 			return 1;
 		}
@@ -74,7 +74,7 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 
 void free_cartridge(Cartridge* cart)
 {
-	switch (cart->mapperID)
+	switch (cart->mapper_id)
 	{
 	case 0:
 		m000_free(cart->mapper);
@@ -95,7 +95,7 @@ void free_cartridge(Cartridge* cart)
 		free(cart->mapper);
 		break;
 	default:
-		printf("[ERROR] Unknown mapper id, %i", cart->mapperID);
+		printf("[ERROR] Unknown mapper id, %i", cart->mapper_id);
 		break;
 	}
 
@@ -106,7 +106,7 @@ int ines_file_format(Header* header)
 {
 	char* c = header->idstring;
 	bool ines1 = c[0] == 'N' && c[1] == 'E' && c[2] == 'S' && c[3] == 0x1A;
-	bool ines2 = ines1 && (header->FormatIdentifer == 0x2);
+	bool ines2 = ines1 && (header->format_identifier == 0x2);
 	if (ines2)
 	{
 		return INES2_0;
@@ -135,7 +135,7 @@ bool chr_is_ram(Header* header)
 		return true;
 	}
 
-	if ((ines_file_format(header) == INES2_0) && (header->CHRRAM_Size.non_volatile_shift_count != 0 || header->CHRRAM_Size.volatile_shift_count != 0))
+	if ((ines_file_format(header) == INES2_0) && (header->CHRRAM_size.non_volatile_shift_count != 0 || header->CHRRAM_size.volatile_shift_count != 0))
 	{
 		return true;
 	}

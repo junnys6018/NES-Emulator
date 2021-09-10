@@ -13,7 +13,7 @@ void clock_irq(Mapper004* map)
 		map->IRQ_reload = false;
 		map->IRQ_counter = map->IRQ_latch;
 	}
-	else 
+	else
 	{
 		map->IRQ_counter--;
 	}
@@ -56,7 +56,7 @@ uint8_t m004_cpu_read_cartridge(Cartridge* cart, uint16_t addr, bool* read)
 		bank_index = map->PRG_bank1_select;
 	}
 	// Fixed to second last bank
-	else if ((addr >= 0x8000 && addr < 0xA000 && map->bank_select.bits.P) || (addr >= 0xC000 && addr < 0xE000 && !map->bank_select.bits.P)) 
+	else if ((addr >= 0x8000 && addr < 0xA000 && map->bank_select.bits.P) || (addr >= 0xC000 && addr < 0xE000 && !map->bank_select.bits.P))
 	{
 		bank_index = map->PRG_ROM_banks - 2;
 	}
@@ -85,15 +85,18 @@ void m004_cpu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool
 	else if (addr >= 0x8000 && addr < 0xA000 && addr % 2 == 0)
 	{
 		map->bank_select.reg = data;
-		if (map->bank_select.bits.C)
+		if (cart->update_pattern_table_cb)
 		{
-			cart->updatePatternTableCB(map->left_pt, 1);
-			cart->updatePatternTableCB(map->right_pt, 0);
-		}
-		else
-		{
-			cart->updatePatternTableCB(map->left_pt, 0);
-			cart->updatePatternTableCB(map->right_pt, 1);
+			if (map->bank_select.bits.C)
+			{
+				cart->update_pattern_table_cb(map->left_pt, 1);
+				cart->update_pattern_table_cb(map->right_pt, 0);
+			}
+			else
+			{
+				cart->update_pattern_table_cb(map->left_pt, 0);
+				cart->update_pattern_table_cb(map->right_pt, 1);
+			}
 		}
 	}
 	else if (addr >= 0x8000 && addr < 0xA000 && addr % 2 == 1)
@@ -248,20 +251,20 @@ void m004_free(Mapper004* mapper)
 
 void m004_load_from_file(Header* header, Cartridge* cart, FILE* file, State6502* cpu)
 {
-	if (header->FourScreen)
+	if (header->four_screen)
 	{
 		printf("[ERROR] Not implemented 4-screen mirroring on mapper 4\n");
 		return;
 	}
 
-	cart->CPUReadCartridge = m004_cpu_read_cartridge;
-	cart->CPUWriteCartridge = m004_cpu_write_cartridge;
+	cart->cpu_read_cartridge = m004_cpu_read_cartridge;
+	cart->cpu_write_cartridge = m004_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = m004PPUReadCartridge;
-	cart->PPUPeakCartridge = m004_ppu_peek_cartridge;
-	cart->PPUWriteCartridge = m004_ppu_write_cartridge;
+	cart->ppu_read_cartridge = m004PPUReadCartridge;
+	cart->ppu_peak_cartridge = m004_ppu_peek_cartridge;
+	cart->ppu_write_cartridge = m004_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = m004_ppu_mirror_nametable;
+	cart->ppu_mirror_nametable = m004_ppu_mirror_nametable;
 
 	Mapper004* map = malloc(sizeof(Mapper004));
 	assert(map);
@@ -270,18 +273,18 @@ void m004_load_from_file(Header* header, Cartridge* cart, FILE* file, State6502*
 	map->cpu = cpu;
 
 	// Skip trainer if present
-	if (header->Trainer)
+	if (header->trainer)
 	{
 		fseek(file, 512, SEEK_CUR);
 	}
 
 	if (num_prg_banks(header) > 32 || num_chr_banks(header) > 32)
 	{
-		printf("[ERROR] Too many banks\n");	
+		printf("[ERROR] Too many banks\n");
 	}
 
 	map->PRG_ROM_banks = 2 * num_prg_banks(header); // Convert from 16K banks to 8K banks
-	map->CHR_banks =  8 * num_chr_banks(header); // Convert from 8K banks to 1K banks
+	map->CHR_banks = 8 * num_chr_banks(header); // Convert from 8K banks to 1K banks
 
 	map->PRG_ROM = malloc((size_t)map->PRG_ROM_banks * 8 * 1024);
 	map->CHR_ROM = malloc((size_t)map->CHR_banks * 1024);
@@ -289,9 +292,9 @@ void m004_load_from_file(Header* header, Cartridge* cart, FILE* file, State6502*
 	fread(map->PRG_ROM, (size_t)map->PRG_ROM_banks * 8 * 1024, 1, file);
 	fread(map->CHR_ROM, (size_t)map->CHR_banks * 1024, 1, file);
 
-	if (cart->updatePatternTableCB)
+	if (cart->update_pattern_table_cb)
 	{
-		cart->updatePatternTableCB(map->left_pt, 0);
-		cart->updatePatternTableCB(map->right_pt, 1);
+		cart->update_pattern_table_cb(map->left_pt, 0);
+		cart->update_pattern_table_cb(map->right_pt, 1);
 	}
 }

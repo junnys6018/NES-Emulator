@@ -17,7 +17,7 @@ typedef struct
 	uint8_t CHR[8 * 1024];
 	bool chr_is_ram;
 
-	MirrorMode mirrorMode;
+	MirrorMode mirror_mode;
 	uint16_t PRG_ROM_Banks;
 } Mapper000;
 

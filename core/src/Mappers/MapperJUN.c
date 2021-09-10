@@ -38,16 +38,16 @@ NametableIndex mjun_ppu_mirror_nametable(void* mapper, uint16_t addr)
 
 void mjun_load_from_file(Cartridge* cart, FILE* file)
 {
-	cart->mapperID = 767; // Assign mapperID 767 to my format
+	cart->mapper_id = 767; // Assign mapper_id 767 to my format
 
-	cart->CPUReadCartridge = mjun_cpu_read_cartridge;
-	cart->CPUWriteCartridge = mjun_cpu_write_cartridge;
+	cart->cpu_read_cartridge = mjun_cpu_read_cartridge;
+	cart->cpu_write_cartridge = mjun_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = mjun_ppu_read_cartridge;
-	cart->PPUPeakCartridge = mjun_ppu_read_cartridge;
-	cart->PPUWriteCartridge = mjun_ppu_write_cartridge;
+	cart->ppu_read_cartridge = mjun_ppu_read_cartridge;
+	cart->ppu_peak_cartridge = mjun_ppu_read_cartridge;
+	cart->ppu_write_cartridge = mjun_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = mjun_ppu_mirror_nametable;
+	cart->ppu_mirror_nametable = mjun_ppu_mirror_nametable;
 
 	MapperJUN* map = malloc(sizeof(MapperJUN));
 	assert(map);

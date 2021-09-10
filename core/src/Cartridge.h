@@ -23,18 +23,18 @@ typedef struct
 	uint8_t CHRROM_LSB;
 
 	// Flags
-	uint8_t MirrorType : 1; // 0: Horizontal or mapper controlled; 1: vertical
-	uint8_t Battery : 1;
-	uint8_t Trainer : 1;
-	uint8_t FourScreen : 1;
-	uint8_t MapperID1 : 4; // Bits 0-3
+	uint8_t mirror_type : 1; // 0: Horizontal or mapper controlled; 1: vertical
+	uint8_t battery : 1;
+	uint8_t trainer : 1;
+	uint8_t four_screen : 1;
+	uint8_t mapper_id1 : 4; // Bits 0-3
 
-	uint8_t ConsoleType : 2;
-	uint8_t FormatIdentifer : 2; // Used to determine if the supplied file is a NES 1.0 or 2.0 format, on a NES 1.0 it will have the value 0b00, on NES 2.0 it will read 0b10
-	uint8_t MapperID2 : 4; // Bits 4-7
+	uint8_t console_type : 2;
+	uint8_t format_identifier : 2; // Used to determine if the supplied file is a NES 1.0 or 2.0 format, on a NES 1.0 it will have the value 0b00, on NES 2.0 it will read 0b10
+	uint8_t mapper_id2 : 4; // Bits 4-7
 
-	uint8_t MapperID3 : 4; // Bits 8-11
-	uint8_t SubmapperNumber : 4;
+	uint8_t mapper_id3 : 4; // Bits 8-11
+	uint8_t submapper_number : 4;
 
 	uint8_t PRGROM_MSB : 4;
 	uint8_t CHRROM_MSB : 4;
@@ -43,22 +43,22 @@ typedef struct
 	{
 		uint8_t volatile_shift_count : 4;
 		uint8_t non_volatile_shift_count : 4;
-	} PRGRAM_Size;
+	} PRGRAM_size;
 
 	struct
 	{
 		uint8_t volatile_shift_count : 4;
 		uint8_t non_volatile_shift_count : 4;
-	} CHRRAM_Size;
+	} CHRRAM_size;
 
-	uint8_t TimingMode : 2;
+	uint8_t timing_mode : 2;
 	uint8_t unused : 6;
 
-	uint8_t PPUType : 4;
-	uint8_t HardwareType : 4;
+	uint8_t ppu_type : 4;
+	uint8_t hardware_type : 4;
 
-	uint8_t MiscRomsPresent;
-	uint8_t DefaultExpansionDevice;
+	uint8_t misc_roms_present;
+	uint8_t default_expansion_device;
 
 } Header;
 
@@ -67,17 +67,17 @@ typedef struct
 	// For debugging
 	Header header;
 
-	uint16_t mapperID;
-	CPU_READ_BYTE CPUReadCartridge;
-	CPU_WRITE_BYTE CPUWriteCartridge;
+	uint16_t mapper_id;
+	CPU_READ_BYTE cpu_read_cartridge;
+	CPU_WRITE_BYTE cpu_write_cartridge;
 
-	PPU_READ_BYTE PPUReadCartridge;
-	PPU_READ_BYTE PPUPeakCartridge;
-	PPU_WRITE_BYTE PPUWriteCartridge;
+	PPU_READ_BYTE ppu_read_cartridge;
+	PPU_READ_BYTE ppu_peak_cartridge;
+	PPU_WRITE_BYTE ppu_write_cartridge;
 
-	NAMETABLE_MIRROR PPUMirrorNametable;
+	NAMETABLE_MIRROR ppu_mirror_nametable;
 
-	UPDATE_PATTERN_TABLE_CB updatePatternTableCB;
+	UPDATE_PATTERN_TABLE_CB update_pattern_table_cb;
 
 	void* mapper;
 } Cartridge;
@@ -102,4 +102,4 @@ uint16_t num_prg_banks(Header* header);
 uint16_t num_chr_banks(Header* header);
 bool chr_is_ram(Header* header);
 
-#endif // !CARTRIDGE_H
+#endif

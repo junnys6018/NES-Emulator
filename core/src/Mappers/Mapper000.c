@@ -53,7 +53,7 @@ void m000_ppu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 NametableIndex m000_ppu_mirror_nametable(void* mapper, uint16_t addr)
 {
 	Mapper000* map000 = (Mapper000*)mapper;
-	switch (map000->mirrorMode)
+	switch (map000->mirror_mode)
 	{
 	case HORIZONTAL:
 		return mirror_horizontal(addr);
@@ -70,14 +70,14 @@ void m000_free(Mapper000* mapper)
 
 void m000_load_from_file(Header* header, Cartridge* cart, FILE* file)
 {
-	cart->CPUReadCartridge = m000_cpu_read_cartridge;
-	cart->CPUWriteCartridge = m000_cpu_write_cartridge;
+	cart->cpu_read_cartridge = m000_cpu_read_cartridge;
+	cart->cpu_write_cartridge = m000_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = m000_ppu_read_cartridge;
-	cart->PPUPeakCartridge = m000_ppu_read_cartridge;
-	cart->PPUWriteCartridge = m000_ppu_write_cartridge;
+	cart->ppu_read_cartridge = m000_ppu_read_cartridge;
+	cart->ppu_peak_cartridge = m000_ppu_read_cartridge;
+	cart->ppu_write_cartridge = m000_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = m000_ppu_mirror_nametable;
+	cart->ppu_mirror_nametable = m000_ppu_mirror_nametable;
 
 	Mapper000* map = malloc(sizeof(Mapper000));
 	assert(map);
@@ -87,7 +87,7 @@ void m000_load_from_file(Header* header, Cartridge* cart, FILE* file)
 	map->chr_is_ram = chr_is_ram(header);
 
 	// Skip trainer if present
-	if (header->Trainer)
+	if (header->trainer)
 	{
 		fseek(file, 512, SEEK_CUR);
 	}
@@ -113,12 +113,12 @@ void m000_load_from_file(Header* header, Cartridge* cart, FILE* file)
 	fread(map->CHR, 8 * 1024, 1, file);
 
 	// Set Nametable mirroring mode
-	map->mirrorMode = header->MirrorType == 0 ? HORIZONTAL : VERTICAL;
+	map->mirror_mode = header->mirror_type == 0 ? HORIZONTAL : VERTICAL;
 
 	// Bind Pattern table to renderer
-	if (cart->updatePatternTableCB)
+	if (cart->update_pattern_table_cb)
 	{
-		cart->updatePatternTableCB(map->CHR, 0);
-		cart->updatePatternTableCB(map->CHR + 0x1000, 1);
+		cart->update_pattern_table_cb(map->CHR, 0);
+		cart->update_pattern_table_cb(map->CHR + 0x1000, 1);
 	}
 }

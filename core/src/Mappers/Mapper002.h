@@ -16,7 +16,7 @@ typedef struct
 	// Fixed 8 KB CHR
 	uint8_t CHR[8 * 1024];
 
-	MirrorMode mirrorMode;
+	MirrorMode mirror_mode;
 	uint8_t PRG_bank_select;
 	uint8_t PRG_ROM_banks;
 	bool chr_is_ram;

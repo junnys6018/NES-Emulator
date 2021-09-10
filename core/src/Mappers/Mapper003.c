@@ -24,10 +24,10 @@ void m003_cpu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data, bool
 	{
 		map003->CHR_bank_select = data % map003->CHR_banks;
 		uint32_t index = (uint32_t)(map003->CHR_bank_select << 13);
-		if (cart->updatePatternTableCB)
+		if (cart->update_pattern_table_cb)
 		{
-			cart->updatePatternTableCB(map003->CHR + index, 0);
-			cart->updatePatternTableCB(map003->CHR + index + 0x1000, 1);
+			cart->update_pattern_table_cb(map003->CHR + index, 0);
+			cart->update_pattern_table_cb(map003->CHR + index + 0x1000, 1);
 		}
 	}
 }
@@ -53,7 +53,7 @@ void m003_ppu_write_cartridge(Cartridge* cart, uint16_t addr, uint8_t data)
 NametableIndex m003_ppu_mirror_nametable(void* mapper, uint16_t addr)
 {
 	Mapper003* map003 = (Mapper003*)mapper;
-	switch (map003->mirrorMode)
+	switch (map003->mirror_mode)
 	{
 	case HORIZONTAL:
 		return mirror_horizontal(addr);
@@ -71,14 +71,14 @@ void m003_free(Mapper003* mapper)
 
 void m003_load_from_file(Header* header, Cartridge* cart, FILE* file)
 {
-	cart->CPUReadCartridge = m003_cpu_read_cartridge;
-	cart->CPUWriteCartridge = m003_cpu_write_cartridge;
+	cart->cpu_read_cartridge = m003_cpu_read_cartridge;
+	cart->cpu_write_cartridge = m003_cpu_write_cartridge;
 
-	cart->PPUReadCartridge = m003_ppu_read_cartridge;
-	cart->PPUPeakCartridge = m003_ppu_read_cartridge;
-	cart->PPUWriteCartridge = m003_ppu_write_cartridge;
+	cart->ppu_read_cartridge = m003_ppu_read_cartridge;
+	cart->ppu_peak_cartridge = m003_ppu_read_cartridge;
+	cart->ppu_write_cartridge = m003_ppu_write_cartridge;
 
-	cart->PPUMirrorNametable = m003_ppu_mirror_nametable;
+	cart->ppu_mirror_nametable = m003_ppu_mirror_nametable;
 
 	Mapper003* map = malloc(sizeof(Mapper003));
 	assert(map);
@@ -86,7 +86,7 @@ void m003_load_from_file(Header* header, Cartridge* cart, FILE* file)
 	cart->mapper = map;
 
 	// Skip trainer if present
-	if (header->Trainer)
+	if (header->trainer)
 	{
 		fseek(file, 512, SEEK_CUR);
 	}
@@ -112,5 +112,5 @@ void m003_load_from_file(Header* header, Cartridge* cart, FILE* file)
 	fread(map->CHR, (size_t)map->CHR_banks * 8 * 1024, 1, file);
 
 	// Set the mirror mode
-	map->mirrorMode = header->MirrorType == 1 ? VERTICAL : HORIZONTAL;
+	map->mirror_mode = header->mirror_type == 1 ? VERTICAL : HORIZONTAL;
 }

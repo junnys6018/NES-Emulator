@@ -95,7 +95,7 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 	Header header = nes->cart.header;
 	char buf[64];
 
-	sprintf(buf, "Mapper        - %u", nes->cart.mapperID);
+	sprintf(buf, "Mapper        - %u", nes->cart.mapper_id);
 	RenderText(buf, white);
 
 	int PRG_banks = ((uint16_t)header.PRGROM_MSB << 8) | (uint16_t)header.PRGROM_LSB;
@@ -106,15 +106,15 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 	sprintf(buf, "CHR ROM banks - %i [%iKB]", CHR_banks, CHR_banks * 8);
 	RenderText(buf, white);
 
-	sprintf(buf, "PPU mirroring - %s", header.MirrorType ? "vertical" : "horizontal");
+	sprintf(buf, "PPU mirroring - %s", header.mirror_type ? "vertical" : "horizontal");
 	RenderText(buf, white);
 
-	sprintf(buf, "Battery       - %s", header.Battery ? "yes" : "no");
+	sprintf(buf, "Battery       - %s", header.battery ? "yes" : "no");
 	RenderText(buf, white);
 
-	sprintf(buf, "Trainer       - %s", header.Trainer ? "yes" : "no");
+	sprintf(buf, "Trainer       - %s", header.trainer ? "yes" : "no");
 	RenderText(buf, white);
 
-	sprintf(buf, "4-Screen      - %s", header.FourScreen ? "yes" : "no");
+	sprintf(buf, "4-Screen      - %s", header.four_screen ? "yes" : "no");
 	RenderText(buf, white);
 }

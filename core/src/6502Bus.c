@@ -8,7 +8,7 @@ void cpu_bus_write(Bus6502* bus, uint16_t addr, uint8_t data)
 	// Check if cartridge wants to handle the write
 	bool wrote;
 	Cartridge* cart = bus->cartridge;
-	cart->CPUWriteCartridge(cart, addr, data, &wrote);
+	cart->cpu_write_cartridge(cart, addr, data, &wrote);
 	if (!wrote)
 	{
 		// Write to internal RAM
@@ -53,7 +53,7 @@ uint8_t cpu_bus_read(Bus6502* bus, uint16_t addr)
 	// Check if cartridge wants to handle the read
 	bool read;
 	Cartridge* cart = bus->cartridge;
-	uint8_t ret = cart->CPUReadCartridge(cart, addr, &read);
+	uint8_t ret = cart->cpu_read_cartridge(cart, addr, &read);
 	if (!read)
 	{
 		// Read internal RAM

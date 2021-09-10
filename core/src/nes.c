@@ -18,16 +18,16 @@ int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callb
 	else // Load a dummy cart
 	{
 		memset(&nes->cart, 0, sizeof(nes->cart));
-		nes->cart.mapperID = 767;
+		nes->cart.mapper_id = 767;
 
-		nes->cart.CPUReadCartridge = mjun_cpu_read_cartridge;
-		nes->cart.CPUWriteCartridge = mjun_cpu_write_cartridge;
+		nes->cart.cpu_read_cartridge = mjun_cpu_read_cartridge;
+		nes->cart.cpu_write_cartridge = mjun_cpu_write_cartridge;
 
-		nes->cart.PPUReadCartridge = mjun_ppu_read_cartridge;
-		nes->cart.PPUPeakCartridge = mjun_ppu_read_cartridge;
-		nes->cart.PPUWriteCartridge = mjun_ppu_write_cartridge;
+		nes->cart.ppu_read_cartridge = mjun_ppu_read_cartridge;
+		nes->cart.ppu_peak_cartridge = mjun_ppu_read_cartridge;
+		nes->cart.ppu_write_cartridge = mjun_ppu_write_cartridge;
 
-		nes->cart.PPUMirrorNametable = mjun_ppu_mirror_nametable;
+		nes->cart.ppu_mirror_nametable = mjun_ppu_mirror_nametable;
 
 		MapperJUN* map = malloc(sizeof(MapperJUN));
 		assert(map);

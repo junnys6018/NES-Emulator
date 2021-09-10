@@ -14,7 +14,7 @@ typedef struct
 
 	uint8_t* CHR;
 
-	MirrorMode mirrorMode;
+	MirrorMode mirror_mode;
 	uint8_t CHR_bank_select;
 	uint16_t PRG_ROM_banks;
 	uint16_t CHR_banks;
