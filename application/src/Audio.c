@@ -18,7 +18,8 @@ typedef struct
 {
 	float* volatile buffers;
 
-	// Number of free buffers that can we writen to
+	// Number of free buffers that can we writen to, this is initially set to BUF_COUNT - 1
+	// because the first buffer is in a "currently written to" state after initialization
 	SDL_sem* volatile sem_free_bufers;
 
 	// Current buffer we are reading from
