@@ -6,7 +6,7 @@
 
 #include "nes.h"
 
-#include "util/timer.h"
+#include "Util/timer.h"
 
 #include <stdio.h>
 #include <stdbool.h>

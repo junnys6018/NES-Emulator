@@ -45,7 +45,7 @@ if (WIN32)
         COMMAND ${CMAKE_COMMAND} -E $<$<CONFIG:Debug>:echo> copy $<TARGET_FILE:application> ${CMAKE_CURRENT_SOURCE_DIR}/NES-Emulator.exe)
 else()
     add_custom_command(TARGET application POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E $<$<CONFIG:Debug>:echo> cp $<TARGET_FILE:application> ${CMAKE_CURRENT_SOURCE_DIR}/NES-Emulator)
+        COMMAND ${CMAKE_COMMAND} -E $<$<CONFIG:Debug>:echo> copy $<TARGET_FILE:application> ${CMAKE_CURRENT_SOURCE_DIR}/NES-Emulator)
     target_link_libraries(application PUBLIC m dl)
 endif()
 

@@ -5,7 +5,7 @@
 #include "Mappers/Mapper003.h"
 #include "Mappers/Mapper004.h"
 #include "Mappers/MapperJUN.h"
-#include "Nes.h"
+#include "nes.h"
 
 #include <assert.h>
 #include <stdio.h>

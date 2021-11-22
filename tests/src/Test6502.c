@@ -1,6 +1,6 @@
 #include "Test6502.h"
-#include "Nes.h"
-#include "Timer.h"
+#include "nes.h"
+#include "timer.h"
 #include "TestUtil.h"
 
 #include <stdio.h>

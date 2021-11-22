@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "Nes.h"
+#include "nes.h"
 
 void emulate_until_halt(Nes* nes)
 {

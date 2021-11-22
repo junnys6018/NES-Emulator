@@ -1,5 +1,5 @@
-#include "test2C02.h"
-#include "Nes.h"
+#include "Test2C02.h"
+#include "nes.h"
 #include "TestUtil.h"
 
 #include <stdio.h>

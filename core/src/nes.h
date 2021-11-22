@@ -38,7 +38,7 @@ void clock_nes_instruction(Nes* nes);
 void clock_nes_frame(Nes* nes);
 
 // Emulate one PPU cycle
-inline void clock_nes_cycle(Nes* nes)
+static inline void clock_nes_cycle(Nes* nes)
 {
 	nes->system_clock++;
 	if (nes->system_clock % 3 == 0)

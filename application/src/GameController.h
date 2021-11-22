@@ -13,7 +13,7 @@ typedef struct
 void TryOpenGameController(GameController* game_controller);
 bool OpenGameController(GameController* game_controller, int device_index);
 void CloseGameController(GameController* game_controller);
-inline bool IsGameControllerOpen(GameController* game_controller)
+static inline bool IsGameControllerOpen(GameController* game_controller)
 {
 	return game_controller->sdl_game_controller != NULL;
 }
