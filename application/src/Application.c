@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "Audio.h"
 #include "ColorDefs.h"
@@ -73,7 +74,7 @@ typedef struct
 	PaletteDataModel m_palette;
 	NesScreenModel m_nes_screen;
 	SettingsModel m_settings;
-
+	char m_current_rom_file[512];
 } ApplicationContext;
 
 static ApplicationContext ac;
@@ -162,7 +163,8 @@ void InitOpengl(SDL_Window* window)
 #undef TRY
 
 	ac.gl_context = SDL_GL_CreateContext(window);
-	if (!ac.gl_context) {
+	if (!ac.gl_context)
+	{
 		printf("[ERROR] %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
@@ -198,6 +200,11 @@ void InitApplication(char* rom)
 {
 	char error_string[256];
 	ac.nes = malloc(sizeof(Nes));
+
+	if (rom)
+	{
+		strcpy(ac.m_current_rom_file, rom);
+	}
 
 	int result = initialize_nes(ac.nes, rom, SetPatternTable, error_string);
 	if (result != 0)
@@ -393,7 +400,7 @@ void DrawViews()
 			DrawAbout(GetControllerType(&ac.game_controller));
 			break;
 		case TARGET_SETTINGS:
-			DrawSettings(&ac.m_channel_enable, &ac.m_nes_screen, &ac.m_settings);
+			DrawSettings(&ac.m_channel_enable, &ac.m_nes_screen, &ac.m_settings, ac.m_current_rom_file);
 			break;
 		}
 

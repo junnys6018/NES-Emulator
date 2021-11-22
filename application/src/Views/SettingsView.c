@@ -14,7 +14,7 @@ void SetAPUChannels(ChannelEnableModel* ch)
 	apu_channel_set(apu, CHANNEL_DMC, ch->DMC);
 }
 
-void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* settings)
+void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* settings, char current_rom_file[512])
 {
 	Nes* nes = GetApplicationNes();
 	Cartridge* cart = &nes->cart;
@@ -44,10 +44,13 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 
 				// ...so load a dummy one
 				initialize_nes(nes, NULL, SetPatternTable, NULL);
+
+				memset(current_rom_file, 0, 512);
 			}
 			// Successfully loaded rom
 			else if (settings->mode == MODE_NOT_RUNNING)
 			{
+				strcpy(current_rom_file, file);
 				settings->mode = MODE_PLAY;
 			}
 			SetAPUChannels(ch);
@@ -76,8 +79,10 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 		if (settings->mode != MODE_NOT_RUNNING)
 		{
 			char error_string[256];
-			char* save_location = get_default_save_location(cart->cartridge_file);
-			int result = save_game(cart, save_location, error_string);
+			char* save_location = get_default_save_location(current_rom_file);
+			FILE* file = fopen(save_location, "wb");
+			int result = save_game(cart, file, error_string);
+			fclose(file);
 			if (result == 0)
 				printf("[INFO]: saved to %s\n", save_location);
 			else if (result == 1)
@@ -92,14 +97,19 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 	{
 		if (settings->mode != MODE_NOT_RUNNING)
 		{
-			char file[256];
-			if (OpenFileDialog(file, 256) == 0)
+			char filepath[256];
+			if (OpenFileDialog(filepath, 256) == 0)
 			{
 				char error_string[256];
+				FILE* file = fopen(filepath, "rb");
 				if (load_save(cart, file, error_string) == 0)
+				{
+					printf("[INFO]: Loaded save %s\n", filepath);
 					reset_nes(nes);
+				}
 				else
 					printf("[ERROR]: %s\n", error_string);
+				fclose(file);
 			}
 		}
 	}

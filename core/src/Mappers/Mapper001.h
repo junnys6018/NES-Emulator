@@ -43,8 +43,8 @@ typedef struct
 
 void m001_free(Mapper001* mapper);
 void m001_load_from_file(Header* header, Cartridge* cart, FILE* file);
-int m001_save_game(Cartridge* cart, const char* savefile, char error_string[256]);
-int m001_load_save(Cartridge* cart, const char* savefile, char error_string[256]);
+int m001_save_game(Cartridge* cart, FILE* savefile, char error_string[256]);
+int m001_load_save(Cartridge* cart, FILE* savefile, char error_string[256]);
 
 
 #endif

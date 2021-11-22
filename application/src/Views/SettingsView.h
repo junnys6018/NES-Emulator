@@ -4,6 +4,6 @@
 #include "Models/NesScreenModel.h"
 #include "Models/SettingsModel.h"
 
-void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* settings);
+void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* settings, char current_rom_file[512]);
 
 #endif

@@ -3,17 +3,35 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
 {
+
 	memset(nes, 0, sizeof(Nes));
 	if (filepath)
 	{
-		if (load_cartridge_from_file(nes, filepath, callback, error_string) != 0)
+		FILE* romfile = fopen(filepath, "rb");
+
+		// check if a save file exists in the same location as the rom
+		FILE* savefile = NULL;
+		char* save_location = get_default_save_location(filepath);
+		struct stat buffer;
+		if (stat(save_location, &buffer) == 0)
+		{
+			printf("[INFO]: Found savefile: %s\n", save_location);
+			savefile = fopen(save_location, "rb");
+		}
+
+		if (load_cartridge_from_file(nes, romfile, savefile, callback, error_string) != 0)
 		{
 			// Loading cart failed
 			return 1;
 		}
+
+		fclose(romfile);
+		if (savefile)
+			fclose(savefile);
 	}
 	else // Load a dummy cart
 	{
@@ -34,7 +52,6 @@ int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callb
 		memset(map, 0, sizeof(MapperJUN));
 		nes->cart.mapper = map;
 	}
-
 	nes->cpu_bus.cartridge = &nes->cart;
 	nes->cpu_bus.ppu = &nes->ppu;
 	nes->cpu_bus.cpu = &nes->cpu;

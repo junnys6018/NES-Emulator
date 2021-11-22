@@ -15,30 +15,13 @@
 
 // TODO: error handling for each mapper loading function
 
-int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
+int load_cartridge_from_file(struct Nes* nes, FILE* romfile, FILE* savefile, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
 {
 	Cartridge* cart = &((Nes*)nes)->cart;
 
-	cart->cartridge_file = malloc(strlen(filepath) + 1);
-	if (!cart->cartridge_file)
-	{
-		if (error_string)
-			sprintf(error_string, "%s", "memory allocation failed");
-
-		return 1;
-	}
-	strcpy(cart->cartridge_file, filepath);
-
 	cart->update_pattern_table_cb = callback;
-	FILE* file = fopen(filepath, "rb");
-	if (!file)
-	{
-		if (error_string)
-			sprintf(error_string, "failed to open %s", filepath);
-		return 1;
-	}
 
-	fread(&cart->header, sizeof(Header), 1, file);
+	fread(&cart->header, sizeof(Header), 1, romfile);
 	Header header = cart->header;
 
 	// Verify File
@@ -50,60 +33,55 @@ int load_cartridge_from_file(struct Nes* nes, const char* filepath, UPDATE_PATTE
 		switch (mapper_id)
 		{
 		case 0:
-			m000_load_from_file(&header, cart, file);
+			m000_load_from_file(&header, cart, romfile);
 			break;
 		case 1:
-			m001_load_from_file(&header, cart, file);
+			m001_load_from_file(&header, cart, romfile);
 			break;
 		case 2:
-			m002_load_from_file(&header, cart, file);
+			m002_load_from_file(&header, cart, romfile);
 			break;
 		case 3:
-			m003_load_from_file(&header, cart, file);
+			m003_load_from_file(&header, cart, romfile);
 			break;
 		case 4:
-			m004_load_from_file(&header, cart, file, &((Nes*)nes)->cpu);
+			m004_load_from_file(&header, cart, romfile, &((Nes*)nes)->cpu);
 			break;
 		default:
 			if (error_string)
 				sprintf(error_string, "cannot load cartridge with mapper id %i", mapper_id);
-			fclose(file);
 			return 1;
 		}
 	}
 	// My custom rom format, for now this format has a 16 byte header, then 64KB of data for cpu memory
 	else if (c[0] == 'J' && c[1] == 'U' && c[2] == 'N' && c[3] == 0x1A)
 	{
-		mjun_load_from_file(cart, file);
+		mjun_load_from_file(cart, romfile);
 	}
 	else
 	{
 		if (error_string)
 			sprintf(error_string, "invalid header");
-		fclose(file);
 		return 1;
 	}
 
-	fclose(file);
-
-	// check if a save file exists in the same location as the rom
-	char* save_location = get_default_save_location(filepath);
-	struct stat buffer;
-	if (stat(save_location, &buffer) == 0)
+	if (savefile)
 	{
-		if (load_save(cart, save_location, NULL) == 0)
+		if (load_save(cart, savefile, error_string) == 0)
 		{
-			printf("[INFO]: loaded save file %s\n", save_location);
+			printf("[INFO]: loaded save file\n");
+		}
+		else
+		{
+			return 1;
 		}
 	}
 
-	free(save_location);
 	return 0;
 }
 
 void free_cartridge(Cartridge* cart)
 {
-	free(cart->cartridge_file);
 	switch (cart->mapper_id)
 	{
 	case 0:
@@ -132,7 +110,7 @@ void free_cartridge(Cartridge* cart)
 	memset(cart, 0, sizeof(Cartridge));
 }
 
-int save_game(Cartridge* cart, const char* savefile, char error_string[256])
+int save_game(Cartridge* cart, FILE* savefile, char error_string[256])
 {
 	switch (cart->mapper_id)
 	{
@@ -153,7 +131,7 @@ int save_game(Cartridge* cart, const char* savefile, char error_string[256])
 	}
 }
 
-int load_save(Cartridge* cart, const char* savefile, char error_string[256])
+int load_save(Cartridge* cart, FILE* savefile, char error_string[256])
 {
 	switch (cart->mapper_id)
 	{
