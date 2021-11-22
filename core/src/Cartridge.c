@@ -125,7 +125,7 @@ void free_cartridge(Cartridge* cart)
 		free(cart->mapper);
 		break;
 	default:
-		printf("[ERROR] unknown mapper id %i", cart->mapper_id);
+		printf("[ERROR] unknown mapper id %i\n", cart->mapper_id);
 		break;
 	}
 

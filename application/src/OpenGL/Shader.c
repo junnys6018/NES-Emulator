@@ -55,7 +55,7 @@ GLuint BuildShader(const char* vertex_src, const char* fragment_src)
 			glGetProgramInfoLog(program, length, NULL, message);
 		}
 
-		printf("Failed to link shader: %s", message);
+		printf("Failed to link shader: %s\n", message);
 
 		if (message)
 		{

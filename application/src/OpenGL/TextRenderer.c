@@ -36,14 +36,14 @@ void InitTextRenderer(char fontfile[256], int font_size)
 	c.fontdata = malloc(size);
 	if (!c.fontdata)
 	{
-		printf("Cound not allocate buffer for font file!");
+		printf("Cound not allocate buffer for font file!\n");
 	}
 	fread(c.fontdata, 1, size, file);
 	fclose(file);
 
 	if (!stbtt_InitFont(&c.info, c.fontdata, 0))
 	{
-		printf("Could not init font");
+		printf("Could not init font\n");
 	}
 
 	c.font_size = font_size; // distance from highest ascender to the lowest descender in pixels

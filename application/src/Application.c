@@ -141,22 +141,36 @@ void CalculateWindowMetrics(int w, int h)
 
 void InitOpengl(SDL_Window* window)
 {
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+#define TRY(set_attribute_call, error)  \
+	if (set_attribute_call == -1)       \
+	{                                   \
+		printf("[ERROR]: %s\n", error); \
+		exit(EXIT_FAILURE);             \
+	}
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	TRY(SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1), "Could not set SDL_GL_DOUBLEBUFFER");
+	TRY(SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1), "Could not set SDL_GL_ACCELERATED_VISUAL");
+	TRY(SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8), "Could not set SDL_GL_RED_SIZE");
+	TRY(SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8), "Could not set SDL_GL_GREEN_SIZE");
+	TRY(SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8), "Could not set SDL_GL_BLUE_SIZE");
+	TRY(SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8), "Could not set SDL_GL_ALPHA_SIZE");
+
+	TRY(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4), "Could not set SDL_GL_CONTEXT_MAJOR_VERSION");
+	TRY(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5), "Could not set SDL_GL_CONTEXT_MINOR_VERSION");
+	TRY(SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE), "Could not set SDL_GL_CONTEXT_PROFILE_MASK");
+
+#undef TRY
 
 	ac.gl_context = SDL_GL_CreateContext(window);
+	if (!ac.gl_context) {
+		printf("[ERROR] %s\n", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
 	int success = gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
 	if (!success)
 	{
-		printf("[ERROR] Failed to initialize opengl");
+		printf("[ERROR] Failed to initialize opengl\n");
+		exit(EXIT_FAILURE);
 	}
 
 	EnableGLDebugging();
@@ -218,7 +232,7 @@ void InitApplication(char* rom)
 	ac.win = SDL_CreateWindow("NES Emulator - By Jun Lim", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, starting_w, starting_h, flags);
 	if (!ac.win)
 	{
-		printf("Could not create window");
+		printf("Could not create window\n");
 	}
 
 	InitOpengl(ac.win);

@@ -70,7 +70,7 @@ void InitBatchRenderer()
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 		static const char* vertex_src =
-			"#version 330 core\n"
+			"#version 400 core\n"
 			"layout(location = 0) in vec2 a_Position;\n"
 			"layout(location = 1) in vec3 a_Color;\n"
 			"layout(location = 2) in vec2 a_TexCoord;\n"
@@ -87,7 +87,7 @@ void InitBatchRenderer()
 			"}\n";
 
 		static const char* fragment_src =
-			"#version 330 core\n"
+			"#version 400 core\n"
 			"in vec3 v_Color;\n"
 			"in vec2 v_TexCoord;\n"
 			"in float v_TexIndex;\n"
@@ -115,7 +115,7 @@ void InitBatchRenderer()
 	}
 	else
 	{
-		printf("Batch renderer already initialized!");
+		printf("[ERROR] Batch renderer already initialized!\n");
 	}
 }
 

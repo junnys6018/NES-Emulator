@@ -12,7 +12,6 @@ void GenerateTexture(Texture2D* tex, int w, int h, void* pixels, GLenum blendmod
 	glBindTexture(GL_TEXTURE_2D, tex->handle);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, format, w, h, 0, format, GL_UNSIGNED_BYTE, pixels);
-
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, blendmode);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, blendmode);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
