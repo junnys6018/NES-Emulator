@@ -26,7 +26,13 @@ jobs:
         with:
           name: windows-${{matrix.configuration}}-tests
           path: ./build/tests/${{matrix.configuration}}/tests.exe
-      
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-${{matrix.configuration}}-NES-Emulator.exe
+          path: ./build/application/${{matrix.configuration}}/application.exe
+
   test-win:
     needs: build-win
     runs-on: windows-latest
@@ -53,53 +59,65 @@ jobs:
         run: .\tests.exe
         working-directory: tests
 
-  # build-linux:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       configuration: [Debug, Release]
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
     
-  #   steps:
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v2
-  #       with:
-  #         submodules: recursive
-      
-  #     - name: Generate Project files
-  #       run: scripts/GenerateLinuxProjects.sh
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Download and install SDL2-2.0.12
+        run: sudo ./InstallSDL2.sh
+        working-directory: scripts
+
+      - name: Generate Project files
+        run: scripts/GenerateLinuxProjects.sh
         
-  #     - name: Build
-  #       run: cmake --build build/${{matrix.configuration}}
+      - name: Build
+        run: cmake --build build/${{matrix.configuration}}
         
-  #     - name: Upload test artifact
-  #       uses: actions/upload-artifact@v2
-  #       with:
-  #         name: linux-${{matrix.configuration}}-tests
-  #         path: ./build/${{matrix.configuration}}/tests/tests
+      - name: Upload test artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-${{matrix.configuration}}-tests
+          path: ./build/${{matrix.configuration}}/tests/tests
 
-  # test-linux:
-  #   needs: build-linux
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       configuration: [Debug, Release]
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux-${{matrix.configuration}}-NES-Emulator
+          path: ./build/${{matrix.configuration}}/application/application
+
+  test-linux:
+    needs: build-linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
         
-  #   steps:
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v2
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
-  #     - name: Download test artifact
-  #       uses: actions/download-artifact@v2.0.9
-  #       with:
-  #         name: linux-${{matrix.configuration}}-tests
-  #         path: tests
+      - name: Download test artifact
+        uses: actions/download-artifact@v2.0.9
+        with:
+          name: linux-${{matrix.configuration}}-tests
+          path: tests
 
-  #     - run: ls -laR tests
+      - run: ls -laR tests
 
-  #     - name: Make test executable
-  #       run: chmod +x tests
-  #       working-directory: tests
+      - name: Make test executable
+        run: chmod +x tests
+        working-directory: tests
 
-  #     - name: Run Tests
-  #       run: ./tests
-  #       working-directory: tests
+      - name: Run Tests
+        run: ./tests
+        working-directory: tests
