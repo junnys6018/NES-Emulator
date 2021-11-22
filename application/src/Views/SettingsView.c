@@ -78,17 +78,25 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 	{
 		if (settings->mode != MODE_NOT_RUNNING)
 		{
-			char error_string[256];
-			char* save_location = get_default_save_location(current_rom_file);
-			FILE* file = fopen(save_location, "wb");
-			int result = save_game(cart, file, error_string);
-			fclose(file);
-			if (result == 0)
-				printf("[INFO]: saved to %s\n", save_location);
-			else if (result == 1)
-				printf("[ERROR]: %s\n", error_string);
+			if (supports_saving(nes))
+			{
 
-			free(save_location);
+				char error_string[256];
+				char* save_location = get_default_save_location(current_rom_file);
+				FILE* file = fopen(save_location, "wb");
+				int result = save_game(cart, file, error_string);
+				fclose(file);
+				if (result == 0)
+					printf("[INFO]: saved to %s\n", save_location);
+				else if (result == 1)
+					printf("[ERROR]: %s\n", error_string);
+
+				free(save_location);
+			}
+			else
+			{
+				printf("[INFO]: This rom does not support saving\n");
+			}
 		}
 	}
 
@@ -97,19 +105,26 @@ void DrawSettings(ChannelEnableModel* ch, NesScreenModel* scr, SettingsModel* se
 	{
 		if (settings->mode != MODE_NOT_RUNNING)
 		{
-			char filepath[256];
-			if (OpenFileDialog(filepath, 256) == 0)
+			if (supports_saving(nes))
 			{
-				char error_string[256];
-				FILE* file = fopen(filepath, "rb");
-				if (load_save(cart, file, error_string) == 0)
+				char filepath[256];
+				if (OpenFileDialog(filepath, 256) == 0)
 				{
-					printf("[INFO]: Loaded save %s\n", filepath);
-					reset_nes(nes);
+					char error_string[256];
+					FILE* file = fopen(filepath, "rb");
+					if (load_save(cart, file, error_string) == 0)
+					{
+						printf("[INFO]: Loaded save %s\n", filepath);
+						reset_nes(nes);
+					}
+					else
+						printf("[ERROR]: %s\n", error_string);
+					fclose(file);
 				}
-				else
-					printf("[ERROR]: %s\n", error_string);
-				fclose(file);
+			}
+			else
+			{
+				printf("[INFO]: This rom does not support saving\n");
 			}
 		}
 	}

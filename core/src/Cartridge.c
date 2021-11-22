@@ -119,7 +119,9 @@ int save_game(Cartridge* cart, FILE* savefile, char error_string[256])
 	case 2:
 	case 3:
 	case 767:
-		return SAVE_NOT_SUPPORTED;
+		if (error_string)
+			sprintf(error_string, "this mapper does not support saves");
+		return 1;
 	case 1:
 		return m001_save_game(cart, savefile, error_string);
 	case 4:
@@ -140,7 +142,9 @@ int load_save(Cartridge* cart, FILE* savefile, char error_string[256])
 	case 2:
 	case 3:
 	case 767:
-		return 0;
+		if (error_string)
+			sprintf(error_string, "this mapper does not support saves");
+		return 1;
 	case 1:
 		return m001_load_save(cart, savefile, error_string);
 	case 4:

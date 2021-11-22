@@ -7,7 +7,6 @@
 
 int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callback, char error_string[256])
 {
-
 	memset(nes, 0, sizeof(Nes));
 	if (filepath)
 	{
@@ -26,6 +25,9 @@ int initialize_nes(Nes* nes, const char* filepath, UPDATE_PATTERN_TABLE_CB callb
 		if (load_cartridge_from_file(nes, romfile, savefile, callback, error_string) != 0)
 		{
 			// Loading cart failed
+			fclose(romfile);
+			if (savefile)
+				fclose(savefile);
 			return 1;
 		}
 

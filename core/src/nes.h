@@ -48,5 +48,11 @@ static inline void clock_nes_cycle(Nes* nes)
 	clock_2A03(&nes->apu);
 }
 
+static inline bool supports_saving(Nes* nes) 
+{
+	uint16_t mapper_id = nes->cart.mapper_id;
+	return mapper_id == 1 || mapper_id == 4;
+}
+
 
 #endif // !NES_H
