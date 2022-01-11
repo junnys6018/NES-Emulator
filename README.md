@@ -18,13 +18,25 @@ This emulator has a real time waveform visualisation of each channel, (square 1 
 Video demo can be found [here](https://youtu.be/fevGlhVMHI8)
 
 ## Building 
-- This project uses cmake as its build system.
 - Clone repo with `git clone --recursive https://github.com/junnys6018/NES-Emulator.git`.
 - If the repository was cloned non-recursively run `git submodule update --init` to clone required submodules.
 - Run `./scripts/GenerateLinuxProjects.sh` or `./scripts/GenerateWindowsProjects.bat`.
 - Build files are in the `build` directory.
 - Build with make on linux or msvc on windows. 
 - Make sure you build in release, otherwise the emulation will not run in real time.
+
+### Webassembly
+Here is a rough guide for targeting webassembly. If you just want to get hold of the webassembly module and javascript glue code, it is provided in the `web` directory as emu.js and emu.wasm. Included is an example consuming the webassembly module.
+
+- Install [emscripten](https://emscripten.org/docs/getting_started/downloads.html)
+- Download the emscripten toolchain file [here](https://github.com/emscripten-core/emscripten/blob/main/cmake/Modules/Platform/Emscripten.cmake)
+- Activate emscripten `source <path/to/emsdk/emsdk_env.sh>`
+
+```
+cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=<path/to/Emscripten.cmake> -DCMAKE_BUILD_TYPE=Release
+cd build
+make
+```
 
 ## Dependencies
 The only dependency this project has is SDL. On windows the library is prebuilt in the repo, so you dont have to download and install SDL yourself.  
