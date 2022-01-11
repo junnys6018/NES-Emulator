@@ -3,7 +3,6 @@ Open bus behaviour
 Second controller
 APU testing
 more mappers
-CI
 
 color emphasis
 bg and sprites on leftmost 8 pixels flag
