@@ -1,0 +1,13 @@
+[
+"_initialize",
+"_create_nes",
+"_free_nes",
+"_create_buffer",
+"_free_buffer",
+"_emulate_until",
+"_get_total_cycles",
+"_get_framebuffer_wasm",
+"_set_keys",
+"_get_audio_buffer",
+"_flush_audio_samples"
+]
