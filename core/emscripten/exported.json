@@ -2,6 +2,7 @@
 "_initialize",
 "_create_nes",
 "_free_nes",
+"_write_save",
 "_create_buffer",
 "_free_buffer",
 "_emulate_until",

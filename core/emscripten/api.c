@@ -9,6 +9,9 @@
 #define EVENT_AUDIO_BUFFER_FULL 2
 #define EVENT_UNTIL_TICKS 4
 
+#define SAVE_BUFFER_SIZE 256 * 1024
+static uint8_t save_buffer[SAVE_BUFFER_SIZE];
+
 EMSCRIPTEN_KEEPALIVE
 void initialize()
 {
@@ -40,9 +43,10 @@ Nes* create_nes(uint8_t* rom, size_t romsize, uint8_t* save, size_t savesize)
 	FILE* savefile = NULL;
 
 	if (save)
-		fmemopen(save, savesize, "rb");
+		savefile = fmemopen(save, savesize, "rb");
 
 	load_cartridge_from_file(nes, romfile, savefile, NULL, NULL);
+
 	fclose(romfile);
 	if (savefile)
 		fclose(savefile);
@@ -57,6 +61,24 @@ void free_nes(Nes* nes)
 {
 	destroy_nes(nes);
 	free(nes);
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint8_t* write_save(Nes* nes)
+{
+	FILE* savefile = fmemopen(save_buffer, SAVE_BUFFER_SIZE, "wb");
+
+	char error_string[256];
+	int result = save_game(&nes->cart, savefile, error_string);
+
+	if (result == 0)
+		printf("[INFO]: Saved Game\n");
+	else if (result == 1)
+		printf("[ERROR]: %s\n", error_string);
+
+	fclose(savefile);
+
+	return &save_buffer[0];
 }
 
 EMSCRIPTEN_KEEPALIVE
