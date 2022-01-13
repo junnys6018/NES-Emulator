@@ -41,7 +41,7 @@ class NES {
 				getTotalCycles: instance.cwrap('get_total_cycles', 'number', ['number']),
 				getFrameBuffer: instance.cwrap('get_framebuffer_wasm', 'number', ['number']),
 				setKeys: instance.cwrap('set_keys', null, ['number', 'number']),
-				getAudioBuffer: instance.cwrap('get_audio_buffer', 'number', ['number']),
+				getAudioBuffer: instance.cwrap('get_audio_buffer', 'number', []),
 				flushAudioSamples: instance.cwrap('flush_audio_samples', 'number', ['number']),
 			});
 
