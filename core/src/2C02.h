@@ -97,8 +97,8 @@ typedef struct
 	// Access: write only, accessed from $2003
 	uint8_t OAMADDR; // OAM address port
 
-	// Access: read/write, accessed from $2004 
-	uint8_t OAMDATA; 
+	// Access: read/write, accessed from $2004
+	uint8_t OAMDATA;
 
 	// Access: write twice, accessed from $2005
 	uint8_t PPUSCROLL;
@@ -111,10 +111,10 @@ typedef struct
 
 	// Internal Registers
 
-	uint16_t v; // Current VRAM address (15 bits)
-	uint16_t t; // Temporary VRAM address (15 bits)
-	uint8_t x; // Fine X scroll (3 bits)
-	bool w; // First or second write toggle
+	uint16_t v;	   // Current VRAM address (15 bits)
+	uint16_t t;	   // Temporary VRAM address (15 bits)
+	uint8_t x;	   // Fine X scroll (3 bits)
+	bool w;		   // First or second write toggle
 	bool oddframe; // 0: even; 1: odd
 
 	// BG Rendering registers
@@ -123,8 +123,8 @@ typedef struct
 	uint16_t pa_shift_low, pa_shift_high; // Palatte attribute shift registers
 
 	uint8_t pt_latch_low, pt_latch_high, pa_latch_low, pa_latch_high; // Latches used to feed data into shift registers
-	uint8_t name_tbl_byte; // Byte fetched from nametable
-	
+	uint8_t name_tbl_byte;											  // Byte fetched from nametable
+
 	// Sprite Rendering registers
 	uint8_t active_sprites;
 	uint8_t pt_sprite_low[8];
@@ -132,8 +132,8 @@ typedef struct
 	uint8_t sprite_attribute[8];
 	uint8_t sprite_xpos[8];
 	bool sprite_zero_on_next_scanline, sprite_zero_on_current_scanline;
-	
-	int cycles; // 341 cycles per scanline
+
+	int cycles;	  // 341 cycles per scanline
 	int scanline; // 262 scanlines per frame
 
 	// Stuff that does not represent the hardware of the 2C02
@@ -142,11 +142,11 @@ typedef struct
 	struct
 	{
 		// states represent 2.1...2.4 listed here: http://wiki.nesdev.com/w/index.php/PPU_sprite_evaluation
-		enum 
+		enum
 		{
 			RANGE_CHECK,
-			OVERFLOW_CHECK, 
-			IDLE, 		
+			OVERFLOW_CHECK,
+			IDLE,
 		} state;
 		uint8_t secondary_oam_free_slot;
 		uint8_t remaining;
@@ -160,8 +160,8 @@ typedef struct
 	int back_buffer;
 	Bus2C02* bus;
 	struct State6502* cpu;
-	
-	// Due to hardware, strange behaviour occurs if PPUSTATUS is read at the beggining of vertical blanking 
+
+	// Due to hardware, strange behaviour occurs if PPUSTATUS is read at the beggining of vertical blanking
 	// If PPUSTATUS is read at (0,241), the V flag is read as clear, and it wont be set at (1,241), and NMI will not be generated
 	// If PPUSTATUS is read at (1,241) or (2,241), the V flag is read as set, and will be cleared as usual, but NMI will be supressed
 	bool ppustatus_read_early, ppustatus_read_late;

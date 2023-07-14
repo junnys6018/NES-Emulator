@@ -1,7 +1,7 @@
 #ifndef CARTRIDGE_H
 #define CARTRIDGE_H
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 struct Cartridge;
@@ -16,7 +16,7 @@ typedef struct
 	uint16_t index : 1;
 	uint16_t addr : 10;
 } NametableIndex;
-typedef NametableIndex(*NAMETABLE_MIRROR)(void* mapper, uint16_t addr);
+typedef NametableIndex (*NAMETABLE_MIRROR)(void* mapper, uint16_t addr);
 
 typedef struct
 {
@@ -33,7 +33,7 @@ typedef struct
 
 	uint8_t console_type : 2;
 	uint8_t format_identifier : 2; // Used to determine if the supplied file is a NES 1.0 or 2.0 format, on a NES 1.0 it will have the value 0b00, on NES 2.0 it will read 0b10
-	uint8_t mapper_id2 : 4; // Bits 4-7
+	uint8_t mapper_id2 : 4;		   // Bits 4-7
 
 	uint8_t mapper_id3 : 4; // Bits 8-11
 	uint8_t submapper_number : 4;
@@ -92,7 +92,6 @@ void free_cartridge(Cartridge* cart);
 int save_game(Cartridge* cart, FILE* savefile, char error_string[256]);
 int load_save(Cartridge* cart, FILE* savefile, char error_string[256]);
 char* get_default_save_location(const char* rom_location);
-
 
 // Header utility functions
 

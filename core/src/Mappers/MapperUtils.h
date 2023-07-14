@@ -4,7 +4,11 @@
 
 typedef enum
 {
-	ONE_SCREEN_LOWER, ONE_SCREEN_UPPER, VERTICAL, HORIZONTAL, FOUR_SCREEN
+	ONE_SCREEN_LOWER,
+	ONE_SCREEN_UPPER,
+	VERTICAL,
+	HORIZONTAL,
+	FOUR_SCREEN
 } MirrorMode;
 
 NametableIndex mirror_vertical(uint16_t addr);

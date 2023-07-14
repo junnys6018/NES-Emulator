@@ -1,9 +1,9 @@
 #ifndef MAPPER_001_H
 #define MAPPER_001_H
+#include "Cartridge.h"
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <assert.h>
-#include "Cartridge.h"
 
 typedef struct
 {
@@ -45,6 +45,5 @@ void m001_free(Mapper001* mapper);
 void m001_load_from_file(Header* header, Cartridge* cart, FILE* file);
 int m001_save_game(Cartridge* cart, FILE* savefile, char error_string[256]);
 int m001_load_save(Cartridge* cart, FILE* savefile, char error_string[256]);
-
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef CHEAT_CODE_H
 #define CHEAT_CODE_H
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 // See http://tuxnes.sourceforge.net/gamegenie.html
 typedef struct

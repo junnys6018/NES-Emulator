@@ -2,11 +2,11 @@
 #define _6502_BUS_H
 #include <stdint.h>
 
-#include "Cheatcodes/cheatcode.h"
-#include "Cartridge.h"
-#include "Gamepad.h"
-#include "2C02.h"
 #include "2A03.h"
+#include "2C02.h"
+#include "Cartridge.h"
+#include "Cheatcodes/cheatcode.h"
+#include "Gamepad.h"
 
 typedef struct
 {

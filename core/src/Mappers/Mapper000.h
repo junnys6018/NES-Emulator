@@ -1,10 +1,10 @@
 #ifndef MAPPER_000_H
 #define MAPPER_000_H
-#include <stdint.h>
-#include <stdio.h>
-#include <assert.h>
 #include "Cartridge.h"
 #include "MapperUtils.h"
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
 
 typedef struct
 {

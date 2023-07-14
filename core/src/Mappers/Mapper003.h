@@ -1,11 +1,11 @@
 #ifndef MAPPER_003_H
 #define MAPPER_003_H
-#include <stdint.h>
-#include <stdio.h>
-#include <assert.h>
-#include <stdlib.h>
 #include "Cartridge.h"
 #include "MapperUtils.h"
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef struct
 {

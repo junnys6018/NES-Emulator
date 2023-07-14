@@ -1,7 +1,7 @@
 #ifndef MAPPER_004_H
 #define MAPPER_004_H
-#include "Cartridge.h"
 #include "6502.h"
+#include "Cartridge.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -26,15 +26,15 @@ typedef struct
 		{
 			uint8_t R : 3; // Specify which bank register to update on next write to Bank Data register
 			uint8_t Unused : 3;
-			uint8_t P : 1; // PRG ROM bank mode (0: $8000-$9FFF swappable, 
+			uint8_t P : 1; // PRG ROM bank mode (0: $8000-$9FFF swappable,
 						   //                       $C000 - $DFFF fixed to second - last bank;
-			               //                    1: $C000-$DFFF swappable,
-			               //                       $8000-$9FFF fixed to second-last bank)
+						   //                    1: $C000-$DFFF swappable,
+						   //                       $8000-$9FFF fixed to second-last bank)
 
 			uint8_t C : 1; // CHR A12 inversion (0: two 2 KB banks at $0000-$0FFF,
-			               //                       four 1 KB banks at $1000 - $1FFF;
+						   //                       four 1 KB banks at $1000 - $1FFF;
 						   //                       1: two 2 KB banks at $1000-$1FFF,
-                           //                       four 1 KB banks at $0000-$0FFF)
+						   //                       four 1 KB banks at $0000-$0FFF)
 		} bits;
 		uint8_t reg;
 	} bank_select;
@@ -70,7 +70,7 @@ typedef struct
 	// Internal data
 	uint8_t IRQ_counter;
 	bool old_PPU_A12;
-	
+
 	uint32_t PRG_ROM_banks;
 	uint32_t CHR_banks;
 

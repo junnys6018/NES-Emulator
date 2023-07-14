@@ -1,10 +1,10 @@
 #ifndef _2A03_H
 #define _2A03_H
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define AUDIO_SAMPLES (40)
-#define SAMPLE_RATE  (44100)
+#define SAMPLE_RATE (44100)
 #define SAMPLE_PERIOD (1.0f / SAMPLE_RATE)
 
 // Forward declaration to avoid circular dependency
@@ -193,9 +193,9 @@ typedef struct
 		struct
 		{
 			uint8_t Frequency : 4; // Pulse 1 enable
-			uint8_t Unused : 2; // Pulse 2 enable
-			uint8_t L : 1; // Loop
-			uint8_t I : 1; // IRQ Enable
+			uint8_t Unused : 2;	   // Pulse 2 enable
+			uint8_t L : 1;		   // Loop
+			uint8_t I : 1;		   // IRQ Enable
 		} flags;
 		uint8_t reg;
 	} DMC_FREQ;
@@ -204,7 +204,7 @@ typedef struct
 	uint8_t DMC_ADDR;
 	uint8_t DMC_LENGTH;
 
-	uint8_t DMC_sample_buffer;	
+	uint8_t DMC_sample_buffer;
 	bool DMC_sample_buffer_empty;
 
 	bool DMC_IRQ_flag;
@@ -214,7 +214,7 @@ typedef struct
 		uint32_t bytes_remaining;
 	} DMC_memory_reader;
 
-	struct 
+	struct
 	{
 		uint8_t shift_register;
 		uint8_t bits_remaining;
@@ -230,9 +230,9 @@ typedef struct
 		{
 			uint8_t P1 : 1; // Pulse 1 enable
 			uint8_t P2 : 1; // Pulse 2 enable
-			uint8_t T  : 1; // Triangle enable
-			uint8_t N  : 1; // Noise enable
-			uint8_t D  : 1; // DMC enable
+			uint8_t T : 1;	// Triangle enable
+			uint8_t N : 1;	// Noise enable
+			uint8_t D : 1;	// DMC enable
 			uint8_t Unused : 3;
 		} flags;
 		uint8_t reg;
@@ -244,8 +244,8 @@ typedef struct
 		struct
 		{
 			uint8_t Unused : 6; // in reality these bits are used to read data from JOY2
-			uint8_t I : 1; // Interrupt inhibit flag. If set, the frame interrupt flag is cleared, otherwise it is unaffected.
-			uint8_t M : 1; // Sequencer mode: 0 selects 4-step sequence, 1 selects 5-step sequence
+			uint8_t I : 1;		// Interrupt inhibit flag. If set, the frame interrupt flag is cleared, otherwise it is unaffected.
+			uint8_t M : 1;		// Sequencer mode: 0 selects 4-step sequence, 1 selects 5-step sequence
 		} flags;
 		uint8_t reg;
 	} FRAME_COUNTER;

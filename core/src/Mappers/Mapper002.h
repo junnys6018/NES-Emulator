@@ -2,9 +2,9 @@
 #define MAPPER_002_H
 #include "Cartridge.h"
 #include "MapperUtils.h"
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 

@@ -7,8 +7,8 @@
 typedef struct
 {
 	Cartridge* cartridge;
-	
-	uint8_t OAM[256]; // Object Attribute Memory
+
+	uint8_t OAM[256];		   // Object Attribute Memory
 	uint8_t secondary_OAM[32]; // Secondary OAM
 	uint8_t nametable[2][1024];
 	uint8_t palette[32]; // 32 Bytes of palette data

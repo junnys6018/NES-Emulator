@@ -1,11 +1,11 @@
 #ifndef NES_H
 #define NES_H
 
-#include "6502.h"
-#include "6502Bus.h"
+#include "2A03.h"
 #include "2C02.h"
 #include "2C02Bus.h"
-#include "2A03.h"
+#include "6502.h"
+#include "6502Bus.h"
 #include "Cartridge.h"
 #include "Gamepad.h"
 
@@ -48,11 +48,10 @@ static inline void clock_nes_cycle(Nes* nes)
 	clock_2A03(&nes->apu);
 }
 
-static inline bool supports_saving(Nes* nes) 
+static inline bool supports_saving(Nes* nes)
 {
 	uint16_t mapper_id = nes->cart.mapper_id;
 	return mapper_id == 1 || mapper_id == 4;
 }
-
 
 #endif // !NES_H

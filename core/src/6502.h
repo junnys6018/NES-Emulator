@@ -4,23 +4,23 @@
 
 typedef struct State6502
 {
-	uint8_t A; // Accumilator register 
+	uint8_t A; // Accumilator register
 	uint8_t X; // X and Y index registers
 	uint8_t Y;
 	uint16_t PC; // Program counter
-	uint8_t SP; // Stack pointer
+	uint8_t SP;	 // Stack pointer
 
 	union
 	{
 		struct
 		{
-			uint8_t C : 1;		// Carry
-			uint8_t Z : 1;		// Zero
-			uint8_t I : 1;		// Interrupt disable
-			uint8_t D : 1;		// Decimal
+			uint8_t C : 1; // Carry
+			uint8_t Z : 1; // Zero
+			uint8_t I : 1; // Interrupt disable
+			uint8_t D : 1; // Decimal
 			uint8_t unused : 2;
-			uint8_t V : 1;		// Overflow
-			uint8_t N : 1;		// Negative
+			uint8_t V : 1; // Overflow
+			uint8_t N : 1; // Negative
 		} flags;
 		uint8_t reg;
 	} status;
@@ -35,8 +35,8 @@ typedef struct State6502
 	int apu_stall_cycles;
 
 	// Helper members
-	uint8_t operand; // Data fetched for the operand of an instruction
-	uint16_t addr; // Address of the data fetched, only set for zero page, absolute addressing and indirect X, Y 
+	uint8_t operand;	// Data fetched for the operand of an instruction
+	uint16_t addr;		// Address of the data fetched, only set for zero page, absolute addressing and indirect X, Y
 	uint32_t remaining; // Remaining cycles in the instruction
 
 	/* 
@@ -45,16 +45,16 @@ typedef struct State6502
 	 * 2 bytes are fetched.
 	 */
 	uint16_t indirect_fetch;
-	
+
 	uint64_t total_cycles;
 
 	// Internal latch that is set on the falling edge of the interrupt line
 	bool nmi_interrupt;
 
-	// IRQ is level trigged, active low 
-	// 8 Devices on the nes are capable of pulling the IRQ line low 
+	// IRQ is level trigged, active low
+	// 8 Devices on the nes are capable of pulling the IRQ line low
 	// It is the responsibilty of the IRQ handler to acknowledge the interrupt so that
-	// the source stops pulling the line low. Each bit of the variable below represents whether 
+	// the source stops pulling the line low. Each bit of the variable below represents whether
 	// a particular source is pulling the IRQ line low (1: pulling low; 0: not pulling low)
 	// Each bit corresponds to a specific device listed below
 	//  ---- ----
@@ -83,4 +83,3 @@ void irq_clear(State6502* cpu, int index);
 void dissassemble(State6502* cpu, uint16_t addr, int* size, char line[128]);
 
 #endif
-
